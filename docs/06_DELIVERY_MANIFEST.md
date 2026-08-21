@@ -8,15 +8,15 @@
 ## 1. Candidate / canonical identity
 
 ```text
-Status: CONDITIONAL / VISUAL_REVIEW
+Status: PASS — RC0 TECHNICAL / VISUAL_REVIEW
 Canonical branch: main (observed)
-Canonical commit: PENDING — Main Agent must create and record the integrated RC0 commit
+Canonical commit: 9628d21cfccefdfc03cda46e0247aac8c40b79e2
 Audit date: 2026-08-22
 Viewport target: 1920×1080
-Release decision: RC0 technical path independently verified; not canonical until commit and human visual review
+Release decision: RC0 technical path canonicalized; human visual review remains open
 ```
 
-There is no previous stable commit or Git rollback SHA. The first canonical commit and its rollback anchor are owned by Main Agent after integration.
+There is no previous stable commit before RC0. The RC0 canonical commit and rollback anchor are `9628d21cfccefdfc03cda46e0247aac8c40b79e2`.
 
 ## 2. Entries and startup commands
 
@@ -53,7 +53,7 @@ Do not stage `data/source/**`, `data/runtime/**`, local Cesium runtime tiles, ei
 
 | Gate | Status | Evidence / exact limit |
 |---|---|---|
-| Repository root, branch, ignore boundary | PASS | Root is `git/`; branch is `main`; secret scan emitted no values; no commit yet |
+| Repository root, branch, ignore boundary | PASS | Root is `git/`; branch is `main`; secret scan emitted no values; canonical commit recorded below |
 | Backend memory Contract/Telemetry smoke | PASS | `python -B backend/smoke.py`; REST, CORS, WebSocket, telemetry projection, simulator, 404/422 boundaries passed |
 | Frontend TypeScript | PASS | `npm run typecheck` in `frontend/` |
 | Frontend production build | NOT VERIFIED | Not rerun in audit; parent must run with secret-bearing local env excluded from generated output |
@@ -70,7 +70,7 @@ Do not stage `data/source/**`, `data/runtime/**`, local Cesium runtime tiles, ei
 | Visual review | CONDITIONAL / `VISUAL_REVIEW` | Screenshots exist; final human comparison against `references/golden-dashboard.png` is not an acceptance result |
 | 60-second core chain | PASS (technical) | `review/e2e/60-second-chain.json`; API → WS → telemetry → event → Cesium → forecast → fallback → reconnect completed |
 | Five-minute rehearsal | PASS (technical) / CCTV conditional | `review/e2e/5-minute-rehearsal.json`; 11 checkpoints completed in 310.3s, CCTV/AI explicitly recorded as placeholder-conditional |
-| Production deployment / rollback rehearsal | NOT VERIFIED | No deployment or previous Git rollback point exists |
+| Production deployment / rollback rehearsal | NOT VERIFIED | No production deployment rehearsal; Git rollback anchor exists at the RC0 commit |
 
 ## 6. Verified artifacts and known deviations
 
@@ -97,19 +97,19 @@ Known deviations:
 ## 7. Release checklist
 
 - [x] `main` branch confirmed.
-- [ ] Main Agent stages an explicit allowlist and inspects `git diff --cached --name-status`.
-- [ ] Main Agent creates the canonical commit and records its SHA here and in the audit.
+- [x] Main Agent stages an explicit allowlist and inspects `git diff --cached --name-status`.
+- [x] Main Agent creates the canonical commit and records its SHA here and in the audit.
 - [x] Secret-bearing local env and large generated/runtime classes are excluded by boundary rules.
 - [x] Backend smoke and frontend typecheck are recorded above.
 - [x] Parent runs frontend build and fixed 1920×1080 browser smoke on the integrated tree.
 - [x] Parent resolves or explicitly carries all conditional gates above.
-- [ ] Parent records known-good visual/build artifact and rollback SHA after commit.
+- [x] Parent records known-good visual/build artifact and rollback SHA after commit.
 
 ## 8. Rollback
 
 ```text
 Previous stable commit: NONE — repository had no commits before RC0
-Current rollback point: preserved uncommitted workspace until canonical commit exists
-RC0 rollback anchor: PENDING — fill with Main Agent's canonical commit SHA after staging
+Current rollback point: `9628d21cfccefdfc03cda46e0247aac8c40b79e2`
+RC0 rollback anchor: `9628d21cfccefdfc03cda46e0247aac8c40b79e2`
 Recovery: use a commit-based revert after the anchor exists; do not treat ignored runtime data as a Git rollback
 ```

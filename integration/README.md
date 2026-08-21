@@ -1,8 +1,8 @@
 # Integration
 
-状态：`PASS（技术）` / `VISUAL_REVIEW` / `CANONICAL_PENDING`
+状态：`PASS（技术）` / `VISUAL_REVIEW` / `CANONICALIZED`
 
-本目录负责 Adapter、Mock → API 切换、Contract compatibility、环境变量记录和 canonical 集成边界；不在集成阶段重写 frontend/backend 主模块。当前技术主链已独立复跑通过；仓库在 `main` 但还没有 commit，canonical SHA 和 rollback anchor 必须由 Main Agent 在整合后填写。
+本目录负责 Adapter、Mock → API 切换、Contract compatibility、环境变量记录和 canonical 集成边界；不在集成阶段重写 frontend/backend 主模块。当前技术主链已独立复跑通过；仓库在 `main`，canonical commit/rollback anchor 为 `9628d21cfccefdfc03cda46e0247aac8c40b79e2`。
 
 ## Current seams
 
@@ -29,7 +29,7 @@
 
 ## Handoff checklist
 
-1. Stage an explicit file allowlist and inspect `git diff --cached --name-status`.
-2. Keep `.env.local`, `data/source`, `data/runtime`, local Cesium tiles, `node_modules`, `dist`, `.vite`, `__pycache__`, `.codex`, and generated review ZIPs out of the first commit.
-3. Run the integrated frontend build/browser smoke without copying a local secret into generated artifacts.
-4. Record branch, canonical commit SHA, startup commands, environment names (never values), open conditional gates, and rollback anchor in `docs/06_DELIVERY_MANIFEST.md`.
+1. Done: stage an explicit file allowlist and inspect `git diff --cached --name-status`.
+2. Done: keep `.env.local`, `data/source`, `data/runtime`, local Cesium tiles, `node_modules`, `dist`, `.vite`, `__pycache__`, `.codex`, and generated review ZIPs out of the first commit.
+3. Done: run the integrated frontend build/browser smoke without copying a local secret into generated artifacts.
+4. Done: record branch, canonical commit SHA, startup commands, environment names (never values), open conditional gates, and rollback anchor in `docs/06_DELIVERY_MANIFEST.md`.

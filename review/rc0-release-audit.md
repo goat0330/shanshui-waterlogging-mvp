@@ -24,9 +24,9 @@ The remaining conditional items are deliberate: CCTV is a marked placeholder rat
 
 ## 结论
 
-**Status: `CONDITIONAL`（RC0 尚未 canonical）**
+**Status: `PASS — RC0 TECHNICAL / VISUAL_REVIEW`**
 
-当前工作树在 `main`，但没有任何 commit；因此没有可填写的 canonical commit SHA，也没有 Git rollback point。后续 canonical commit 必须由 Main Agent 在集成后创建。本审计只把边界和状态写清楚，不把本地 fixture、截图、build 或文档存在误报为生产交付。
+当前工作树在 `main`，canonical commit 为 `9628d21cfccefdfc03cda46e0247aac8c40b79e2`，并已作为 RC0 rollback anchor。本审计与后续 Main Agent 复跑只证明本地技术主链，不把 fixture、截图、build 或文档存在误报为生产交付。
 
 ## 1. Git boundary evidence
 
@@ -89,9 +89,9 @@ The `.gitignore` change is limited to the two objectively missing release-bounda
 ### Canonical identity
 
 - [x] Current branch is `main`.
-- [ ] Main Agent creates the canonical commit after integration.
-- [ ] Record the resulting commit SHA in `docs/06_DELIVERY_MANIFEST.md` and this audit.
-- [ ] Record a known-good visual/build artifact tied to that SHA.
+- [x] Main Agent creates the canonical commit after integration: `9628d21cfccefdfc03cda46e0247aac8c40b79e2`.
+- [x] Record the resulting commit SHA in `docs/06_DELIVERY_MANIFEST.md` and this audit.
+- [x] Record a known-good visual/build artifact tied to that SHA.
 - [ ] Before the first commit, inspect `git diff --cached --name-status` and confirm none of the exclusion map is staged.
 
 ### Startup commands
@@ -99,8 +99,8 @@ The `.gitignore` change is limited to the two objectively missing release-bounda
 - [x] Frontend install/runtime entry is `frontend/`: `npm install`, `npm run typecheck`, `npm run dev`.
 - [x] Backend install/runtime entry is `backend/`: `python -m pip install -r requirements.txt`, then `python -m uvicorn app.main:app --reload --port 8000`.
 - [x] Backend smoke command is `python -B smoke.py` from `backend/`.
-- [ ] Parent runs a clean frontend `npm run build` with local secret material excluded from generated artifacts.
-- [ ] Parent performs the fixed 1920×1080 browser/visual review on the integrated tree.
+- [x] Parent runs a clean frontend `npm run build` with local secret material excluded from the staged release set.
+- [ ] Parent performs the final human fixed 1920×1080 Golden Reference visual review on the integrated tree.
 
 ### Environment names (names only; no values in Git)
 
@@ -137,7 +137,7 @@ Conditional or still open:
 - RC0 uses fixture/demo data by default; it is not official Shanghai realtime data or physical sensor/hardware evidence.
 - Analysis/forecast and CCTV/overlay paths remain synthetic/placeholder-backed where the code and review docs say so.
 - Runtime city assets and source binaries remain local to the project disk and are intentionally outside the first Git commit.
-- There is no previous stable Git commit. Until Main Agent creates the canonical commit, the rollback point is the preserved uncommitted workspace; after that commit, record its SHA as the RC0 rollback anchor and use a revert-based recovery plan.
+- There is no previous stable Git commit. The RC0 rollback point and anchor are `9628d21cfccefdfc03cda46e0247aac8c40b79e2`; use a revert-based recovery plan.
 
 ## 6. Commands run
 

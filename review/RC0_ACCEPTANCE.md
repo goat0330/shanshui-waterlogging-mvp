@@ -14,7 +14,7 @@
 
 | Gate | Status | Independent evidence / boundary |
 |---|---|---|
-| G0 Git baseline | CONDITIONAL until commit | `main` confirmed; ignore and secret boundary audited; canonical commit still pending |
+| G0 Git baseline | PASS | `main`; curated 155-file baseline; canonical commit `9628d21cfccefdfc03cda46e0247aac8c40b79e2` |
 | G1 Backend smoke | PASS | `python -B backend/smoke.py` |
 | G2 Frontend typecheck/build | PASS | `npm run typecheck`; `npm run build` |
 | G3 API-mode browser | PASS | `review/e2e/api-realtime-browser-smoke.json` |
@@ -24,7 +24,7 @@
 | G7 NOW/+10/+30 geographic surface | PASS (technical) | three GeoJSON requests HTTP 200; all forecast states ready |
 | G8 Degraded/fallback | PASS | 5s REST polling observed after WS failure and stopped after reconnect |
 | G9 60-second chain | PASS | `review/e2e/60-second-chain.json`; page errors empty |
-| G10 Canonical commit | PENDING | stage allowlist, inspect cached diff, commit, then record SHA |
+| G10 Canonical commit | PASS | `9628d21cfccefdfc03cda46e0247aac8c40b79e2`; forbidden paths excluded |
 | G11 Delivery docs | PASS after this update | manifest, integration readme, frontend readme and audit updated; commit identity remains pending |
 
 ## Five-minute rehearsal
