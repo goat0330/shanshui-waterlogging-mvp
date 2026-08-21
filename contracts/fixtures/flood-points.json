@@ -1,0 +1,62 @@
+[
+  {
+    "id": "FP-001",
+    "name": "人民路 × 滨江大道",
+    "district": "黄浦区",
+    "coordinates": {
+      "lat": 31.2297,
+      "lon": 121.4874
+    },
+    "depthCm": 28.6,
+    "riskLevel": "HIGH",
+    "trend": "UP"
+  },
+  {
+    "id": "FP-002",
+    "name": "中山南路 × 打浦路",
+    "district": "黄浦区",
+    "coordinates": {
+      "lat": 31.21,
+      "lon": 121.475
+    },
+    "depthCm": 22.3,
+    "riskLevel": "HIGH",
+    "trend": "UP"
+  },
+  {
+    "id": "FP-003",
+    "name": "陆家浜路 × 西藏南路",
+    "district": "黄浦区",
+    "coordinates": {
+      "lat": 31.2132,
+      "lon": 121.483
+    },
+    "depthCm": 18.7,
+    "riskLevel": "WARNING",
+    "trend": "UP"
+  },
+  {
+    "id": "FP-004",
+    "name": "世博大道 × 耀龙路",
+    "district": "浦东新区",
+    "coordinates": {
+      "lat": 31.185,
+      "lon": 121.503
+    },
+    "depthCm": 15.2,
+    "riskLevel": "WARNING",
+    "trend": "STABLE"
+  },
+  {
+    "id": "FP-005",
+    "name": "周家嘴路 × 杨树浦路",
+    "district": "杨浦区",
+    "coordinates": {
+      "lat": 31.262,
+      "lon": 121.54
+    },
+    "depthCm": 12.1,
+    "riskLevel": "WARNING",
+    "trend": "UP"
+  }
+]

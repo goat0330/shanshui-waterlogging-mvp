@@ -1,0 +1,543 @@
+openapi: 3.1.0
+info:
+  title: Shanshui Waterlogging MVP API
+  version: 0.1.0
+  description: Contract for the Shanghai urban-waterlogging MVP demo.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /api/v1/dashboard/overview:
+    get:
+      operationId: getDashboardOverview
+      responses:
+        "200":
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardOverview"
+
+  /api/v1/rainfall/current:
+    get:
+      operationId: getCurrentRainfall
+      responses:
+        "200":
+          description: Current rainfall
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RainfallSnapshot"
+
+  /api/v1/rainfall/stations/ranking:
+    get:
+      operationId: listRainfallStationRanking
+      responses:
+        "200":
+          description: Rainfall station intensity ranking
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RainfallStationRankingItem"
+
+  /api/v1/flood-points:
+    get:
+      operationId: listFloodPoints
+      responses:
+        "200":
+          description: Flood points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FloodPoint"
+
+  /api/v1/flood-events/{event_id}:
+    get:
+      operationId: getFloodEvent
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Flood event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FloodEvent"
+        "404":
+          description: Event not found
+
+  /api/v1/flood-events/{event_id}/forecast:
+    get:
+      operationId: getFloodForecast
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Forecast frames
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FloodForecast"
+
+  /api/v1/flood-events/{event_id}/analysis:
+    get:
+      operationId: getFloodAnalysis
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: AI analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIAnalysis"
+
+  /api/v1/cameras:
+    get:
+      operationId: listCameras
+      responses:
+        "200":
+          description: Cameras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Camera"
+
+  /api/v1/cameras/{camera_id}:
+    get:
+      operationId: getCamera
+      parameters:
+        - name: camera_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Camera
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Camera"
+        "404":
+          description: Camera not found
+
+  /api/v1/scenarios/{scenario_id}/timeline:
+    get:
+      operationId: getScenarioTimeline
+      parameters:
+        - name: scenario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scenario timeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScenarioTimeline"
+
+  /api/v1/telemetry/observations:
+    post:
+      operationId: createTelemetryObservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryObservation"
+      responses:
+        "201":
+          description: Telemetry accepted and normalized to SensorState
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorState"
+        "404":
+          description: Unknown sensor
+        "422":
+          description: Invalid observation
+
+  /api/v1/sensors/{sensor_id}:
+    get:
+      operationId: getSensorState
+      parameters:
+        - name: sensor_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Latest sensor state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorState"
+        "404":
+          description: Unknown sensor
+
+components:
+  schemas:
+    RiskLevel:
+      type: string
+      enum: [NORMAL, WARNING, HIGH, CRITICAL]
+
+    Coordinates:
+      type: object
+      required: [lat, lon]
+      properties:
+        lat:
+          type: number
+        lon:
+          type: number
+
+    SensorType:
+      type: string
+      enum: [WATER_DEPTH]
+
+    SceneSensorType:
+      type: string
+      enum: [WATER_LEVEL_SENSOR]
+
+    TelemetryTransport:
+      type: string
+      enum: [WIFI, CELLULAR_4G, SIMULATOR]
+
+    TelemetryObservation:
+      type: object
+      required: [sensorId, observedAt, depthMm]
+      additionalProperties: false
+      properties:
+        sensorId:
+          type: string
+          minLength: 1
+        observedAt:
+          type: string
+          format: date-time
+        depthMm:
+          type: number
+          minimum: 0
+        sequence:
+          type: integer
+          minimum: 0
+        transport:
+          $ref: "#/components/schemas/TelemetryTransport"
+        batteryMv:
+          type: integer
+          minimum: 0
+        signalDbm:
+          type: number
+
+    SensorState:
+      type: object
+      required:
+        [sensorId, siteId, coordinates, depthMm, depthCm, waterDetected, observedAt, receivedAt]
+      properties:
+        sensorId:
+          type: string
+        siteId:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        depthMm:
+          type: number
+          minimum: 0
+        depthCm:
+          type: number
+          minimum: 0
+        waterDetected:
+          type: boolean
+        observedAt:
+          type: string
+          format: date-time
+        receivedAt:
+          type: string
+          format: date-time
+        sequence:
+          type: integer
+          minimum: 0
+        transport:
+          $ref: "#/components/schemas/TelemetryTransport"
+        batteryMv:
+          type: integer
+          minimum: 0
+        signalDbm:
+          type: number
+        source:
+          type: string
+
+    SensorRegistryEntry:
+      type: object
+      required: [sensorId, siteId, name, coordinates, sensorType, enabled]
+      properties:
+        sensorId:
+          type: string
+        siteId:
+          type: string
+        name:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        sensorType:
+          $ref: "#/components/schemas/SensorType"
+        enabled:
+          type: boolean
+
+    SceneSensorInput:
+      type: object
+      required: [id, type, coordinates, depthCm, visualState, selected]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/SceneSensorType"
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        depthCm:
+          type: number
+          minimum: 0
+        visualState:
+          $ref: "#/components/schemas/RiskLevel"
+        selected:
+          type: boolean
+
+    UrbanStatus:
+      type: object
+      required: [critical, warning, normal]
+      properties:
+        critical:
+          type: integer
+        warning:
+          type: integer
+        normal:
+          type: integer
+
+    DashboardOverview:
+      type: object
+      required: [updatedAt, city, weather, urbanStatus, activeFloodPoints]
+      properties:
+        updatedAt:
+          type: string
+          format: date-time
+        city:
+          type: string
+        weather:
+          type: object
+          properties:
+            temperatureC:
+              type: number
+            condition:
+              type: string
+        urbanStatus:
+          $ref: "#/components/schemas/UrbanStatus"
+        activeFloodPoints:
+          type: integer
+
+    RainfallSnapshot:
+      type: object
+      required: [updatedAt, intensityMmH, cumulativeMm, durationMinutes, trend]
+      properties:
+        updatedAt:
+          type: string
+          format: date-time
+        intensityMmH:
+          type: number
+        cumulativeMm:
+          type: number
+        durationMinutes:
+          type: integer
+        trend:
+          type: array
+          items:
+            type: object
+            required: [minutesAgo, valueMmH]
+            properties:
+              minutesAgo:
+                type: integer
+                valueMmH:
+                  type: number
+
+    RainfallStationRankingItem:
+      type: object
+      required: [stationId, stationName, intensityMmH]
+      additionalProperties: false
+      properties:
+        stationId:
+          type: string
+        stationName:
+          type: string
+        intensityMmH:
+          type: number
+          minimum: 0
+
+    FloodPoint:
+      type: object
+      required: [id, name, coordinates, depthCm, riskLevel, trend]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        district:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        depthCm:
+          type: number
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        trend:
+          type: string
+          enum: [UP, STABLE, DOWN]
+
+    FloodEvent:
+      type: object
+      required:
+        [id, name, district, eventType, coordinates, currentDepthCm, riseRateCmMin, pipeLoadPercent, riskLevel, startedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        district:
+          type: string
+        eventType:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        currentDepthCm:
+          type: number
+        riseRateCmMin:
+          type: number
+        pipeLoadPercent:
+          type: number
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        startedAt:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        cameraId:
+          type: string
+
+    ForecastFrame:
+      type: object
+      required: [timeKey, offsetMinutes, maxDepthCm, affectedAreaKm2, geometryUrl]
+      properties:
+        timeKey:
+          type: string
+          enum: [NOW, PLUS_10, PLUS_30]
+        offsetMinutes:
+          type: integer
+        maxDepthCm:
+          type: number
+        affectedAreaKm2:
+          type: number
+        geometryUrl:
+          type: string
+
+    FloodForecast:
+      type: object
+      required: [eventId, generatedAt, frames]
+      properties:
+        eventId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        frames:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastFrame"
+
+    Camera:
+      type: object
+      required: [id, name, coordinates, status, mediaType, mediaUrl]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        status:
+          type: string
+          enum: [ONLINE, OFFLINE]
+        mediaType:
+          type: string
+          enum: [MP4, HLS, WEBRTC]
+        mediaUrl:
+          type: string
+        overlayUrl:
+          type: string
+
+    AIAnalysis:
+      type: object
+      required: [eventId, riskSummary, causes, forecastSummary, actions]
+      properties:
+        eventId:
+          type: string
+        riskSummary:
+          type: string
+        causes:
+          type: array
+          items:
+            type: object
+            required: [label, weight]
+            properties:
+              label:
+                type: string
+              weight:
+                type: number
+        forecastSummary:
+          type: string
+        actions:
+          type: array
+          items:
+            type: object
+            required: [priority, title, detail]
+            properties:
+              priority:
+                type: integer
+              title:
+                type: string
+              detail:
+                type: string
+
+    ScenarioTimeline:
+      type: object
+      required: [scenarioId, currentTime, mode]
+      properties:
+        scenarioId:
+          type: string
+        currentTime:
+          type: string
+          format: date-time
+        mode:
+          type: string
+          enum: [REALTIME, PLAYBACK, FORECAST]
+        selectedForecastKey:
+          type: string
+          enum: [NOW, PLUS_10, PLUS_30]

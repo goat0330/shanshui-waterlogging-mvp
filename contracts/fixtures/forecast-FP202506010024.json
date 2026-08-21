@@ -1,0 +1,27 @@
+{
+  "eventId": "FP202506010024",
+  "generatedAt": "2025-06-01T10:24:35+08:00",
+  "frames": [
+    {
+      "timeKey": "NOW",
+      "offsetMinutes": 0,
+      "maxDepthCm": 28.6,
+      "affectedAreaKm2": 0.38,
+      "geometryUrl": "/demo/forecast/now.geojson"
+    },
+    {
+      "timeKey": "PLUS_10",
+      "offsetMinutes": 10,
+      "maxDepthCm": 35.2,
+      "affectedAreaKm2": 0.64,
+      "geometryUrl": "/demo/forecast/plus10.geojson"
+    },
+    {
+      "timeKey": "PLUS_30",
+      "offsetMinutes": 30,
+      "maxDepthCm": 52.4,
+      "affectedAreaKm2": 1.28,
+      "geometryUrl": "/demo/forecast/plus30.geojson"
+    }
+  ]
+}

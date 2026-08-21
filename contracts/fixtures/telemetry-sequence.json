@@ -1,0 +1,15 @@
+{
+  "sensorId": "SSZJ-NODE-001",
+  "siteId": "SITE-RML-BJDD",
+  "demoSynthetic": true,
+  "sequence": [
+    {"delayMs": 0, "depthMm": 0},
+    {"delayMs": 1800, "depthMm": 40},
+    {"delayMs": 1800, "depthMm": 80},
+    {"delayMs": 1800, "depthMm": 120},
+    {"delayMs": 1800, "depthMm": 180},
+    {"delayMs": 1800, "depthMm": 240},
+    {"delayMs": 1800, "depthMm": 286},
+    {"delayMs": 1800, "depthMm": 350}
+  ]
+}

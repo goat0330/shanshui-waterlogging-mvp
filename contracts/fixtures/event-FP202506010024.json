@@ -1,0 +1,17 @@
+{
+  "id": "FP202506010024",
+  "name": "人民路 × 滨江大道",
+  "district": "黄浦区",
+  "eventType": "道路积水",
+  "coordinates": {
+    "lat": 31.2297,
+    "lon": 121.4874
+  },
+  "currentDepthCm": 28.6,
+  "riseRateCmMin": 1.8,
+  "pipeLoadPercent": 91,
+  "riskLevel": "HIGH",
+  "startedAt": "2025-06-01T09:52:00+08:00",
+  "durationSeconds": 1941,
+  "cameraId": "CAM-017"
+}

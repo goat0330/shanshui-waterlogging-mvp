@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "backend_port": 11357,
+  "frontend_port": 11358,
+  "frontend_command": "npm run dev -- --host 127.0.0.1 --port <free-port> --strictPort",
+  "backend_commands": [
+    "python -m uvicorn app.main:app --host 127.0.0.1 --port <free-port>",
+    "python -m uvicorn app.main:app --host 127.0.0.1 --port <free-port> --ws none"
+  ],
+  "live": {
+    "badge": "API DATA · WS CONNECTED",
+    "initial_depth_text": "28.6cm",
+    "telemetry_response_depth_cm": 34.5,
+    "ui_depth_text": "34.5cm",
+    "event_requests_before_fallback": 2
+  },
+  "rest_fallback": {
+    "badge": "API DATA · WS FALLBACK",
+    "telemetry_response_depth_cm": 41.2,
+    "ui_depth_text": "41.2cm",
+    "event_requests_before_fallback": 2,
+    "event_requests_after_immediate_reload": 3,
+    "event_requests_after_5s_poll": 4,
+    "polling_request_observed": true
+  },
+  "reconnected": {
+    "badge": "API DATA · WS CONNECTED",
+    "event_requests_at_connect": 5,
+    "event_requests_after_6s": 5,
+    "polling_stopped": true,
+    "telemetry_response_depth_cm": 43.3,
+    "ui_depth_text": "43.3cm"
+  },
+  "console_errors": [
+    "WebSocket connection to 'ws://127.0.0.1:11357/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404"
+  ],
+  "page_errors": [],
+  "screenshots": [
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\api-realtime-live.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\api-realtime-rest-fallback.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\api-realtime-reconnected.png"
+  ]
+}

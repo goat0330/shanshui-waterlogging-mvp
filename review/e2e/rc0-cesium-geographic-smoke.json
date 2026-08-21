@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "url": "http://127.0.0.1:5173/",
+  "mount_count": 1,
+  "canvas_count": 1,
+  "scene_source": "loading",
+  "initial_forecast": "NOW",
+  "initial_forecast_status": "ready",
+  "forecast_states": [
+    {
+      "key": "PLUS_30",
+      "scene_source": "osm",
+      "forecast_source": "PLUS_30",
+      "forecast_status": "ready"
+    },
+    {
+      "key": "NOW",
+      "scene_source": "osm",
+      "forecast_source": "NOW",
+      "forecast_status": "ready"
+    },
+    {
+      "key": "PLUS_10",
+      "scene_source": "osm",
+      "forecast_source": "PLUS_10",
+      "forecast_status": "ready"
+    }
+  ],
+  "forecast_requests": [
+    {
+      "url": "http://127.0.0.1:5173/demo/forecast/now.geojson",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/demo/forecast/plus30.geojson",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/demo/forecast/now.geojson",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/demo/forecast/plus10.geojson",
+      "status": 200
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "camera_gesture": true,
+  "screenshots": [
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\forecast-plus_30-1920x1080.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\forecast-now-1920x1080.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\forecast-plus_10-1920x1080.png"
+  ]
+}

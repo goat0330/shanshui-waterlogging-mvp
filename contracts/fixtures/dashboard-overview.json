@@ -1,0 +1,14 @@
+{
+  "updatedAt": "2025-06-01T10:24:35+08:00",
+  "city": "上海市",
+  "weather": {
+    "temperatureC": 25,
+    "condition": "小雨"
+  },
+  "urbanStatus": {
+    "critical": 3,
+    "warning": 12,
+    "normal": 137
+  },
+  "activeFloodPoints": 26
+}

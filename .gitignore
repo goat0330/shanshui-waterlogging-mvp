@@ -1,0 +1,48 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Local agent orchestration metadata; not part of the application release.
+.codex/
+
+# JavaScript / Python build and cache outputs
+node_modules/
+dist/
+.vite/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local runtime and review outputs
+*.log
+coverage/
+playwright-report/
+test-results/
+review/runtime/
+frontend/review/*.zip
+frontend/artifacts/
+review/e2e/*.png
+spikes/cesium/review/*.png
+
+# Captured Shanghai Tiles are local runtime data; keep only the small manifest.
+spikes/cesium/public/data/tiles/**
+!spikes/cesium/public/data/tiles/shanghai-aoi/
+!spikes/cesium/public/data/tiles/shanghai-aoi/manifest.json
+
+# Local source city-model assets; keep on the project disk, never commit 2GB+ binaries.
+data/source/
+
+# Converted city-model runtime; keep locally for Cesium smoke, never commit generated Tiles.
+data/runtime/
+spikes/cesium/public/data/runtime/
+frontend/public/data/shanghai-core/
+frontend/public/data/runtime/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

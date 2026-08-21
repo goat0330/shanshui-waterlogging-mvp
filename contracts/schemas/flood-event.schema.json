@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FloodEvent",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "district",
+    "eventType",
+    "coordinates",
+    "currentDepthCm",
+    "riseRateCmMin",
+    "pipeLoadPercent",
+    "riskLevel",
+    "startedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "district": {
+      "type": "string"
+    },
+    "eventType": {
+      "type": "string"
+    },
+    "coordinates": {
+      "type": "object",
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lon": {
+          "type": "number"
+        }
+      }
+    },
+    "currentDepthCm": {
+      "type": "number"
+    },
+    "riseRateCmMin": {
+      "type": "number"
+    },
+    "pipeLoadPercent": {
+      "type": "number"
+    },
+    "riskLevel": {
+      "enum": [
+        "NORMAL",
+        "WARNING",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "startedAt": {
+      "type": "string"
+    },
+    "durationSeconds": {
+      "type": "integer"
+    },
+    "cameraId": {
+      "type": "string"
+    }
+  }
+}

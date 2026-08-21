@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SensorRegistryEntry",
+  "type": "object",
+  "required": ["sensorId", "siteId", "name", "coordinates", "sensorType", "enabled"],
+  "properties": {
+    "sensorId": {"type": "string"},
+    "siteId": {"type": "string"},
+    "name": {"type": "string"},
+    "coordinates": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": {"type": "number", "minimum": -90, "maximum": 90},
+        "lon": {"type": "number", "minimum": -180, "maximum": 180}
+      },
+      "additionalProperties": false
+    },
+    "sensorType": {"enum": ["WATER_DEPTH"]},
+    "enabled": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

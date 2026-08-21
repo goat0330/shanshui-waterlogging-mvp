@@ -1,0 +1,28 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "forecastKey": "NOW",
+        "source": "synthetic-demo",
+        "coordinateSystem": "WGS84 lon/lat",
+        "maxDepthCm": 28.6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.4848, 31.2286],
+            [121.4860, 31.2282],
+            [121.4879, 31.2286],
+            [121.4885, 31.2298],
+            [121.4875, 31.2311],
+            [121.4855, 31.2308],
+            [121.4848, 31.2286]
+          ]
+        ]
+      }
+    }
+  ]
+}

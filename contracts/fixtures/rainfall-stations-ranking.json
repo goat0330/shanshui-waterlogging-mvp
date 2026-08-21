@@ -1,0 +1,27 @@
+[
+  {
+    "stationId": "RAIN-XJH-001",
+    "stationName": "徐家汇站",
+    "intensityMmH": 23.6
+  },
+  {
+    "stationId": "RAIN-SJGY-002",
+    "stationName": "世纪公园站",
+    "intensityMmH": 18.9
+  },
+  {
+    "stationId": "RAIN-LYQ-003",
+    "stationName": "龙阳路站",
+    "intensityMmH": 16.3
+  },
+  {
+    "stationId": "RAIN-ZSGY-004",
+    "stationName": "中山公园站",
+    "intensityMmH": 14.8
+  },
+  {
+    "stationId": "RAIN-WJG-005",
+    "stationName": "五角场站",
+    "intensityMmH": 13.2
+  }
+]

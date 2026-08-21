@@ -1,0 +1,61 @@
+{
+  "imageId": "IMG-00002",
+  "source": {
+    "type": "local",
+    "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\vision\\artifacts\\smoke_inputs\\flood_no_reference.jpg"
+  },
+  "floodDetected": true,
+  "depth": {
+    "level": 5,
+    "estimatedDepthCm": null,
+    "rangeCm": [
+      50,
+      null
+    ],
+    "confidence": 0.4
+  },
+  "method": "NO_REFERENCE",
+  "referenceObjects": [
+    {
+      "type": "PERSON_REFERENCE",
+      "bbox": {
+        "x": 378,
+        "y": 366,
+        "width": 176,
+        "height": 354
+      },
+      "confidence": 0.462,
+      "waterOverlapRatio": 0.643,
+      "waterlineY": 0.387,
+      "reliable": false,
+      "detector": "opencv_hog"
+    },
+    {
+      "type": "TRAFFIC_SIGN_REFERENCE",
+      "bbox": {
+        "x": 1102,
+        "y": 468,
+        "width": 31,
+        "height": 42
+      },
+      "confidence": 0.338,
+      "waterOverlapRatio": 0.991,
+      "waterlineY": 0.37,
+      "reliable": false,
+      "detector": "opencv_color_heuristic"
+    }
+  ],
+  "waterMaskPath": "artifacts/IMG-00002-water-mask.png",
+  "quality": "LOW",
+  "qualityFlags": [
+    "BASELINE_ONLY",
+    "MODEL_WEIGHT_MISSING",
+    "NO_REFERENCE"
+  ],
+  "model": {
+    "waterSegmentation": "opencv_baseline",
+    "referenceDetection": "opencv_hog_and_color_heuristic",
+    "geometrySupport": "none"
+  },
+  "synthetic": false
+}

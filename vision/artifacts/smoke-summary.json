@@ -1,0 +1,365 @@
+[
+  {
+    "name": "flood_person",
+    "expected": "flood_with_reference",
+    "result": {
+      "imageId": "IMG-00001",
+      "source": {
+        "type": "local",
+        "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\vision\\artifacts\\smoke_inputs\\flood_person.jpg"
+      },
+      "floodDetected": true,
+      "depth": {
+        "level": 3,
+        "estimatedDepthCm": 25.4,
+        "rangeCm": [
+          20,
+          30
+        ],
+        "confidence": 0.424
+      },
+      "method": "PERSON_REFERENCE",
+      "referenceObjects": [
+        {
+          "type": "PERSON_REFERENCE",
+          "bbox": {
+            "x": 739,
+            "y": 235,
+            "width": 105,
+            "height": 209
+          },
+          "confidence": 0.695,
+          "waterOverlapRatio": 0.149,
+          "waterlineY": 0.45,
+          "reliable": true,
+          "detector": "opencv_hog"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 499,
+            "y": 840,
+            "width": 56,
+            "height": 85
+          },
+          "confidence": 0.397,
+          "waterOverlapRatio": 0.74,
+          "waterlineY": 0.347,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 437,
+            "y": 826,
+            "width": 27,
+            "height": 44
+          },
+          "confidence": 0.389,
+          "waterOverlapRatio": 0.968,
+          "waterlineY": 0.328,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 550,
+            "y": 155,
+            "width": 25,
+            "height": 35
+          },
+          "confidence": 0.388,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.349,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 1138,
+            "y": 879,
+            "width": 50,
+            "height": 80
+          },
+          "confidence": 0.383,
+          "waterOverlapRatio": 0.856,
+          "waterlineY": 0.345,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 472,
+            "y": 171,
+            "width": 39,
+            "height": 51
+          },
+          "confidence": 0.374,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.341,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 1230,
+            "y": 192,
+            "width": 34,
+            "height": 36
+          },
+          "confidence": 0.362,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.339,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 930,
+            "y": 113,
+            "width": 72,
+            "height": 128
+          },
+          "confidence": 0.331,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.349,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        }
+      ],
+      "waterMaskPath": "artifacts/IMG-00001-water-mask.png",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING"
+      ],
+      "model": {
+        "waterSegmentation": "opencv_baseline",
+        "referenceDetection": "opencv_hog_and_color_heuristic",
+        "geometrySupport": "none"
+      },
+      "synthetic": false
+    }
+  },
+  {
+    "name": "flood_no_reference",
+    "expected": "flood_without_reliable_reference",
+    "result": {
+      "imageId": "IMG-00002",
+      "source": {
+        "type": "local",
+        "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\vision\\artifacts\\smoke_inputs\\flood_no_reference.jpg"
+      },
+      "floodDetected": true,
+      "depth": {
+        "level": 5,
+        "estimatedDepthCm": null,
+        "rangeCm": [
+          50,
+          null
+        ],
+        "confidence": 0.4
+      },
+      "method": "NO_REFERENCE",
+      "referenceObjects": [
+        {
+          "type": "PERSON_REFERENCE",
+          "bbox": {
+            "x": 378,
+            "y": 366,
+            "width": 176,
+            "height": 354
+          },
+          "confidence": 0.462,
+          "waterOverlapRatio": 0.643,
+          "waterlineY": 0.387,
+          "reliable": false,
+          "detector": "opencv_hog"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 1102,
+            "y": 468,
+            "width": 31,
+            "height": 42
+          },
+          "confidence": 0.338,
+          "waterOverlapRatio": 0.991,
+          "waterlineY": 0.37,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        }
+      ],
+      "waterMaskPath": "artifacts/IMG-00002-water-mask.png",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING",
+        "NO_REFERENCE"
+      ],
+      "model": {
+        "waterSegmentation": "opencv_baseline",
+        "referenceDetection": "opencv_hog_and_color_heuristic",
+        "geometrySupport": "none"
+      },
+      "synthetic": false
+    }
+  },
+  {
+    "name": "dry_street",
+    "expected": "non_flood",
+    "result": {
+      "imageId": "IMG-00003",
+      "source": {
+        "type": "local",
+        "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\vision\\artifacts\\smoke_inputs\\dry_street.jpg"
+      },
+      "floodDetected": false,
+      "depth": {
+        "level": 0,
+        "estimatedDepthCm": null,
+        "rangeCm": [
+          0,
+          0
+        ],
+        "confidence": 0.289
+      },
+      "method": "VISUAL_RANGE",
+      "referenceObjects": [
+        {
+          "type": "PERSON_REFERENCE",
+          "bbox": {
+            "x": 1629,
+            "y": 2572,
+            "width": 202,
+            "height": 406
+          },
+          "confidence": 0.498,
+          "waterOverlapRatio": 0.608,
+          "waterlineY": 0.583,
+          "reliable": false,
+          "detector": "opencv_hog"
+        },
+        {
+          "type": "PERSON_REFERENCE",
+          "bbox": {
+            "x": 862,
+            "y": 1852,
+            "width": 456,
+            "height": 911
+          },
+          "confidence": 0.485,
+          "waterOverlapRatio": 0.071,
+          "waterlineY": 0.317,
+          "reliable": false,
+          "detector": "opencv_hog"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 790,
+            "y": 1768,
+            "width": 54,
+            "height": 76
+          },
+          "confidence": 0.377,
+          "waterOverlapRatio": 0.292,
+          "waterlineY": 0.314,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 19,
+            "y": 2672,
+            "width": 99,
+            "height": 190
+          },
+          "confidence": 0.357,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.302,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 146,
+            "y": 648,
+            "width": 41,
+            "height": 91
+          },
+          "confidence": 0.356,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.317,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 890,
+            "y": 1774,
+            "width": 283,
+            "height": 116
+          },
+          "confidence": 0.347,
+          "waterOverlapRatio": 0.0,
+          "waterlineY": 0.313,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 2065,
+            "y": 2442,
+            "width": 84,
+            "height": 88
+          },
+          "confidence": 0.341,
+          "waterOverlapRatio": 0.918,
+          "waterlineY": 0.582,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        },
+        {
+          "type": "TRAFFIC_SIGN_REFERENCE",
+          "bbox": {
+            "x": 2047,
+            "y": 2259,
+            "width": 78,
+            "height": 129
+          },
+          "confidence": 0.307,
+          "waterOverlapRatio": 0.543,
+          "waterlineY": 0.582,
+          "reliable": false,
+          "detector": "opencv_color_heuristic"
+        }
+      ],
+      "waterMaskPath": "artifacts/IMG-00003-water-mask.png",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING",
+        "NO_WATER",
+        "NO_REFERENCE"
+      ],
+      "model": {
+        "waterSegmentation": "opencv_baseline",
+        "referenceDetection": "opencv_hog_and_color_heuristic",
+        "geometrySupport": "none"
+      },
+      "synthetic": false
+    }
+  }
+]

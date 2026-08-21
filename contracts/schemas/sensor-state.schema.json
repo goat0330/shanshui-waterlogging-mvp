@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SensorState",
+  "type": "object",
+  "required": ["sensorId", "siteId", "coordinates", "depthMm", "depthCm", "waterDetected", "observedAt", "receivedAt"],
+  "properties": {
+    "sensorId": {"type": "string"},
+    "siteId": {"type": "string"},
+    "coordinates": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "properties": {"lat": {"type": "number"}, "lon": {"type": "number"}},
+      "additionalProperties": false
+    },
+    "depthMm": {"type": "number", "minimum": 0},
+    "depthCm": {"type": "number", "minimum": 0},
+    "waterDetected": {"type": "boolean"},
+    "observedAt": {"type": "string", "format": "date-time"},
+    "receivedAt": {"type": "string", "format": "date-time"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "transport": {"enum": ["WIFI", "CELLULAR_4G", "SIMULATOR"]},
+    "batteryMv": {"type": "integer", "minimum": 0},
+    "signalDbm": {"type": "number"},
+    "source": {"type": "string"}
+  },
+  "additionalProperties": false
+}

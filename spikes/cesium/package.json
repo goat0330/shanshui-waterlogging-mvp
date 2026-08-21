@@ -1,0 +1,20 @@
+{
+  "name": "shanshui-l1-cesium-poc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cesium": "^1.144.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vite-plugin-static-copy": "^4.1.1"
+  }
+}

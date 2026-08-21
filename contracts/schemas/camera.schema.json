@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Camera",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "coordinates",
+    "status",
+    "mediaType",
+    "mediaUrl"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "coordinates": {
+      "type": "object",
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lon": {
+          "type": "number"
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "ONLINE",
+        "OFFLINE"
+      ]
+    },
+    "mediaType": {
+      "enum": [
+        "MP4",
+        "HLS",
+        "WEBRTC"
+      ]
+    },
+    "mediaUrl": {
+      "type": "string"
+    },
+    "overlayUrl": {
+      "type": "string"
+    }
+  }
+}

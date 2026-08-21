@@ -1,0 +1,14 @@
+[
+  {
+    "id": "CAM-017",
+    "name": "人民路 × 滨江大道（东向西）",
+    "coordinates": {
+      "lat": 31.2296,
+      "lon": 121.4876
+    },
+    "status": "ONLINE",
+    "mediaType": "MP4",
+    "mediaUrl": "/demo/video/flood_cam_017.mp4",
+    "overlayUrl": "/demo/video/flood_cam_017.overlay.json"
+  }
+]

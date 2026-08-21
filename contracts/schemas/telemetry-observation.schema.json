@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TelemetryObservation",
+  "type": "object",
+  "required": ["sensorId", "observedAt", "depthMm"],
+  "additionalProperties": false,
+  "properties": {
+    "sensorId": {"type": "string", "minLength": 1},
+    "observedAt": {"type": "string", "format": "date-time"},
+    "depthMm": {"type": "number", "minimum": 0},
+    "sequence": {"type": "integer", "minimum": 0},
+    "transport": {"enum": ["WIFI", "CELLULAR_4G", "SIMULATOR"]},
+    "batteryMv": {"type": "integer", "minimum": 0},
+    "signalDbm": {"type": "number"}
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "updatedAt": "2025-06-01T10:24:35+08:00",
+  "intensityMmH": 23.6,
+  "cumulativeMm": 68.2,
+  "durationMinutes": 135,
+  "trend": [
+    {
+      "minutesAgo": 120,
+      "valueMmH": 18.0
+    },
+    {
+      "minutesAgo": 100,
+      "valueMmH": 42.0
+    },
+    {
+      "minutesAgo": 80,
+      "valueMmH": 27.0
+    },
+    {
+      "minutesAgo": 60,
+      "valueMmH": 61.0
+    },
+    {
+      "minutesAgo": 45,
+      "valueMmH": 58.0
+    },
+    {
+      "minutesAgo": 30,
+      "valueMmH": 92.0
+    },
+    {
+      "minutesAgo": 15,
+      "valueMmH": 52.0
+    },
+    {
+      "minutesAgo": 0,
+      "valueMmH": 23.6
+    }
+  ]
+}

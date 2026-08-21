@@ -1,0 +1,80 @@
+{
+  "status": "PASS",
+  "backend_port": 22380,
+  "frontend_port": 22381,
+  "events": [
+    {
+      "elapsed_s": 26.5,
+      "name": "initial",
+      "badge": "API DATA · WS CONNECTED",
+      "scene_source": "osm"
+    },
+    {
+      "elapsed_s": 28.3,
+      "name": "fp001-selected",
+      "event": "FP-001",
+      "event_panel": "人民路 × 滨江大道"
+    },
+    {
+      "elapsed_s": 29.8,
+      "name": "telemetry-12cm",
+      "response_depth_cm": 12.0,
+      "ui_depth": "12.0cm"
+    },
+    {
+      "elapsed_s": 30.7,
+      "name": "telemetry-28-6cm",
+      "response_depth_cm": 28.6,
+      "ui_depth": "28.6cm"
+    },
+    {
+      "elapsed_s": 31.5,
+      "name": "forecast-plus10",
+      "forecast": "PLUS_10",
+      "scene_source": "PLUS_10"
+    },
+    {
+      "elapsed_s": 32.2,
+      "name": "forecast-plus30",
+      "forecast": "PLUS_30",
+      "scene_source": "PLUS_30"
+    },
+    {
+      "elapsed_s": 32.9,
+      "name": "forecast-now",
+      "forecast": "NOW",
+      "scene_source": "NOW"
+    },
+    {
+      "elapsed_s": 39.2,
+      "name": "degraded",
+      "badge": "API DATA · WS FALLBACK"
+    },
+    {
+      "elapsed_s": 44.2,
+      "name": "return-realtime",
+      "badge": "API DATA · WS CONNECTED"
+    }
+  ],
+  "console_errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "WebSocket connection to 'ws://127.0.0.1:22380/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404"
+  ],
+  "page_errors": [],
+  "screenshots": [
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-01-initial.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-02-fp001-selected.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-03-telemetry-12cm.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-04-telemetry-28-6cm.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-05-forecast-plus10.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-06-forecast-plus30.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-07-forecast-now.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-08-degraded.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\60s-09-return-realtime.png"
+  ]
+}

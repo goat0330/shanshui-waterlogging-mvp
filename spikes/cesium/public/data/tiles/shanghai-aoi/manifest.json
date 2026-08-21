@@ -1,0 +1,985 @@
+{
+  "captured_at": "2026-08-21T03:53:19.720277+00:00",
+  "source": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset.json",
+  "cache_type": "fixed-view visible tile cache",
+  "scope": {
+    "viewport": "1920x1080",
+    "overview_camera": "Shanghai overview from the L1 PoC",
+    "event_camera": "人民路 × 滨江大道 (121.4874, 31.2297)",
+    "warning": "Not a complete Shanghai AOI mirror; files outside the captured LOD/view may be absent."
+  },
+  "file_count": 94,
+  "total_bytes": 6392971,
+  "failed_responses": [
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/14/11.b3dm (Response.body: Protocol error (Network.getResponseBody): No data found for resource with given identifier)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/20/16.b3dm (Response.body: Target page, context or browser has been closed)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/6.b3dm (Response.body: Target page, context or browser has been closed)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/7.b3dm (Response.body: Target page, context or browser has been closed)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_6_2.json (Response.body: Target page, context or browser has been closed)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/7.b3dm (Response.body: Target page, context or browser has been closed)"
+    ],
+    [
+      200,
+      "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/20/14.b3dm (Response.body: Target page, context or browser has been closed)"
+    ]
+  ],
+  "files": [
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/1/1/0.b3dm",
+      "relative_path": "1/1/0.b3dm",
+      "bytes": 2506,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/1/1/1.b3dm",
+      "relative_path": "1/1/1.b3dm",
+      "bytes": 2039,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/2/0.b3dm",
+      "relative_path": "2/2/0.b3dm",
+      "bytes": 1527,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/2/1.b3dm",
+      "relative_path": "2/2/1.b3dm",
+      "bytes": 6656,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/2/2.b3dm",
+      "relative_path": "2/2/2.b3dm",
+      "bytes": 9689,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/2/3.b3dm",
+      "relative_path": "2/2/3.b3dm",
+      "bytes": 4170,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/3/1.b3dm",
+      "relative_path": "2/3/1.b3dm",
+      "bytes": 5665,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/3/2.b3dm",
+      "relative_path": "2/3/2.b3dm",
+      "bytes": 9680,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/2/3/3.b3dm",
+      "relative_path": "2/3/3.b3dm",
+      "bytes": 2584,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/4/3.b3dm",
+      "relative_path": "3/4/3.b3dm",
+      "bytes": 30143,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/4/4.b3dm",
+      "relative_path": "3/4/4.b3dm",
+      "bytes": 50974,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/4/5.b3dm",
+      "relative_path": "3/4/5.b3dm",
+      "bytes": 27585,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/4/6.b3dm",
+      "relative_path": "3/4/6.b3dm",
+      "bytes": 13234,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/5/3.b3dm",
+      "relative_path": "3/5/3.b3dm",
+      "bytes": 31070,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/5/4.b3dm",
+      "relative_path": "3/5/4.b3dm",
+      "bytes": 28809,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/5/5.b3dm",
+      "relative_path": "3/5/5.b3dm",
+      "bytes": 32000,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/5/6.b3dm",
+      "relative_path": "3/5/6.b3dm",
+      "bytes": 18479,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/6/4.b3dm",
+      "relative_path": "3/6/4.b3dm",
+      "bytes": 25662,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/6/6.b3dm",
+      "relative_path": "3/6/6.b3dm",
+      "bytes": 5498,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/7/4.b3dm",
+      "relative_path": "3/7/4.b3dm",
+      "bytes": 35734,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/3/7/5.b3dm",
+      "relative_path": "3/7/5.b3dm",
+      "bytes": 23563,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/10.b3dm",
+      "relative_path": "4/10/10.b3dm",
+      "bytes": 88379,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/11.b3dm",
+      "relative_path": "4/10/11.b3dm",
+      "bytes": 50259,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/12.b3dm",
+      "relative_path": "4/10/12.b3dm",
+      "bytes": 55143,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/13.b3dm",
+      "relative_path": "4/10/13.b3dm",
+      "bytes": 41792,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/6.b3dm",
+      "relative_path": "4/10/6.b3dm",
+      "bytes": 83803,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/8.b3dm",
+      "relative_path": "4/10/8.b3dm",
+      "bytes": 113565,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/10/9.b3dm",
+      "relative_path": "4/10/9.b3dm",
+      "bytes": 70873,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/10.b3dm",
+      "relative_path": "4/11/10.b3dm",
+      "bytes": 40147,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/11.b3dm",
+      "relative_path": "4/11/11.b3dm",
+      "bytes": 29225,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/12.b3dm",
+      "relative_path": "4/11/12.b3dm",
+      "bytes": 15144,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/13.b3dm",
+      "relative_path": "4/11/13.b3dm",
+      "bytes": 4575,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/7.b3dm",
+      "relative_path": "4/11/7.b3dm",
+      "bytes": 71431,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/8.b3dm",
+      "relative_path": "4/11/8.b3dm",
+      "bytes": 85638,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/11/9.b3dm",
+      "relative_path": "4/11/9.b3dm",
+      "bytes": 73960,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/12/12.b3dm",
+      "relative_path": "4/12/12.b3dm",
+      "bytes": 16524,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/12/8.b3dm",
+      "relative_path": "4/12/8.b3dm",
+      "bytes": 67725,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/12/9.b3dm",
+      "relative_path": "4/12/9.b3dm",
+      "bytes": 57919,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/13/12.b3dm",
+      "relative_path": "4/13/12.b3dm",
+      "bytes": 4645,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/13/8.b3dm",
+      "relative_path": "4/13/8.b3dm",
+      "bytes": 71694,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/13/9.b3dm",
+      "relative_path": "4/13/9.b3dm",
+      "bytes": 48037,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/14/10.b3dm",
+      "relative_path": "4/14/10.b3dm",
+      "bytes": 58566,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/10.b3dm",
+      "relative_path": "4/8/10.b3dm",
+      "bytes": 56760,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/11.b3dm",
+      "relative_path": "4/8/11.b3dm",
+      "bytes": 51796,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/12.b3dm",
+      "relative_path": "4/8/12.b3dm",
+      "bytes": 16436,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/13.b3dm",
+      "relative_path": "4/8/13.b3dm",
+      "bytes": 3838,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/8.b3dm",
+      "relative_path": "4/8/8.b3dm",
+      "bytes": 92098,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/8/9.b3dm",
+      "relative_path": "4/8/9.b3dm",
+      "bytes": 84505,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/10.b3dm",
+      "relative_path": "4/9/10.b3dm",
+      "bytes": 72706,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/11.b3dm",
+      "relative_path": "4/9/11.b3dm",
+      "bytes": 55227,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/12.b3dm",
+      "relative_path": "4/9/12.b3dm",
+      "bytes": 37792,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/13.b3dm",
+      "relative_path": "4/9/13.b3dm",
+      "bytes": 14311,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/8.b3dm",
+      "relative_path": "4/9/8.b3dm",
+      "bytes": 70573,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/4/9/9.b3dm",
+      "relative_path": "4/9/9.b3dm",
+      "bytes": 87282,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/20/12.b3dm",
+      "relative_path": "5/20/12.b3dm",
+      "bytes": 91615,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/20/13.b3dm",
+      "relative_path": "5/20/13.b3dm",
+      "bytes": 135188,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/20/17.b3dm",
+      "relative_path": "5/20/17.b3dm",
+      "bytes": 96335,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/21/12.b3dm",
+      "relative_path": "5/21/12.b3dm",
+      "bytes": 46337,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/21/13.b3dm",
+      "relative_path": "5/21/13.b3dm",
+      "bytes": 119975,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/21/16.b3dm",
+      "relative_path": "5/21/16.b3dm",
+      "bytes": 110774,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/21/17.b3dm",
+      "relative_path": "5/21/17.b3dm",
+      "bytes": 98152,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/22/14.b3dm",
+      "relative_path": "5/22/14.b3dm",
+      "bytes": 56770,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/22/15.b3dm",
+      "relative_path": "5/22/15.b3dm",
+      "bytes": 49179,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/22/16.b3dm",
+      "relative_path": "5/22/16.b3dm",
+      "bytes": 113520,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/22/17.b3dm",
+      "relative_path": "5/22/17.b3dm",
+      "bytes": 99577,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/23/14.b3dm",
+      "relative_path": "5/23/14.b3dm",
+      "bytes": 99456,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/23/15.b3dm",
+      "relative_path": "5/23/15.b3dm",
+      "bytes": 77408,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/23/16.b3dm",
+      "relative_path": "5/23/16.b3dm",
+      "bytes": 101591,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/5/23/17.b3dm",
+      "relative_path": "5/23/17.b3dm",
+      "bytes": 94527,
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset.json",
+      "relative_path": "tileset.json",
+      "bytes": 48248,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_1_0_1.json",
+      "relative_path": "tileset_1_0_1.json",
+      "bytes": 94082,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_2_3_0.json",
+      "relative_path": "tileset_2_3_0.json",
+      "bytes": 70137,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_4_2.json",
+      "relative_path": "tileset_3_4_2.json",
+      "bytes": 83491,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_4_4.json",
+      "relative_path": "tileset_3_4_4.json",
+      "bytes": 167414,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_4_5.json",
+      "relative_path": "tileset_3_4_5.json",
+      "bytes": 167299,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_4_6.json",
+      "relative_path": "tileset_3_4_6.json",
+      "bytes": 104807,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_5_2.json",
+      "relative_path": "tileset_3_5_2.json",
+      "bytes": 110269,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_5_3.json",
+      "relative_path": "tileset_3_5_3.json",
+      "bytes": 93811,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_5_4.json",
+      "relative_path": "tileset_3_5_4.json",
+      "bytes": 169300,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_5_5.json",
+      "relative_path": "tileset_3_5_5.json",
+      "bytes": 167357,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_5_6.json",
+      "relative_path": "tileset_3_5_6.json",
+      "bytes": 113401,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_6_3.json",
+      "relative_path": "tileset_3_6_3.json",
+      "bytes": 161723,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_6_4.json",
+      "relative_path": "tileset_3_6_4.json",
+      "bytes": 160920,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_6_5.json",
+      "relative_path": "tileset_3_6_5.json",
+      "bytes": 169579,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_7_2.json",
+      "relative_path": "tileset_3_7_2.json",
+      "bytes": 168607,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_7_3.json",
+      "relative_path": "tileset_3_7_3.json",
+      "bytes": 161215,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_7_4.json",
+      "relative_path": "tileset_3_7_4.json",
+      "bytes": 163614,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_3_7_5.json",
+      "relative_path": "tileset_3_7_5.json",
+      "bytes": 104856,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "overview"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_10_7.json",
+      "relative_path": "tileset_4_10_7.json",
+      "bytes": 66392,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_11_6.json",
+      "relative_path": "tileset_4_11_6.json",
+      "bytes": 65388,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_8_6.json",
+      "relative_path": "tileset_4_8_6.json",
+      "bytes": 55032,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_8_7.json",
+      "relative_path": "tileset_4_8_7.json",
+      "bytes": 57500,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_9_6.json",
+      "relative_path": "tileset_4_9_6.json",
+      "bytes": 65466,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    },
+    {
+      "url": "https://data.mars3d.cn/3dtiles/jzw-shanghai/tileset_4_9_7.json",
+      "relative_path": "tileset_4_9_7.json",
+      "bytes": 53024,
+      "status": 200,
+      "content_type": "application/json",
+      "phases": [
+        "event"
+      ]
+    }
+  ]
+}

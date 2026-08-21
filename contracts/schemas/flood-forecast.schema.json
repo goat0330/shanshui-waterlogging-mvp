@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FloodForecast",
+  "type": "object",
+  "required": [
+    "eventId",
+    "generatedAt",
+    "frames"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "timeKey",
+          "offsetMinutes",
+          "maxDepthCm",
+          "affectedAreaKm2",
+          "geometryUrl"
+        ],
+        "properties": {
+          "timeKey": {
+            "enum": [
+              "NOW",
+              "PLUS_10",
+              "PLUS_30"
+            ]
+          },
+          "offsetMinutes": {
+            "type": "integer"
+          },
+          "maxDepthCm": {
+            "type": "number"
+          },
+          "affectedAreaKm2": {
+            "type": "number"
+          },
+          "geometryUrl": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

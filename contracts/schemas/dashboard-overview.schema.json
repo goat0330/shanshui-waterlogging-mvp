@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashboardOverview",
+  "type": "object",
+  "required": [
+    "updatedAt",
+    "city",
+    "weather",
+    "urbanStatus",
+    "activeFloodPoints"
+  ],
+  "properties": {
+    "updatedAt": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "weather": {
+      "type": "object",
+      "required": [
+        "temperatureC",
+        "condition"
+      ],
+      "properties": {
+        "temperatureC": {
+          "type": "number"
+        },
+        "condition": {
+          "type": "string"
+        }
+      }
+    },
+    "urbanStatus": {
+      "type": "object",
+      "required": [
+        "critical",
+        "warning",
+        "normal"
+      ],
+      "properties": {
+        "critical": {
+          "type": "integer"
+        },
+        "warning": {
+          "type": "integer"
+        },
+        "normal": {
+          "type": "integer"
+        }
+      }
+    },
+    "activeFloodPoints": {
+      "type": "integer"
+    }
+  }
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>山水智鉴｜L1 Cesium PoC</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      window.CESIUM_BASE_URL = "/cesium/"
+    </script>
+  </head>
+  <body>
+    <main id="app">
+      <section id="cesiumContainer" aria-label="上海三维城市场景"></section>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SHANSHUI INTELLIGENCE · L1 CESIUM POC</p>
+          <h1>上海城市内涝数字孪生底座</h1>
+        </div>
+        <div class="status-group">
+          <span id="sceneStatus" class="status-pill pending">初始化中</span>
+          <span id="sourceStatus" class="status-pill">Shanghai 3D Tiles · remote</span>
+        </div>
+      </header>
+
+      <aside class="control-panel">
+        <div class="panel-heading">
+          <span class="panel-kicker">L1 / SCENE CONTROL</span>
+          <span id="eventId">FP202506010024</span>
+        </div>
+        <div class="event-card">
+          <strong>人民路 × 滨江大道</strong>
+          <span>黄浦区 · 道路积水 · 演示场景数据</span>
+          <div class="metrics">
+            <div><b id="depthValue">28.6</b><small>cm 当前水深</small></div>
+            <div><b id="areaValue">0.38</b><small>km² 影响范围</small></div>
+          </div>
+        </div>
+
+        <label class="field-label" for="sourceSelect">城市底座</label>
+        <select id="sourceSelect" class="source-select">
+          <option value="shanghai">Shanghai 3D Tiles · 无 token</option>
+          <option value="shanghai-local">Shanghai AOI 本地缓存 · 已捕获视口</option>
+          <option value="shanghai-core">Shanghai Core Local · 真实模型入口</option>
+          <option value="osm">Cesium OSM Buildings · 需 token</option>
+          <option value="local">Local Demo Blocks · 无外部依赖</option>
+        </select>
+        <button id="reloadSource" class="primary-button">加载选定底座</button>
+
+        <label class="field-label" for="materialSelect">材质表现</label>
+        <select id="materialSelect" class="source-select">
+          <option value="style">统一蓝灰 · baseline</option>
+          <option value="shader">蓝灰 Shader · runtime preview</option>
+        </select>
+
+        <div class="control-section">
+          <span class="field-label">预测状态</span>
+          <div class="forecast-buttons">
+            <button class="forecast-button active" data-forecast="NOW">NOW</button>
+            <button class="forecast-button" data-forecast="PLUS_10">+10 min</button>
+            <button class="forecast-button" data-forecast="PLUS_30">+30 min</button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <span class="field-label">图层开关</span>
+          <div class="layer-list">
+            <label><input type="checkbox" data-layer="city" checked /> <span>城市建筑</span></label>
+            <label><input type="checkbox" data-layer="river" checked /> <span>水系</span></label>
+            <label><input type="checkbox" data-layer="flood" checked /> <span>积水预测</span></label>
+            <label><input type="checkbox" data-layer="risk" checked /> <span>风险点</span></label>
+          </div>
+        </div>
+
+        <button id="flyToEvent" class="secondary-button">FlyTo 当前事件</button>
+        <p id="logLine" class="log-line">[source=remote] 等待加载上海 3D Tiles…</p>
+      </aside>
+
+      <footer class="legend-bar">
+        <span><i class="legend-dot city"></i>建筑：蓝灰压低</span>
+        <span><i class="legend-dot river"></i>水系：深青蓝</span>
+        <span><i class="legend-dot flood"></i>积水：青蓝至橙红</span>
+        <span><i class="legend-dot risk"></i>当前风险：橙色</span>
+        <span class="attribution">© OpenStreetMap contributors · Scenario geometry</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

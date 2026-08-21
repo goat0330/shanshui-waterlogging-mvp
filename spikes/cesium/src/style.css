@@ -1,0 +1,105 @@
+:root {
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: #eaf6ff;
+  background: #071421;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app, #cesiumContainer {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body { background: #071421; }
+
+#app { position: relative; }
+
+#cesiumContainer { position: absolute; inset: 0; }
+
+.topbar,
+.control-panel,
+.legend-bar {
+  position: absolute;
+  z-index: 3;
+  background: rgba(6, 24, 39, 0.88);
+  border: 1px solid rgba(83, 180, 229, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.topbar {
+  top: 18px;
+  left: 22px;
+  right: 22px;
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  border-radius: 10px;
+}
+
+.eyebrow, .panel-kicker, .field-label {
+  margin: 0;
+  color: #65d9e6;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+
+h1 { margin: 4px 0 0; font-size: clamp(20px, 2vw, 30px); font-weight: 600; }
+
+.status-group { display: flex; gap: 10px; align-items: center; }
+.status-pill { padding: 7px 10px; border: 1px solid rgba(83, 180, 229, 0.35); border-radius: 999px; color: #b8d8e7; font-size: 12px; }
+.status-pill.pending { color: #ffcc8d; border-color: rgba(255, 154, 55, 0.55); }
+.status-pill.ready { color: #8df2dc; border-color: rgba(42, 215, 199, 0.65); }
+.status-pill.error { color: #ff9c92; border-color: rgba(255, 91, 77, 0.7); }
+
+.control-panel {
+  top: 112px;
+  left: 22px;
+  width: min(360px, calc(100vw - 44px));
+  padding: 16px;
+  border-radius: 10px;
+}
+
+.panel-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; color: #91afc3; font-size: 11px; }
+.event-card { margin: 14px 0; padding: 14px; border: 1px solid rgba(83, 180, 229, 0.25); border-radius: 8px; background: rgba(9, 31, 49, 0.72); }
+.event-card strong { display: block; font-size: 18px; }
+.event-card span { display: block; margin-top: 5px; color: #91afc3; font-size: 12px; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.metrics div { padding: 10px; border-left: 2px solid #ff9a37; background: rgba(255, 154, 55, 0.07); }
+.metrics b { display: block; color: #ffb05b; font-size: 25px; font-weight: 600; }
+.metrics small { color: #91afc3; font-size: 11px; }
+
+.field-label { display: block; margin: 14px 0 7px; }
+.source-select { width: 100%; padding: 9px; color: #eaf6ff; background: #0b2639; border: 1px solid rgba(83, 180, 229, 0.35); border-radius: 6px; }
+button { cursor: pointer; font: inherit; }
+.primary-button, .secondary-button { width: 100%; margin-top: 9px; padding: 9px 12px; border-radius: 6px; }
+.primary-button { color: #061421; background: #43d6e4; border: 1px solid #8cf2f7; font-weight: 700; }
+.secondary-button { color: #d8f6ff; background: rgba(43, 141, 255, 0.16); border: 1px solid rgba(71, 193, 255, 0.5); }
+.control-section { margin-top: 16px; }
+.forecast-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.forecast-button { padding: 8px 4px; color: #91afc3; background: rgba(9, 31, 49, 0.75); border: 1px solid rgba(83, 180, 229, 0.25); border-radius: 6px; }
+.forecast-button.active { color: #eaf6ff; border-color: #27d7e8; background: rgba(39, 215, 232, 0.16); }
+.layer-list { display: grid; gap: 9px; color: #d1e5ef; font-size: 13px; }
+.layer-list input { accent-color: #27d7e8; }
+.log-line { min-height: 34px; margin: 14px 0 0; padding-top: 10px; color: #77a2b8; border-top: 1px solid rgba(83, 180, 229, 0.18); font-size: 11px; line-height: 1.45; }
+
+.legend-bar { left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; max-width: calc(100vw - 44px); padding: 10px 15px; border-radius: 8px; color: #aac8d7; font-size: 11px; white-space: nowrap; }
+.legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; }
+.legend-dot.city { background: #6f8fa7; }
+.legend-dot.river { background: #17495e; border: 1px solid #28c2c4; }
+.legend-dot.flood { background: #208dff; }
+.legend-dot.risk { background: #ff9a37; }
+.attribution { color: #6e8b9e; }
+
+@media (max-width: 760px) {
+  .topbar { left: 10px; right: 10px; top: 10px; padding: 12px; }
+  .control-panel { top: 94px; left: 10px; width: calc(100vw - 20px); max-height: calc(100vh - 160px); overflow: auto; }
+  .legend-bar { left: 10px; right: 10px; bottom: 10px; transform: none; max-width: none; overflow-x: auto; }
+  .status-group { display: none; }
+}

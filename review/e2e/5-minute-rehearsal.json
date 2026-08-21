@@ -1,0 +1,86 @@
+{
+  "status": "PASS",
+  "backend_port": 11043,
+  "frontend_port": 11044,
+  "elapsed_s": 310.3,
+  "events": [
+    {
+      "elapsed_s": 1.6,
+      "name": "00-dashboard",
+      "badge": "API DATA · WS CONNECTED",
+      "scene": "osm"
+    },
+    {
+      "elapsed_s": 33.4,
+      "name": "01-city-rainfall",
+      "status": 1,
+      "rainfall": 1
+    },
+    {
+      "elapsed_s": 63.9,
+      "name": "02-fp001-flyto",
+      "event": "FP-001",
+      "event_panel": "present"
+    },
+    {
+      "elapsed_s": 94.4,
+      "name": "03-telemetry-12cm",
+      "response_depth_cm": 12.0,
+      "ui_depth": "12.0cm"
+    },
+    {
+      "elapsed_s": 125.0,
+      "name": "04-telemetry-28-6cm",
+      "response_depth_cm": 28.6,
+      "ui_depth": "28.6cm"
+    },
+    {
+      "elapsed_s": 155.7,
+      "name": "05-forecast-plus10",
+      "forecast": "PLUS_10"
+    },
+    {
+      "elapsed_s": 186.6,
+      "name": "06-forecast-plus30",
+      "forecast": "PLUS_30"
+    },
+    {
+      "elapsed_s": 217.6,
+      "name": "07-return-now",
+      "forecast": "NOW"
+    },
+    {
+      "elapsed_s": 248.1,
+      "name": "08-cctv-ai",
+      "cctv_panel": 1,
+      "ai_panel": 1,
+      "cctv_semantics": "placeholder-conditional"
+    },
+    {
+      "elapsed_s": 278.6,
+      "name": "09-stable-realtime",
+      "badge": "API DATA · WS CONNECTED"
+    },
+    {
+      "elapsed_s": 309.2,
+      "name": "10-final-return",
+      "badge": "API DATA · WS CONNECTED",
+      "forecast": "NOW"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "screenshots": [
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-01-00-dashboard.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-02-01-city-rainfall.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-03-02-fp001-flyto.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-04-03-telemetry-12cm.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-05-04-telemetry-28-6cm.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-06-05-forecast-plus10.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-07-06-forecast-plus30.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-08-07-return-now.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-09-08-cctv-ai.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-10-09-stable-realtime.png",
+    "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-11-10-final-return.png"
+  ]
+}
