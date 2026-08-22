@@ -1,6 +1,6 @@
 # Backend
 
-状态：`PASS` memory Contract smoke；RC2 provenance output 受 frozen Contract 边界影响为 `CONDITIONAL`，PostgreSQL/PostGIS 为可选 V1 persistence path，未在本机完成实测，不写成 Production Ready。
+状态：`PASS` memory Contract smoke 与 RC2 image provenance output；Main `d5e568b` 已批准并合入最小向后兼容 provenance contract。PostgreSQL/PostGIS 为可选 V1 persistence path，未在本机完成实测，不写成 Production Ready。
 
 实现范围：FastAPI + Pydantic + `FixtureRepository`。默认 `REPOSITORY_BACKEND=memory`，保留现有演示路径；设置 `REPOSITORY_BACKEND=postgres` 后使用 SQLAlchemy 2.x + psycopg + GeoAlchemy2。Forecast 与 Analysis 通过 `ForecastAdapter` / `AnalysisAdapter` 读取上级 `contracts/fixtures/`，是可替换的最小内部边界。VisionDepth 通过 `VisionDepthAdapter` 调用现有 `vision/` pipeline，作为独立 evidence seam。CORS 已开放给本地前端。
 
@@ -75,9 +75,9 @@ POST /api/v1/vision-depth/analyze/upload
 POST /api/v1/vision-depth/analyze/url
 ```
 
-两个端点都返回冻结 Contract 的 `VisionDepthObservation`。上传输入只接受 JPEG/PNG/WebP，当前限制为 15 MB；URL 输入只接受 HTTP/HTTPS，关闭环境代理，逐跳重新校验 redirect，并拒绝 private/local/reserved target、HTML、SVG 和不可用媒体。错误分别使用明确的 `400`、上传 `413`、上传 `415` 和 fetch/inference `502`。该结果是独立的 VisionDepth evidence，不写入 `SensorState`、`FloodPoint.currentDepthCm` 或 `FloodEvent`，也不覆盖 telemetry；`source.type` 为 `local` 或 `url`。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
+两个端点都返回冻结 Contract 的 `VisionDepthObservation`。上传输入只接受 JPEG/PNG/WebP，当前限制为 15 MB；URL 输入只接受 HTTP/HTTPS，关闭环境代理，逐跳重新校验 redirect，并拒绝 private/local/reserved target、HTML、SVG 和不可用媒体。错误分别使用明确的 `400`、上传 `413`、上传 `415` 和 fetch/inference `502`。该结果是独立的 VisionDepth evidence，不写入 `SensorState`、`FloodPoint.currentDepthCm` 或 `FloodEvent`，也不覆盖 telemetry；`source.type` 保留 `local` 或 `url`。
 
-RC2 requested 的 `sourceType/sourceId/observedAt/licenseReview/runtimePolicy` 等 provenance 顶层字段不在当前 frozen schema 中；根对象禁止额外字段，因此 backend 不自行添加。差异记录在 `review/backend/RC2_CONTRACT_PROPOSAL.md`，待 Main/Architect 冻结新版本后再接入。
+Main `d5e568b` 批准的 `provenance` 为必填严格对象：image upload/url 使用 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=pending`、`runtimePolicy=research_mvp`。这些字段不塞入 `model`，也不参与 telemetry 或 flood projection。`VISION_VIDEO` 仅在 Contract 中预留；当前视频 evidence 仍由 Vision worker 提供 local-only artifacts，本 backend 不伪造视频 API 或真实媒体链路。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
 
 ## Simulator
 
