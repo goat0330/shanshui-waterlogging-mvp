@@ -10,6 +10,8 @@ export interface GeographicSensorInput {
   depthCm: number
   riskLevel: FloodPoint['riskLevel']
   selected: boolean
+  source: string
+  eventId?: string
 }
 
 const SENSOR_COLOR: Record<FloodPoint['riskLevel'], Cesium.Color> = {
@@ -47,9 +49,15 @@ export function addGeographicSensorEntity(viewer: Cesium.Viewer, sensor: Geograp
       })
       : undefined,
     properties: {
+      entityType: 'sensor',
       floodPointId: sensor.floodPointId,
       sensorId: sensor.sensorId,
+      eventId: sensor.eventId ?? null,
       coordinateSystem: 'WGS84 lon/lat',
+      longitude: sensor.coordinates.lon,
+      latitude: sensor.coordinates.lat,
+      selected: sensor.selected,
+      source: sensor.source,
     },
   })
 }
