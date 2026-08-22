@@ -1,5 +1,5 @@
 {
-  "status": "PASS",
+  "status": "CONDITIONAL",
   "url": "http://127.0.0.1:5173/",
   "mount_count": 1,
   "canvas_count": 1,
@@ -9,19 +9,19 @@
   "forecast_states": [
     {
       "key": "PLUS_30",
-      "scene_source": "osm",
+      "scene_source": "loading",
       "forecast_source": "PLUS_30",
       "forecast_status": "ready"
     },
     {
       "key": "NOW",
-      "scene_source": "osm",
+      "scene_source": "loading",
       "forecast_source": "NOW",
       "forecast_status": "ready"
     },
     {
       "key": "PLUS_10",
-      "scene_source": "osm",
+      "scene_source": "loading",
       "forecast_source": "PLUS_10",
       "forecast_status": "ready"
     }
@@ -44,7 +44,10 @@
       "status": 200
     }
   ],
-  "console_errors": [],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
   "page_errors": [],
   "camera_gesture": true,
   "screenshots": [

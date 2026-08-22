@@ -1,69 +1,66 @@
 {
   "status": "PASS",
-  "backend_port": 64833,
-  "frontend_port": 64834,
+  "backend_port": 34238,
+  "frontend_port": 34239,
   "events": [
     {
-      "elapsed_s": 37.3,
+      "elapsed_s": 29.1,
       "name": "initial",
       "badge": "API DATA · WS CONNECTED",
       "scene_source": "osm"
     },
     {
-      "elapsed_s": 38.4,
+      "elapsed_s": 30.1,
       "name": "fp001-selected",
       "event": "FP-001",
       "event_panel": "人民路 × 滨江大道"
     },
     {
-      "elapsed_s": 38.9,
+      "elapsed_s": 30.7,
       "name": "telemetry-12cm",
       "response_depth_cm": 12.0,
       "ui_depth": "12.0cm"
     },
     {
-      "elapsed_s": 39.5,
+      "elapsed_s": 31.2,
       "name": "telemetry-28-6cm",
       "response_depth_cm": 28.6,
       "ui_depth": "28.6cm"
     },
     {
-      "elapsed_s": 40.3,
+      "elapsed_s": 31.8,
       "name": "forecast-plus10",
       "forecast": "PLUS_10",
       "scene_source": "PLUS_10"
     },
     {
-      "elapsed_s": 41.0,
+      "elapsed_s": 32.4,
       "name": "forecast-plus30",
       "forecast": "PLUS_30",
       "scene_source": "PLUS_30"
     },
     {
-      "elapsed_s": 41.7,
+      "elapsed_s": 33.0,
       "name": "forecast-now",
       "forecast": "NOW",
       "scene_source": "NOW"
     },
     {
-      "elapsed_s": 48.0,
+      "elapsed_s": 36.2,
       "name": "degraded",
       "badge": "API DATA · WS FALLBACK"
     },
     {
-      "elapsed_s": 53.1,
+      "elapsed_s": 39.5,
       "name": "return-realtime",
       "badge": "API DATA · WS CONNECTED"
     }
   ],
   "console_errors": [
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "WebSocket connection to 'ws://127.0.0.1:64833/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404"
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
   ],
   "page_errors": [],
   "screenshots": [

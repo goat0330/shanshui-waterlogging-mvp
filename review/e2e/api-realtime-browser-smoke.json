@@ -1,7 +1,7 @@
 {
   "status": "PASS",
-  "backend_port": 64831,
-  "frontend_port": 64832,
+  "backend_port": 32999,
+  "frontend_port": 33000,
   "frontend_command": "npm run dev -- --host 127.0.0.1 --port <free-port> --strictPort",
   "backend_commands": [
     "python -m uvicorn app.main:app --host 127.0.0.1 --port <free-port>",
@@ -19,27 +19,24 @@
     "telemetry_response_depth_cm": 41.2,
     "ui_depth_text": "41.2cm",
     "event_requests_before_fallback": 2,
-    "event_requests_after_immediate_reload": 4,
-    "event_requests_after_5s_poll": 5,
+    "event_requests_after_immediate_reload": 3,
+    "event_requests_after_5s_poll": 4,
     "polling_request_observed": true
   },
   "reconnected": {
     "badge": "API DATA · WS CONNECTED",
-    "event_requests_at_connect": 6,
-    "event_requests_after_6s": 6,
+    "event_requests_at_connect": 5,
+    "event_requests_after_6s": 5,
     "polling_stopped": true,
     "telemetry_response_depth_cm": 43.3,
     "ui_depth_text": "43.3cm"
   },
   "console_errors": [
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-    "WebSocket connection to 'ws://127.0.0.1:64831/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404",
-    "WebSocket connection to 'ws://127.0.0.1:64831/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404"
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "WebSocket connection to 'ws://127.0.0.1:32999/ws/v1/realtime' failed: Error during WebSocket handshake: Unexpected response code: 404",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
   ],
   "page_errors": [],
   "screenshots": [

@@ -1,23 +1,23 @@
 {
   "status": "PASS",
-  "backend_port": 11043,
-  "frontend_port": 11044,
-  "elapsed_s": 310.3,
+  "backend_port": 17522,
+  "frontend_port": 17523,
+  "elapsed_s": 309.3,
   "events": [
     {
-      "elapsed_s": 1.6,
+      "elapsed_s": 2.4,
       "name": "00-dashboard",
       "badge": "API DATA · WS CONNECTED",
       "scene": "osm"
     },
     {
-      "elapsed_s": 33.4,
+      "elapsed_s": 33.3,
       "name": "01-city-rainfall",
       "status": 1,
       "rainfall": 1
     },
     {
-      "elapsed_s": 63.9,
+      "elapsed_s": 63.8,
       "name": "02-fp001-flyto",
       "event": "FP-001",
       "event_panel": "present"
@@ -29,46 +29,49 @@
       "ui_depth": "12.0cm"
     },
     {
-      "elapsed_s": 125.0,
+      "elapsed_s": 124.9,
       "name": "04-telemetry-28-6cm",
       "response_depth_cm": 28.6,
       "ui_depth": "28.6cm"
     },
     {
-      "elapsed_s": 155.7,
+      "elapsed_s": 155.6,
       "name": "05-forecast-plus10",
       "forecast": "PLUS_10"
     },
     {
-      "elapsed_s": 186.6,
+      "elapsed_s": 186.1,
       "name": "06-forecast-plus30",
       "forecast": "PLUS_30"
     },
     {
-      "elapsed_s": 217.6,
+      "elapsed_s": 216.7,
       "name": "07-return-now",
       "forecast": "NOW"
     },
     {
-      "elapsed_s": 248.1,
+      "elapsed_s": 247.2,
       "name": "08-cctv-ai",
       "cctv_panel": 1,
       "ai_panel": 1,
       "cctv_semantics": "placeholder-conditional"
     },
     {
-      "elapsed_s": 278.6,
+      "elapsed_s": 277.7,
       "name": "09-stable-realtime",
       "badge": "API DATA · WS CONNECTED"
     },
     {
-      "elapsed_s": 309.2,
+      "elapsed_s": 308.2,
       "name": "10-final-return",
       "badge": "API DATA · WS CONNECTED",
       "forecast": "NOW"
     }
   ],
-  "console_errors": [],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
   "page_errors": [],
   "screenshots": [
     "D:\\研究生作业\\上海城市内涝_智慧平台\\git\\review\\e2e\\5m-01-00-dashboard.png",

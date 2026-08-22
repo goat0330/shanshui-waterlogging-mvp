@@ -2,6 +2,19 @@
 
 这是主目录下的唯一 Git 仓库。主目录的 Markdown 面向决策人；本目录面向机器执行、验证和后续实现。
 
++## RC2 当前状态
+
+当前版本是 `RC2 — Evidence-Backed Demo`，状态为 `CONDITIONAL / VISUAL_REVIEW`。它已经把 API/WS 遥测、VisionDepth 图片入口、4 个合格 MP4 的本地证据 smoke、Cesium geographic 事件/预测层和 Dashboard source labels 收到同一条演示链；不代表生产部署、官方实时上海数据、标定厘米水深或第三方素材的最终公开许可。
+
+- RC2 总控进度：[review/rc2/MAIN_PROGRESS.md](review/rc2/MAIN_PROGRESS.md)
+- 验收矩阵：[docs/RC2_ACCEPTANCE.md](docs/RC2_ACCEPTANCE.md)
+- 来源策略：[docs/RC2_SOURCE_PROVENANCE_POLICY.md](docs/RC2_SOURCE_PROVENANCE_POLICY.md)
+- 公开来源清单：[docs/RC2_SOURCE_MANIFEST.csv](docs/RC2_SOURCE_MANIFEST.csv)
+- 视频下载边界：[docs/RC2_DOWNLOAD_INSTRUCTIONS.md](docs/RC2_DOWNLOAD_INSTRUCTIONS.md)
+- 交付清单：[docs/06_DELIVERY_MANIFEST.md](docs/06_DELIVERY_MANIFEST.md)
+
+最终发布使用 Git tag `rc2-evidence-demo`；原始 MP4、模型权重和运行时输出留在仓库外的本地 research MVP 目录。
+
 ## 机器侧入口
 
 1. `AGENTS.md`

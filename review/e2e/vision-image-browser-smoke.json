@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "backend_port": 61522,
+  "frontend_port": 61523,
+  "source": "VISION_IMAGE",
+  "fixture": "vision/artifacts/smoke_inputs/flood_person.jpg",
+  "telemetry_depth_cm": 28.6,
+  "event_depth_after_vision": "28.6cm",
+  "observation_text": "FLOOD DETECTED\nVISION_IMAGE · LOW\nlevel\n3\nestimatedDepthCm\n25.4 cm\nrangeCm\n20–30 cm\nconfidence\n42%\nmethod\n人员参考物\nimageId\nIMG-API-5bc0b0c767ec\ncontract source\nVISION_IMAGE · local · flood_person.jpg\nqualityFlags\nBASELINE_ONLY · MODEL_WEIGHT_MISSING\nsourceType\nVISION_IMAGE\nsourceId\nIMG-API-5bc0b0c767ec\nlicenseReview\npending\nruntimePolicy\nresearch_mvp",
+  "page_errors": [],
+  "console_errors": []
+}
