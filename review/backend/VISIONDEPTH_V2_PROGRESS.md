@@ -89,6 +89,47 @@ manifest 使用 `license=MVP_REVIEW`、`authorized=true`。这里的 `authorized
 2. 对新增输入补写 manifest 后运行 `python -m tools.data_gate --config configs/local.yaml`，再运行 `python -m tools.video_smoke --config configs/local.yaml`。
 3. 仅在 license/weights/数据授权明确且真实 smoke 通过后，评估一个轻量外部 segmentation/reference adapter；否则继续使用 OpenCV baseline 并保持低置信度。
 
+## RC2 Evidence-Backed Demo Release addendum
+
+### Baseline and ownership
+
+- Canonical Main baseline audited: `595457063e2a1f304ca657695ef86dc76162be3e`。
+- This worker fast-forwarded its own worktree to that baseline; Main 工作树未修改。
+- RC2 tracked change is limited to this report. Runtime MP4、manifest、hashes and ignored outputs remain outside Git.
+
+### P1 feasibility gate and selected route
+
+本轮只选择路线 A：`water/grounded segmentation adapter`。没有同时启动 flooded-vehicle classifier。
+
+`MODEL_UPGRADE=NOT_VERIFIED`，原因是：
+
+- 环境有 `torch 2.6.0+cu118`、CUDA device 1、`transformers`、`ultralytics`、`timm`、`torchvision`、`onnxruntime`，但没有已登记且可复现的 water-segmentation checkpoint。
+- `mmsegmentation`、`detectron2`、`segment_anything` 未安装；本地没有 `.pt/.pth/.onnx/.safetensors/.ckpt` 权重。
+- `data/visiondepth/gt_masks`、`depth_gt`、labels split 均不存在，因此不具备 IoU/F1/MAE 或 classifier 指标验证条件。
+- 按 20 分钟规则不下载权重/完整数据集、不训练大模型；保持 OpenCV baseline 作为唯一可复现实验路径。
+
+### RC2 evidence and source manifest
+
+`data/visiondepth/manifests/video_manifest.csv` 已增加 `project`、`licenseReview`、`researchMvp`、`production`、`redistribution`、`localPath`、`sha256` 字段。6 行 SHA256 与本地文件复核结果为 `manifest_hash_audit=PASS rows=6`。
+
+字段语义：`licenseReview=pending`、`researchMvp=true`、`production=false`、`redistribution=false`。这是本地 evidence-backed demo 的 provenance 记录，不是公开发布/再分发许可。
+
+真实 baseline comparison（无 GT，只记录观察结果）：
+
+- `VF-LSU-20200624-1/2`：各 3 frames，baseline `flood=true`、`level=5`、`estimatedDepthCm=null`。
+- `VF-BOSTON-20190119-20`：8 frames，baseline `flood=false`、`level=0`。
+- `VF-BOSTON-20190121-23`：11 frames，baseline `flood=false`、`level=0`。
+- 总计 4 个合格视频、25 个 sampled frame JSON、25 个 water mask、25 组 timestamp/overlay metadata；所有视频保持 `synthetic=false`，所有帧保留 `CAMERA_UNCALIBRATED` 和 null 厘米值。
+
+这些 level/flood 值是 OpenCV baseline 的证据输出，不是准确率、生产结论或真实厘米测量。
+
+### RC2 blockers and NOT VERIFIED
+
+- 指定 6 个源视频中 2 个只有 11 frames，未满足现有 `>=30` gate；不能通过插帧、复制帧或修改原文件补齐。
+- Water/grounded segmentation adapter 的权重、GT、复现依赖和效果均 `NOT VERIFIED`。
+- 未验证厘米尺度、相机标定、真实 overlay 像素渲染、公开/再分发许可和任何模型指标。
+- 下一步只需提供替代/补充的 `>=30` 帧授权视频并更新外置 manifest；不需要修改主链或 contracts。
+
 ## Checkpoint
 
 - 上一实现 checkpoint：`61fae2b`（`feat(visiondepth): add guarded video evidence scaffold`）。
