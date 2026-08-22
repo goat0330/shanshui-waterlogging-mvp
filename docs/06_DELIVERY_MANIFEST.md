@@ -10,13 +10,13 @@
 ```text
 Status: PASS — RC1.1 TECHNICAL / VISUAL_REVIEW
 Canonical branch: main (observed)
-Canonical source commit: 8c3e582 (RC1.1 + VisionDepth V2 guarded scaffold)
+Canonical source commit: 1430e56 (RC1.1 + VisionDepth V2 research-MVP integration and project data-root fix)
 Audit date: 2026-08-23
 Viewport target: 1920×1080
 Release decision: RC1.1 technical path canonicalized; VisionDepth V2 remains conditional; human visual review and production assets remain open
 ```
 
-RC0 rollback anchor: `78e96e7d4a85a4aa24368bbd0465002a0097e45b`. The RC1.1 source integration commit is `57d2a9f`.
+RC0 rollback anchor: `78e96e7d4a85a4aa24368bbd0465002a0097e45b`. The RC1.1 dashboard/Cesium source integration is retained in the preceding Main history; the VisionDepth V2 research-MVP merge is `24ada29`.
 
 ## 2. Entries and startup commands
 
@@ -63,10 +63,10 @@ Do not stage `data/source/**`, `data/runtime/**`, local Cesium runtime tiles, ei
 | Cesium geographic FP-001 marker | PASS (technical/demo) | WGS84 demo point is loaded as a Cesium geographic entity; formal survey/building calibration remains open |
 | Cesium geographic NOW/+10/+30 surface | PASS (technical/demo) | Synthetic GeoJSON surfaces switched and rendered ready in the 60-second browser chain |
 | WS → REST fallback | PASS / CONDITIONAL | 5s polling observed after WS failure and stopped after reconnect; induced network errors are expected evidence |
-| CCTV/video | CONDITIONAL | Real `<video>` seam and explicit `DEMO / PLACEHOLDER` fallback exist; no legal MP4/RTSP/CCTV feed is present |
+| CCTV/video | CONDITIONAL | Real `<video>` seam and explicit `DEMO / PLACEHOLDER` fallback exist; the research MP4 set is not a LIVE CCTV feed |
 | VisionDepth | CONDITIONAL | OpenCV baseline, three-image evidence, upload/URL API seam and UI drawer pass; production accuracy, calibrated centimetres and generalization are `NOT VERIFIED` |
-| MP4 → frame → VisionDepth evidence | CONDITIONAL | V1 wrapper and V2 guarded adapter pass their rejection paths; no legal local MP4 was found, so `VIDEO_SOURCE_REQUIRED` is the only real-media result |
-| VisionDepth V2 guarded adapter | CONDITIONAL | `backend/visiondepth_v2/`; 4 tests and compile pass; camera calibration, license and authorized-video gates remain closed |
+| MP4 → frame → VisionDepth evidence | CONDITIONAL | V2 data gate accepts 4/6 manifest videos; video smoke produced 25 sampled frame JSON/masks/overlay metadata; the two genuine 11-frame files remain rejected |
+| VisionDepth V2 guarded adapter | CONDITIONAL | `backend/visiondepth_v2/`; 5 tests, compile, data gate and video smoke pass in `research_mvp`; no calibrated centimetres or production accuracy claim |
 | PostgreSQL/PostGIS | NOT VERIFIED | Migration/configuration exists; live migration, seed, restart persistence, spatial query and real PostGIS instance are unverified |
 | Coordinate calibration | CONDITIONAL at range level | `review/huangpu-range-calibration.md` supports range-level alignment; formal control-point/building-element calibration is `NOT VERIFIED` |
 | Visual review | CONDITIONAL / `VISUAL_REVIEW` | Screenshots exist; final human comparison against `references/golden-dashboard.png` is not an acceptance result |
@@ -80,7 +80,7 @@ Verified in the current audit:
 
 - `python -B backend/smoke.py` — `PASS` on the final independent rerun.
 - `python -m vision.smoke`, `python -m media.smoke` and `python -m compileall -q vision media` — `PASS`; media smoke honestly returned `VIDEO_SOURCE_REQUIRED` (existing RequestsDependencyWarning is non-fatal).
-- `backend/visiondepth_v2`: `python -m pytest -q` — `4 passed`; compile passes; data/video smoke return `VIDEO_SOURCE_REQUIRED`; third-party review remains pending.
+- `backend/visiondepth_v2`: `python -m pytest -q` — `5 passed`; compile passes; data gate `PASS` with 4 usable videos; video smoke `PASS` with 4 videos and 25 sampled frames; third-party check passes only as `RESEARCH_MVP_LOCAL_ONLY`.
 - `npm run typecheck` and `npm run build` — `PASS` on the final independent rerun; Vite emitted only the existing large-chunk warning.
 - `review/e2e/api-realtime-browser-smoke.json` — `PASS`: live depth 34.5cm, REST fallback depth 41.2cm, reconnected depth 43.3cm; polling observed then stopped.
 - `review/e2e/60-second-chain.json` — `PASS`: core chain, telemetry values, geographic forecast switching and induced degraded/reconnect states; page errors are zero.
@@ -95,6 +95,7 @@ Known deviations:
 - No LLM key, media-server credential, or PostGIS credential is part of the RC0 environment contract.
 - Forecast GeoJSON, Huangpu hydro geometry and telemetry values are synthetic/demo fixtures; they prove the integration seam, not official live Shanghai data.
 - VisionDepth V2 is an isolated guarded evidence adapter; it does not imply authorized video, calibrated centimetres, external model approval or production metrics.
+- The six research MP4s and `video_manifest.csv` are runtime inputs outside Git. The manifest records source URL and local-MVP authorization, but that flag is not final copyright permission and redistribution remains disabled.
 
 ## 7. Release checklist
 
@@ -111,7 +112,7 @@ Known deviations:
 
 ```text
 Previous stable release: RC0 at `78e96e7d4a85a4aa24368bbd0465002a0097e45b`
-Current source rollback point: `8c3e582`
+Current source rollback point: `1430e56`
 RC0 rollback anchor: `78e96e7d4a85a4aa24368bbd0465002a0097e45b`
 Recovery: use a commit-based revert after the anchor exists; do not treat ignored runtime data as a Git rollback
 ```

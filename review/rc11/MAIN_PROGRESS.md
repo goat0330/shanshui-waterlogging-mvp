@@ -56,13 +56,14 @@ BACKEND: MERGED / P0 PASS / a6d9d04
 DASHBOARD: MERGED / P0 PASS / 876a03e
 CESIUM: MERGED / P0 PASS / 07c0d06
 VISION-VIDEO: MERGED / P0 PASS CONDITIONAL / a81b5de + 79933c5
-VISIONDEPTH-V2: MERGED / CONDITIONAL / 8c3e582
+VISIONDEPTH-V2: MERGED / RESEARCH_MVP_LOCAL_ONLY / CONDITIONAL / 1430e56
 ```
 
 ## Main Integration
 
-- Current Main merge head before this ledger update: `1929009` (`merge(rc11): add dashboard evidence seams`).
+- Current Main source checkpoint before this ledger update: `1430e56` (`fix(visiondepth): resolve project data root from Main`).
 - Integrated merge commits: backend `a6d9d04`; video evidence `8951c28`; Cesium `c86bf0b`; Dashboard `1929009`.
+- VisionDepth V2 research-MVP integration merge: `24ada29` (`merge(visiondepth): enable local research video smoke`).
 - All four worker worktrees remain isolated and clean at their checkpoint commits.
 - Main did not modify `contracts/**` during worker merges; the frozen VisionDepth upload/URL contract remains the source of truth.
 
@@ -73,7 +74,7 @@ VISIONDEPTH-V2: MERGED / CONDITIONAL / 8c3e582
 | Backend REST/WebSocket/telemetry/VisionDepth | PASS | `python -B backend/smoke.py` |
 | Frontend typecheck/build | PASS | `npm run typecheck`, `npm run build` |
 | VisionDepth three-image baseline | PASS | `python -m vision.smoke` |
-| Video evidence wrapper | CONDITIONAL | `python -m media.smoke` → `VIDEO_SOURCE_REQUIRED`; no legal MP4 present |
+| Video evidence wrapper | CONDITIONAL | `python -m media.smoke` → `VIDEO_SOURCE_REQUIRED`; CCTV remains a separate placeholder seam |
 | API → WS → telemetry → UI | PASS | `frontend/scripts/api_realtime_browser_smoke.py` |
 | WS failure → REST fallback → reconnect | PASS / CONDITIONAL | `review/e2e/api-realtime-browser-smoke.json`; page errors 0, expected network errors during forced outage |
 | 60-second main chain | PASS / CONDITIONAL | `review/e2e/60-second-chain.json`; NOW/+10/+30 and fallback passed, expected outage logs |
@@ -84,18 +85,21 @@ VISIONDEPTH-V2: MERGED / CONDITIONAL / 8c3e582
 - `source=demo` / local demo city blocks is explicit when the real Shanghai Core Local tileset is unavailable.
 - Huangpu River geometry is synthetic WGS84 demo GeoJSON, not official hydrography.
 - VisionDepth is an OpenCV baseline/evidence adapter; production accuracy, internet-image reliability and model upgrade are `NOT VERIFIED`.
-- CCTV remains a real `<video>` seam with `DEMO / PLACEHOLDER` fallback; no licensed local MP4 was found.
+- CCTV remains a real `<video>` seam with `DEMO / PLACEHOLDER` fallback; the research MP4s are not presented as LIVE CCTV.
+- VisionDepth V2 research-MVP data is local-only and not a redistribution/public-license approval. The six source files were taken from the official V-FloodNet `water_videos_for_test` folder; four pass the >=30-frame gate and two genuine source files contain only 11 frames.
 - Backend smoke uses memory mode. PostgreSQL/PostGIS persistence, physical ESP32/STM32, 4G/Wi-Fi and official live Shanghai feeds remain `NOT VERIFIED`.
 
 ## Next Gate
 
-No new feature dispatch in this cycle. The remaining gate is user visual review plus, when assets/credentials become available, verification of licensed city/hydro data, legal MP4 and production VisionDepth accuracy. Main should push only this accepted integration line.
+No new feature dispatch in this cycle. The remaining gates are user visual review, camera calibration, replacement/approval for the two short source files, final source licensing, labeled ground truth and production VisionDepth accuracy. Main should push only this accepted integration line.
 
 ## VisionDepth V2 LeanGuard Checkpoint
 
-- Merge: `8c3e582` (`merge(visiondepth): add guarded V2 evidence scaffold`).
+- Merge: `24ada29` (`merge(visiondepth): enable local research video smoke`); Main data-root fix: `1430e56`.
 - Scope is isolated to `backend/visiondepth_v2/**` and `review/backend/VISIONDEPTH_V2_PROGRESS.md`; no `contracts/**`, `backend/app/**`, `vision/**`, `media/**`, frontend or raw data changes.
-- Main independent checks: `python -m pytest -q` → `4 passed`; `python -m compileall -q src tools tests` → `PASS`.
-- Data gate/video smoke: `VIDEO_SOURCE_REQUIRED` because the authorized manifest and MP4 are absent; `sampledFrames=0`, `synthetic=false`.
-- Third-party review: `V-FloodNet` and `flood-water-segmentation` remain pending; no source, weights, data or video were downloaded.
-- V2 is a guarded research/evidence adapter only. It does not enter FastAPI routes or the dashboard and cannot be presented as real calibrated video depth.
+- Main independent checks: `python -m pytest -q` → `5 passed`; `python -m compileall -q backend/visiondepth_v2/src backend/visiondepth_v2/tools backend/visiondepth_v2/tests` → `PASS`; `python -B backend/smoke.py` → `PASS`.
+- Data gate: `PASS`, 4 usable videos out of 6 manifest entries. Video smoke: `PASS`, 4 videos, 25 sampled frames, `synthetic=false`; masks, timestamped frame JSON and overlay metadata passed the artifact audit.
+- The two 20200526 source files remain rejected because they genuinely contain 11 frames each; no interpolation, frame duplication or source mutation was used.
+- All video outputs remain outside Git under the project-level `data/visiondepth/` runtime root. The Main fallback in `1430e56` resolves that root when launched from `git/`.
+- Third-party check: `RESEARCH_MVP_LOCAL_ONLY`; production, redistribution and external-model paths remain blocked while final license review is pending.
+- Camera calibration is not available, so every sampled observation keeps `estimatedDepthCm=null`, low confidence and `CAMERA_UNCALIBRATED`. This is evidence plumbing, not calibrated water depth, accuracy metrics or a LIVE CCTV claim.
