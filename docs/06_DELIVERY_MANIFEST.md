@@ -10,10 +10,10 @@
 ```text
 Status: PASS — RC1.1 TECHNICAL / VISUAL_REVIEW
 Canonical branch: main (observed)
-Canonical source commit: 57d2a9f (independent RC1.1 acceptance evidence)
+Canonical source commit: 8c3e582 (RC1.1 + VisionDepth V2 guarded scaffold)
 Audit date: 2026-08-23
 Viewport target: 1920×1080
-Release decision: RC1.1 technical path canonicalized; human visual review and production assets remain open
+Release decision: RC1.1 technical path canonicalized; VisionDepth V2 remains conditional; human visual review and production assets remain open
 ```
 
 RC0 rollback anchor: `78e96e7d4a85a4aa24368bbd0465002a0097e45b`. The RC1.1 source integration commit is `57d2a9f`.
@@ -65,7 +65,8 @@ Do not stage `data/source/**`, `data/runtime/**`, local Cesium runtime tiles, ei
 | WS → REST fallback | PASS / CONDITIONAL | 5s polling observed after WS failure and stopped after reconnect; induced network errors are expected evidence |
 | CCTV/video | CONDITIONAL | Real `<video>` seam and explicit `DEMO / PLACEHOLDER` fallback exist; no legal MP4/RTSP/CCTV feed is present |
 | VisionDepth | CONDITIONAL | OpenCV baseline, three-image evidence, upload/URL API seam and UI drawer pass; production accuracy, calibrated centimetres and generalization are `NOT VERIFIED` |
-| MP4 → frame → VisionDepth evidence | CONDITIONAL | Wrapper and timestamped JSON path pass; no legal local MP4 was found, so `VIDEO_SOURCE_REQUIRED` is the only real-media result |
+| MP4 → frame → VisionDepth evidence | CONDITIONAL | V1 wrapper and V2 guarded adapter pass their rejection paths; no legal local MP4 was found, so `VIDEO_SOURCE_REQUIRED` is the only real-media result |
+| VisionDepth V2 guarded adapter | CONDITIONAL | `backend/visiondepth_v2/`; 4 tests and compile pass; camera calibration, license and authorized-video gates remain closed |
 | PostgreSQL/PostGIS | NOT VERIFIED | Migration/configuration exists; live migration, seed, restart persistence, spatial query and real PostGIS instance are unverified |
 | Coordinate calibration | CONDITIONAL at range level | `review/huangpu-range-calibration.md` supports range-level alignment; formal control-point/building-element calibration is `NOT VERIFIED` |
 | Visual review | CONDITIONAL / `VISUAL_REVIEW` | Screenshots exist; final human comparison against `references/golden-dashboard.png` is not an acceptance result |
@@ -79,6 +80,7 @@ Verified in the current audit:
 
 - `python -B backend/smoke.py` — `PASS` on the final independent rerun.
 - `python -m vision.smoke`, `python -m media.smoke` and `python -m compileall -q vision media` — `PASS`; media smoke honestly returned `VIDEO_SOURCE_REQUIRED` (existing RequestsDependencyWarning is non-fatal).
+- `backend/visiondepth_v2`: `python -m pytest -q` — `4 passed`; compile passes; data/video smoke return `VIDEO_SOURCE_REQUIRED`; third-party review remains pending.
 - `npm run typecheck` and `npm run build` — `PASS` on the final independent rerun; Vite emitted only the existing large-chunk warning.
 - `review/e2e/api-realtime-browser-smoke.json` — `PASS`: live depth 34.5cm, REST fallback depth 41.2cm, reconnected depth 43.3cm; polling observed then stopped.
 - `review/e2e/60-second-chain.json` — `PASS`: core chain, telemetry values, geographic forecast switching and induced degraded/reconnect states; page errors are zero.
@@ -92,6 +94,7 @@ Known deviations:
 - Visual screenshots are review evidence, not proof of final visual match or user acceptance.
 - No LLM key, media-server credential, or PostGIS credential is part of the RC0 environment contract.
 - Forecast GeoJSON, Huangpu hydro geometry and telemetry values are synthetic/demo fixtures; they prove the integration seam, not official live Shanghai data.
+- VisionDepth V2 is an isolated guarded evidence adapter; it does not imply authorized video, calibrated centimetres, external model approval or production metrics.
 
 ## 7. Release checklist
 
@@ -108,7 +111,7 @@ Known deviations:
 
 ```text
 Previous stable release: RC0 at `78e96e7d4a85a4aa24368bbd0465002a0097e45b`
-Current source rollback point: `57d2a9f`
+Current source rollback point: `8c3e582`
 RC0 rollback anchor: `78e96e7d4a85a4aa24368bbd0465002a0097e45b`
 Recovery: use a commit-based revert after the anchor exists; do not treat ignored runtime data as a Git rollback
 ```

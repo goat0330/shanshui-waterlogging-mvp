@@ -56,6 +56,7 @@ BACKEND: MERGED / P0 PASS / a6d9d04
 DASHBOARD: MERGED / P0 PASS / 876a03e
 CESIUM: MERGED / P0 PASS / 07c0d06
 VISION-VIDEO: MERGED / P0 PASS CONDITIONAL / a81b5de + 79933c5
+VISIONDEPTH-V2: MERGED / CONDITIONAL / 8c3e582
 ```
 
 ## Main Integration
@@ -89,3 +90,12 @@ VISION-VIDEO: MERGED / P0 PASS CONDITIONAL / a81b5de + 79933c5
 ## Next Gate
 
 No new feature dispatch in this cycle. The remaining gate is user visual review plus, when assets/credentials become available, verification of licensed city/hydro data, legal MP4 and production VisionDepth accuracy. Main should push only this accepted integration line.
+
+## VisionDepth V2 LeanGuard Checkpoint
+
+- Merge: `8c3e582` (`merge(visiondepth): add guarded V2 evidence scaffold`).
+- Scope is isolated to `backend/visiondepth_v2/**` and `review/backend/VISIONDEPTH_V2_PROGRESS.md`; no `contracts/**`, `backend/app/**`, `vision/**`, `media/**`, frontend or raw data changes.
+- Main independent checks: `python -m pytest -q` → `4 passed`; `python -m compileall -q src tools tests` → `PASS`.
+- Data gate/video smoke: `VIDEO_SOURCE_REQUIRED` because the authorized manifest and MP4 are absent; `sampledFrames=0`, `synthetic=false`.
+- Third-party review: `V-FloodNet` and `flood-water-segmentation` remain pending; no source, weights, data or video were downloaded.
+- V2 is a guarded research/evidence adapter only. It does not enter FastAPI routes or the dashboard and cannot be presented as real calibrated video depth.
