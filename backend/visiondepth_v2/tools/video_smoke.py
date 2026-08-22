@@ -128,37 +128,66 @@ def run(config_path: str | Path) -> tuple[int, dict[str, Any]]:
         _write_json(output_root / "smoke" / "VIDEO_SOURCE_REQUIRED" / "smoke_summary.json", summary)
         return 2, summary
 
-    video = usable[0]
-    every = max(1, int(config.get("video", {}).get("sample_every_n_frames", 15)))
-    fps = float(video["fps"] or 0.0)
-    available_stride = max(1, (int(video["frameCount"]) - 1) // 2)
-    stride = min(every, available_stride)
-    interval = stride / fps if fps else 1.0
+    runtime_profile = str(config.get("runtime_profile", "unknown"))
+    local_only = runtime_profile == "research_mvp" and not bool(config.get("redistribution", False))
     max_samples = max(3, int(config.get("video", {}).get("max_samples", 12)))
-    result_path = output_root / "smoke" / str(video["videoId"]) / "video-result.json"
-    result = run_video_pipeline(
-        video["path"],
-        result_path,
-        video_id=str(video["videoId"]),
-        sample_interval_sec=interval,
-        max_frames=max_samples,
-        source_license_status=str(video["license"]),
-        synthetic=False,
-    )
-    result = _guard_video_result(result, camera_profile, allow_uncalibrated)
-    _write_json(result_path, result)
+    video_summaries: list[dict[str, Any]] = []
+    for video in usable:
+        every = max(1, int(config.get("video", {}).get("sample_every_n_frames", 15)))
+        fps = float(video["fps"] or 0.0)
+        available_stride = max(1, (int(video["frameCount"]) - 1) // 2)
+        stride = min(every, available_stride)
+        interval = stride / fps if fps else 1.0
+        result_path = output_root / "smoke" / str(video["videoId"]) / "video-result.json"
+        result = run_video_pipeline(
+            video["path"],
+            result_path,
+            video_id=str(video["videoId"]),
+            sample_interval_sec=interval,
+            max_frames=max_samples,
+            source_license_status=str(video["license"]),
+            synthetic=False,
+        )
+        result = _guard_video_result(result, camera_profile, allow_uncalibrated)
+        result["runtimeProfile"] = runtime_profile
+        result["usagePolicy"] = {
+            "localOnly": local_only,
+            "redistributionAllowed": False,
+            "externalModelsEnabled": bool(config.get("external_models_enabled", False)),
+        }
+        result["source"].update(
+            {
+                "sourceUrl": video["sourceUrl"],
+                "cameraId": video["cameraId"],
+                "scenario": video["scenario"],
+            }
+        )
+        _write_json(result_path, result)
+        video_summary = {
+            "status": "PASS" if len(result["frames"]) >= 3 else "VIDEO_SMOKE_INSUFFICIENT_FRAMES",
+            "videoId": result["videoId"],
+            "source": result["source"],
+            "sampledFrames": len(result["frames"]),
+            "frames": [_frame_summary(frame) for frame in result["frames"]],
+            "resultPath": str(result_path),
+            "synthetic": False,
+            "calibrationStatus": result["calibrationStatus"],
+            "qualityFlags": result["qualityFlags"],
+            "runtimeProfile": runtime_profile,
+        }
+        _write_json(result_path.parent / "smoke_summary.json", video_summary)
+        video_summaries.append(video_summary)
+
     summary = {
-        "status": "PASS" if len(result["frames"]) >= 3 else "VIDEO_SMOKE_INSUFFICIENT_FRAMES",
-        "videoId": result["videoId"],
-        "source": result["source"],
-        "sampledFrames": len(result["frames"]),
-        "frames": [_frame_summary(frame) for frame in result["frames"]],
-        "resultPath": str(result_path),
+        "status": "PASS" if video_summaries and all(item["status"] == "PASS" for item in video_summaries) else "VIDEO_SMOKE_INSUFFICIENT_FRAMES",
+        "videoCount": len(video_summaries),
+        "videos": video_summaries,
+        "sampledFrames": sum(int(item["sampledFrames"]) for item in video_summaries),
         "synthetic": False,
-        "calibrationStatus": result["calibrationStatus"],
-        "qualityFlags": result["qualityFlags"],
+        "runtimeProfile": runtime_profile,
+        "localOnly": local_only,
     }
-    _write_json(result_path.parent / "smoke_summary.json", summary)
+    _write_json(output_root / "smoke" / "smoke_summary.json", summary)
     return (0 if summary["status"] == "PASS" else 5), summary
 
 

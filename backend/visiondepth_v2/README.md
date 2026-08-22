@@ -28,12 +28,14 @@ pending.
 python -m pytest -q
 python -m tools.data_gate --config configs/local.yaml
 python -m tools.video_smoke --config configs/local.yaml
-python -m tools.check_third_party
+python -m tools.check_third_party --config configs/local.yaml
 python -m tools.eval_masks --pred outputs/masks --gt ../../../../data/visiondepth/gt_masks
 python -m compileall -q src tools tests
 ```
 
 The data and third-party roots are intentionally outside Git. Do not add MP4,
 model weights, raw datasets, `.env.local`, or external repositories to this
-package.
-
+package. `runtime_profile: research_mvp` permits only the local OpenCV path;
+it does not approve pending third-party licenses, external model execution, or
+redistribution. Production/redistribution profiles remain blocked until review
+is explicitly approved.
