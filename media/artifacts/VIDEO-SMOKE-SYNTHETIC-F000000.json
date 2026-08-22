@@ -1,0 +1,33 @@
+{
+  "imageId": "VIDEO-SMOKE-SYNTHETIC-F000000",
+  "source": {
+    "type": "local",
+    "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\worktrees\\vision-video-rc11\\media\\artifacts\\VIDEO-SMOKE-SYNTHETIC-frames\\VIDEO-SMOKE-SYNTHETIC-F000000.png"
+  },
+  "floodDetected": false,
+  "depth": {
+    "level": 0,
+    "estimatedDepthCm": null,
+    "rangeCm": [
+      0,
+      0
+    ],
+    "confidence": 0.328
+  },
+  "method": "VISUAL_RANGE",
+  "referenceObjects": [],
+  "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000-water-mask.png",
+  "quality": "LOW",
+  "qualityFlags": [
+    "BASELINE_ONLY",
+    "MODEL_WEIGHT_MISSING",
+    "NO_WATER",
+    "NO_REFERENCE"
+  ],
+  "model": {
+    "waterSegmentation": "opencv_baseline",
+    "referenceDetection": "opencv_hog_and_color_heuristic",
+    "geometrySupport": "none"
+  },
+  "synthetic": false
+}

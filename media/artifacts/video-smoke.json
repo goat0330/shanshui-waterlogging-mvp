@@ -1,0 +1,23 @@
+{
+  "videoId": "VIDEO-SMOKE",
+  "status": "VIDEO_SOURCE_REQUIRED",
+  "source": {
+    "type": "local",
+    "value": null,
+    "mediaType": "video/mp4",
+    "licenseStatus": "NOT_VERIFIED"
+  },
+  "frames": [],
+  "quality": "REJECT",
+  "qualityFlags": [
+    "VIDEO_SOURCE_REQUIRED"
+  ],
+  "model": {
+    "framePipeline": "vision.pipeline.run_pipeline",
+    "waterSegmentation": "opencv_baseline",
+    "referenceDetection": "opencv_hog_and_color_heuristic",
+    "geometrySupport": "none",
+    "weights": "not_used"
+  },
+  "synthetic": false
+}
