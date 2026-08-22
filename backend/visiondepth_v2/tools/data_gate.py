@@ -29,7 +29,16 @@ def _resolve_config_path(config_path: Path, value: str) -> Path:
 
 def manifest_path(config_path: str | Path, config: dict[str, Any]) -> Path:
     path = Path(config_path).resolve()
-    data_root = _resolve_config_path(path, config.get("paths", {}).get("data_root", "data"))
+    configured_root = _resolve_config_path(path, config.get("paths", {}).get("data_root", "data"))
+    data_root = configured_root
+    if not configured_root.exists():
+        # The same package runs from git/ and from an isolated worktree. Keep
+        # runtime data at the project root without hard-coding a user path.
+        for parent in path.parents:
+            candidate = parent / "data" / "visiondepth"
+            if candidate.is_dir():
+                data_root = candidate
+                break
     return data_root / "manifests" / "video_manifest.csv"
 
 

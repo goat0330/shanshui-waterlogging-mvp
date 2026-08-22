@@ -17,10 +17,13 @@ only a camera-calibration guard: when the camera is uncalibrated,
 `estimatedDepthCm` is forced to `null` and confidence is capped low. Water
 segmentation and reference detection are not duplicated here.
 
-V-FloodNet remains an external research adapter only. Its source, weights,
-datasets and videos are not copied or committed. The registry records the
-license review state; `tools.check_third_party` fails while approval is
-pending.
+V-FloodNet remains an external research adapter only. Its source, weights and
+large datasets are not copied or committed. The six small test videos are
+kept outside Git for this local-only MVP smoke and are recorded as
+`MVP_REVIEW`; this is not final public-use approval. The registry keeps the
+pending license state. `tools.check_third_party --config configs/local.yaml`
+passes only for the explicitly non-redistributable `research_mvp` profile and
+still blocks production, redistribution and external model execution.
 
 ## Run from this directory
 
