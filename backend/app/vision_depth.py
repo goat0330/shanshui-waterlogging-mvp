@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import ipaddress
 import mimetypes
+import socket
 import sys
 import tempfile
 import uuid
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 from fastapi import UploadFile
+import requests
 
 from .models import VisionDepthObservation
 
@@ -23,6 +27,7 @@ from vision.pipeline import run_pipeline  # noqa: E402
 _ALLOWED_UPLOAD_MEDIA_TYPES = set(ALLOWED_FORMATS.values())
 _MEDIA_TYPE_ALIASES = {"image/jpg": "image/jpeg"}
 _MEDIA_SUFFIXES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+_MAX_REDIRECTS = 3
 
 
 class VisionDepthError(Exception):
@@ -71,6 +76,106 @@ class VisionDepthAdapter:
     def _output_path(self, image_id: str) -> Path:
         return self.output_dir / f"{uuid.uuid4().hex}.json"
 
+    @staticmethod
+    def _blocked_ip(address: str) -> bool:
+        ip = ipaddress.ip_address(address)
+        return not ip.is_global
+
+    @classmethod
+    def _validate_public_url(cls, url: str) -> None:
+        parsed = urlparse(url)
+        if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
+            raise VisionDepthError(400, "VISION_INVALID_URL", "url must be an HTTP or HTTPS image URL")
+        hostname = parsed.hostname
+        if not hostname:
+            raise VisionDepthError(400, "VISION_INVALID_URL", "url must include a host")
+        hostname = hostname.rstrip(".").lower()
+        if hostname == "localhost" or hostname.endswith(".localhost") or hostname.endswith(".local"):
+            raise VisionDepthError(400, "VISION_PRIVATE_URL", "private or local URL targets are not allowed")
+        try:
+            port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+            addresses = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+        except (socket.gaierror, UnicodeError, ValueError) as exc:
+            raise VisionDepthError(502, "VISION_FETCH_FAILED", "could not resolve image URL host") from exc
+        if not addresses:
+            raise VisionDepthError(502, "VISION_FETCH_FAILED", "image URL host did not resolve")
+        for address in {entry[4][0] for entry in addresses}:
+            try:
+                blocked = cls._blocked_ip(address)
+            except ValueError as exc:
+                raise VisionDepthError(400, "VISION_INVALID_URL", "image URL host is invalid") from exc
+            if blocked:
+                raise VisionDepthError(400, "VISION_PRIVATE_URL", "private or reserved URL targets are not allowed")
+
+    @staticmethod
+    def _response_media_type(response: requests.Response) -> str:
+        media_type = (response.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        media_type = _MEDIA_TYPE_ALIASES.get(media_type, media_type)
+        if media_type not in _ALLOWED_UPLOAD_MEDIA_TYPES:
+            raise VisionDepthError(
+                400,
+                "VISION_INVALID_MEDIA",
+                "URL must return image/jpeg, image/png, or image/webp",
+            )
+        return media_type
+
+    @classmethod
+    def _download_public_url(cls, url: str) -> tuple[bytes, str]:
+        current_url = url
+        session = requests.Session()
+        session.trust_env = False
+        try:
+            for redirect_count in range(_MAX_REDIRECTS + 1):
+                cls._validate_public_url(current_url)
+                try:
+                    with session.get(
+                        current_url,
+                        stream=True,
+                        timeout=(5, 20),
+                        allow_redirects=False,
+                        headers={"Accept": "image/jpeg,image/png,image/webp", "User-Agent": "VisionDepthV1/0.1"},
+                    ) as response:
+                        if 300 <= response.status_code < 400:
+                            location = response.headers.get("Location")
+                            if not location or redirect_count >= _MAX_REDIRECTS:
+                                raise VisionDepthError(400, "VISION_INVALID_URL", "image URL redirect chain is invalid")
+                            current_url = urljoin(current_url, location)
+                            continue
+                        response.raise_for_status()
+                        media_type = cls._response_media_type(response)
+                        declared_length = response.headers.get("Content-Length")
+                        if declared_length:
+                            try:
+                                if int(declared_length) > MAX_BYTES:
+                                    raise VisionDepthError(
+                                        400,
+                                        "VISION_IMAGE_TOO_LARGE",
+                                        f"image exceeds {MAX_BYTES // (1024 * 1024)} MB limit",
+                                    )
+                            except ValueError as exc:
+                                raise VisionDepthError(400, "VISION_INVALID_MEDIA", "invalid image Content-Length") from exc
+                        chunks: list[bytes] = []
+                        total = 0
+                        for chunk in response.iter_content(chunk_size=64 * 1024):
+                            if not chunk:
+                                continue
+                            total += len(chunk)
+                            if total > MAX_BYTES:
+                                raise VisionDepthError(
+                                    400,
+                                    "VISION_IMAGE_TOO_LARGE",
+                                    f"image exceeds {MAX_BYTES // (1024 * 1024)} MB limit",
+                                )
+                            chunks.append(chunk)
+                        return b"".join(chunks), media_type
+                except VisionDepthError:
+                    raise
+                except requests.RequestException as exc:
+                    raise VisionDepthError(502, "VISION_FETCH_FAILED", f"image download failed: {exc}") from exc
+            raise VisionDepthError(400, "VISION_INVALID_URL", "image URL redirect chain is too long")
+        finally:
+            session.close()
+
     def _run(self, source: str, source_type: str, source_value: str, image_id: str) -> VisionDepthObservation:
         try:
             observation = run_pipeline(source, self._output_path(image_id), image_id=image_id)
@@ -116,4 +221,9 @@ class VisionDepthAdapter:
         if not is_http_url(normalized_url):
             raise VisionDepthError(400, "VISION_INVALID_URL", "url must be an HTTP or HTTPS image URL")
         normalized_id = self._image_id(image_id)
-        return self._run(normalized_url, "url", normalized_url, normalized_id)
+        raw, media_type = self._download_public_url(normalized_url)
+        suffix = _MEDIA_SUFFIXES[media_type]
+        with tempfile.TemporaryDirectory(prefix="vision-depth-url-") as temp_dir:
+            source_path = Path(temp_dir) / f"input{suffix}"
+            source_path.write_bytes(raw)
+            return self._run(str(source_path), "url", normalized_url, normalized_id)

@@ -11,11 +11,13 @@ from datetime import datetime
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
 from app.config import load_settings
 from app.main import app, repository, sensor_repository
+from app.vision_depth import VisionDepthAdapter, VisionDepthError
 
 try:
     import websocket
@@ -44,6 +46,12 @@ class QuietImageHandler(SimpleHTTPRequestHandler):
         if self.path == "/unavailable":
             self.send_response(503)
             self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            return
+        if self.path == "/redirect-private":
+            port = self.server.server_address[1]
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{port}/flood_person.jpg")
             self.end_headers()
             return
         super().do_GET()
@@ -231,6 +239,18 @@ def main() -> None:
     assert analysis_adapter.source == "DEMO_SYNTHETIC_FIXTURE"
     assert analysis_adapter.synthetic is True
     assert analysis_adapter.get("FP202506010024") is not None
+    for private_url in [
+        "http://127.0.0.1/image.jpg",
+        "http://localhost/image.jpg",
+        "http://169.254.169.254/latest/meta-data",
+    ]:
+        try:
+            VisionDepthAdapter._validate_public_url(private_url)
+        except VisionDepthError as exc:
+            assert exc.status_code == 400 and exc.code == "VISION_PRIVATE_URL", (private_url, exc.detail())
+        else:
+            raise AssertionError(f"private URL was not blocked: {private_url}")
+    print("PASS VisionDepth private-target/SSRF literal and localhost guards")
     print("PASS OpenAPI formal paths/enums, VisionDepth Contract shape, SensorRegistryEntry, and adapter fixture validation")
 
     websocket_client = None
@@ -253,6 +273,36 @@ def main() -> None:
         vision_thread = threading.Thread(target=vision_server.serve_forever, daemon=True)
         vision_thread.start()
         vision_base_url = f"http://127.0.0.1:{vision_server.server_port}"
+        local_image_url = f"{vision_base_url}/{vision_input.name}"
+        with patch.object(VisionDepthAdapter, "_validate_public_url", return_value=None):
+            direct_url_observation = VisionDepthAdapter().analyze_url(local_image_url, "IMG-RC2-DIRECT-URL")
+        assert direct_url_observation.source.type.value == "url"
+        assert direct_url_observation.imageId == "IMG-RC2-DIRECT-URL"
+        with patch.object(VisionDepthAdapter, "_validate_public_url", return_value=None):
+            try:
+                VisionDepthAdapter._download_public_url(f"{vision_base_url}/html")
+            except VisionDepthError as exc:
+                assert exc.status_code == 400 and exc.code == "VISION_INVALID_MEDIA"
+            else:
+                raise AssertionError("HTML media was not rejected")
+            try:
+                VisionDepthAdapter._download_public_url(f"{vision_base_url}/unavailable")
+            except VisionDepthError as exc:
+                assert exc.status_code == 502 and exc.code == "VISION_FETCH_FAILED"
+            else:
+                raise AssertionError("unavailable media was not mapped")
+        with patch.object(
+            VisionDepthAdapter,
+            "_validate_public_url",
+            side_effect=[None, VisionDepthError(400, "VISION_PRIVATE_URL", "redirect target blocked")],
+        ):
+            try:
+                VisionDepthAdapter._download_public_url(f"{vision_base_url}/redirect-private")
+            except VisionDepthError as exc:
+                assert exc.status_code == 400 and exc.code == "VISION_PRIVATE_URL"
+            else:
+                raise AssertionError("private redirect target was not blocked")
+        print("PASS VisionDepth secure URL media, unavailable, and redirect guards")
         with LOCAL_OPENER.open(
             Request(
                 f"{BASE_URL}/api/v1/dashboard/overview",
@@ -412,15 +462,11 @@ def main() -> None:
         status, url_observation = request(
             "/api/v1/vision-depth/analyze/url",
             method="POST",
-            payload={"url": f"{vision_base_url}/{vision_input.name}", "imageId": "IMG-RC11-URL"},
+            payload={"url": local_image_url, "imageId": "IMG-RC2-PRIVATE-URL"},
         )
-        assert status == 200, (status, url_observation)
-        assert set(url_observation) == set(upload_observation)
-        assert url_observation["imageId"] == "IMG-RC11-URL"
-        assert url_observation["source"]["type"] == "url"
-        assert url_observation["source"]["value"].startswith(vision_base_url)
-        json.dumps(url_observation, ensure_ascii=False)
-        print("PASS 200 VisionDepth URL input and source.type=url")
+        assert status == 400, (status, url_observation)
+        assert url_observation["detail"]["code"] == "VISION_PRIVATE_URL"
+        print("PASS URL endpoint blocks private target before fetch")
 
         status, payload = multipart_request(
             "/api/v1/vision-depth/analyze/upload",
@@ -432,6 +478,17 @@ def main() -> None:
         assert status == 415, (status, payload)
         assert payload["detail"]["code"] == "VISION_UNSUPPORTED_MEDIA_TYPE"
         print("PASS 415 VisionDepth unsupported upload MIME")
+
+        status, payload = multipart_request(
+            "/api/v1/vision-depth/analyze/upload",
+            "not-an-image.svg",
+            b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+            "image/svg+xml",
+            "IMG-RC2-BAD-SVG",
+        )
+        assert status == 415, (status, payload)
+        assert payload["detail"]["code"] == "VISION_UNSUPPORTED_MEDIA_TYPE"
+        print("PASS 415 VisionDepth SVG rejection")
 
         status, payload = multipart_request(
             "/api/v1/vision-depth/analyze/upload",
@@ -455,19 +512,11 @@ def main() -> None:
         status, payload = request(
             "/api/v1/vision-depth/analyze/url",
             method="POST",
-            payload={"url": f"{vision_base_url}/html", "imageId": "IMG-RC11-HTML"},
+            payload={"url": "http://169.254.169.254/latest/meta-data", "imageId": "IMG-RC2-METADATA"},
         )
         assert status == 400, (status, payload)
-        assert payload["detail"]["code"] == "VISION_INVALID_MEDIA"
-
-        status, payload = request(
-            "/api/v1/vision-depth/analyze/url",
-            method="POST",
-            payload={"url": f"{vision_base_url}/unavailable", "imageId": "IMG-RC11-UNAVAILABLE"},
-        )
-        assert status == 502, (status, payload)
-        assert payload["detail"]["code"] == "VISION_FETCH_FAILED"
-        print("PASS VisionDepth 400/415/502 bad URL, HTML, MIME, and unavailable-media errors")
+        assert payload["detail"]["code"] == "VISION_PRIVATE_URL"
+        print("PASS VisionDepth API 400/415 private URL and invalid URL errors")
 
         status, payload = request(
             "/api/v1/vision-depth/analyze/url",
@@ -483,19 +532,14 @@ def main() -> None:
             return request(
                 "/api/v1/vision-depth/analyze/url",
                 method="POST",
-                payload={"url": f"{vision_base_url}/{vision_input.name}", "imageId": image_id},
+                payload={"url": local_image_url, "imageId": image_id},
             )
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            concurrent_results = list(executor.map(run_concurrent_vision, ["IMG-RC11-CONCURRENT-1", "IMG-RC11-CONCURRENT-2"]))
-        assert all(status_code == 200 for status_code, _ in concurrent_results), concurrent_results
-        concurrent_payloads = [payload for _, payload in concurrent_results]
-        assert {payload["imageId"] for payload in concurrent_payloads} == {
-            "IMG-RC11-CONCURRENT-1",
-            "IMG-RC11-CONCURRENT-2",
-        }
-        assert all(payload["source"]["type"] == "url" for payload in concurrent_payloads)
-        print("PASS VisionDepth two-request concurrency boundary")
+            concurrent_results = list(executor.map(run_concurrent_vision, ["IMG-RC2-CONCURRENT-1", "IMG-RC2-CONCURRENT-2"]))
+        assert all(status_code == 400 for status_code, _ in concurrent_results), concurrent_results
+        assert all(payload["detail"]["code"] == "VISION_PRIVATE_URL" for _, payload in concurrent_results)
+        print("PASS VisionDepth two-request concurrency and SSRF boundary")
 
         status, sensor_after_vision = request("/api/v1/sensors/SSZJ-NODE-001")
         assert status == 200
