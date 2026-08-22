@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type {
   AIAnalysis,
   Camera,
@@ -12,6 +12,8 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  SensorState,
+  VisionDepthObservation,
 } from './types'
 import { CesiumScene } from './CesiumScene'
 
@@ -189,8 +191,8 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
       <div className="status-content">
         <div className="status-ring" style={ringStyle} aria-label={`严重 ${critical}，警戒 ${warning}，正常 ${normal}`}>
           <div className="status-ring-hole">
-            <span className="cloud-glyph">☁</span>
-            <span className="cloud-rain">···</span>
+            <strong className="status-ring-value">{overview.activeFloodPoints}</strong>
+            <span className="status-ring-label">活跃点位</span>
           </div>
         </div>
         <div className="status-list">
@@ -319,10 +321,12 @@ export function RankingPanel({ ranking, state = 'ready' }: RankingPanelProps) {
 export interface EventPanelProps {
   event: FloodEvent | null
   analysis: AIAnalysis | null
+  sensor?: SensorState | null
+  onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   if (!event) {
     return (
@@ -338,10 +342,13 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
       <PanelHeader title="内涝事件" icon="▮" meta={<span>事件 ID：{event.id}</span>} />
       <div className="event-title-row">
         <h3>{event.name}</h3>
-        <span className="risk-badge">{RISK_LABEL[event.riskLevel]}</span>
+        <div className="event-title-actions">
+          <span className="risk-badge">{RISK_LABEL[event.riskLevel]}</span>
+          {onOpenVision && <button type="button" className="vision-entry-button" onClick={onOpenVision}>视觉水深证据</button>}
+        </div>
       </div>
       <div className="event-metrics">
-        <EventMetric label="当前水深" value={event.currentDepthCm.toFixed(1)} unit="cm" />
+        <EventMetric label={sensor ? '实测水深' : '事件水深'} value={(sensor?.depthCm ?? event.currentDepthCm).toFixed(1)} unit="cm" />
         <EventMetric label="上涨速度" value={event.riseRateCmMin.toFixed(1)} unit="cm/min" />
         <EventMetric label="管网负荷" value={String(event.pipeLoadPercent)} unit="%" />
         <EventMetric label="风险等级" value={RISK_LABEL[event.riskLevel]} unit="" />
@@ -352,6 +359,7 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
         <span>事件类型 <strong>{event.eventType}</strong></span>
         <span>持续时长 <strong>00:{String(durationMinutes).padStart(2, '0')}:41</strong></span>
       </div>
+      <SensorEvidence sensor={sensor} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
   )
@@ -359,6 +367,48 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
 
 function EventMetric({ label, value, unit }: { label: string; value: string; unit: string }) {
   return <div className="event-metric"><span>{label}</span><strong>{value}<small>{unit}</small></strong></div>
+}
+
+export interface SensorEvidenceProps {
+  sensor: SensorState | null
+}
+
+type SensorFreshnessStatus = 'ONLINE' | 'STALE' | 'OFFLINE' | 'NO_EVIDENCE'
+
+function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
+  if (!sensor) return 'NO_EVIDENCE'
+  const receivedAt = new Date(sensor.receivedAt).getTime()
+  if (!Number.isFinite(receivedAt)) return 'OFFLINE'
+  const ageMs = Date.now() - receivedAt
+  if (ageMs > 30 * 60 * 1000) return 'OFFLINE'
+  if (ageMs > 2 * 60 * 1000) return 'STALE'
+  return 'ONLINE'
+}
+
+export function SensorEvidence({ sensor }: SensorEvidenceProps) {
+  const status = getSensorFreshness(sensor)
+  if (!sensor) {
+    return (
+      <div className="sensor-evidence sensor-evidence--empty" role="status">
+        <div className="sensor-evidence-head"><span>SENSOR EVIDENCE</span><strong>NO EVIDENCE</strong></div>
+        <p>当前没有可验证的传感器状态；事件水深不等同于实测水深。</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`sensor-evidence sensor-evidence--${status.toLowerCase()}`}>
+      <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · 实测水深</span><strong>{status}</strong></div>
+      <div className="sensor-evidence-grid">
+        <span><small>sensorId</small><b>{sensor.sensorId}</b></span>
+        <span><small>current depth</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
+        <span><small>observedAt</small><b>{formatClock(sensor.observedAt)}</b></span>
+        <span><small>freshness</small><b>{status}</b></span>
+        <span><small>source</small><b>{sensor.source ?? 'UNKNOWN'}</b></span>
+        <span><small>waterDetected</small><b>{sensor.waterDetected ? 'YES' : 'NO'}</b></span>
+      </div>
+    </div>
+  )
 }
 
 export interface ForecastPreviewProps {
@@ -388,7 +438,7 @@ export function ForecastPreview({ forecast, activeKey, onChange, state = 'ready'
             onClick={() => onChange(frame.timeKey)}
             aria-pressed={frame.timeKey === activeKey}
           >
-            <span className="forecast-card-label">{FORECAST_LABEL[frame.timeKey]}</span>
+            <span className="forecast-card-label">{FORECAST_LABEL[frame.timeKey]} <small>{frame.timeKey === 'NOW' ? '实测基准' : '预测'}</small></span>
             <span className={`mini-map mini-map--${frame.timeKey.toLowerCase()}`}>
               <svg viewBox="0 0 120 78" aria-hidden="true">
                 <path d="M42-8c-7 18-1 25 9 34 8 8 4 15-5 21-8 5-8 14-2 28" className="mini-river" />
@@ -400,7 +450,7 @@ export function ForecastPreview({ forecast, activeKey, onChange, state = 'ready'
           </button>
         ))}
       </div>
-      <div className="forecast-summary"><span>水深(cm)</span><strong>{forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm.toFixed(1)} <small>当前帧最大水深</small></strong></div>
+      <div className="forecast-summary"><span>水深(cm) · {activeKey === 'NOW' ? '实测基准' : '预测最大值'}</span><strong>{forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm.toFixed(1)} <small>{activeKey === 'NOW' ? 'Sensor baseline' : '当前预测帧最大水深'}</small></strong></div>
       <DepthLegend compact />
     </Panel>
   )
@@ -434,6 +484,14 @@ const DEFAULT_CCTV_OVERLAY: CctvOverlayData = {
 
 export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData = DEFAULT_CCTV_OVERLAY }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
+  const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    setMediaState(camera?.mediaUrl ? 'loading' : 'unavailable')
+    setPlaying(false)
+  }, [camera?.mediaUrl])
+
   if (!camera) {
     return (
       <Panel className="cctv-panel" state={state === 'ready' ? 'empty' : state}>
@@ -445,13 +503,25 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
   return (
     <Panel className="cctv-panel" state={state}>
       <PanelHeader title="视频监控" icon="▮" meta={<span>{camera.name}</span>} />
-      <div className="cctv-viewport" aria-label="CCTV 演示占位画面">
+      <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${camera.name} 视频证据 seam`}>
+        <video
+          ref={videoRef}
+          className="cctv-video"
+          src={camera.mediaUrl || undefined}
+          controls={mediaState === 'ready'}
+          muted
+          playsInline
+          preload="metadata"
+          onCanPlay={() => setMediaState('ready')}
+          onLoadedData={() => setMediaState('ready')}
+          onError={() => setMediaState('unavailable')}
+        />
         <div className="cctv-video-placeholder" />
         <div className="cctv-skyline" />
         <div className="cctv-road"><span className="road-lane road-lane--left" /><span className="road-lane road-lane--right" /></div>
         <div className="cctv-car cctv-car--one" /><div className="cctv-car cctv-car--two" /><div className="cctv-car cctv-car--three" />
         <div className="cctv-water-line" />
-        {showOverlay && state === 'ready' && overlayData.objects?.map((object, index) => (
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData.objects?.map((object, index) => (
           <span
             className={`cctv-box cctv-box--${object.type}`}
             key={`${object.type}-${index}`}
@@ -460,17 +530,134 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        {showOverlay && state === 'ready' && <span className="cctv-depth-tag">WATER {overlayData.waterDepthCm?.toFixed(1) ?? '--'} cm</span>}
-        <span className="cctv-source-tag">{state === 'ready' ? 'DEMO FEED · 场景占位' : 'MEDIA NOT ATTACHED'}</span>
-        <span className={`cctv-live ${camera.status === 'ONLINE' ? 'cctv-live--demo' : 'cctv-live--offline'}`}><i />{camera.status === 'ONLINE' ? 'DEMO LIVE' : camera.status}</span>
-        {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供路径，待本地 MP4 接入</span>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && <span className="cctv-depth-tag">WATER {overlayData.waterDepthCm?.toFixed(1) ?? '--'} cm</span>}
+        <span className="cctv-source-tag">{mediaState === 'ready' ? `MEDIA · ${camera.mediaType}` : 'DEMO / PLACEHOLDER'}</span>
+        <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? camera.status : mediaState === 'loading' ? 'MEDIA CHECKING' : `${camera.status} · PLACEHOLDER`}</span>
+        {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
       <div className="cctv-controls">
-        <button type="button" className="cctv-play" onClick={() => setPlaying((value) => !value)} aria-label={playing ? '暂停演示视频' : '播放演示视频'}>{playing ? 'Ⅱ' : '▶'}</button>
+        <button
+          type="button"
+          className="cctv-play"
+          disabled={mediaState !== 'ready'}
+          onClick={() => {
+            const video = videoRef.current
+            if (!video || mediaState !== 'ready') return
+            if (video.paused) {
+              void video.play()
+              setPlaying(true)
+            } else {
+              video.pause()
+              setPlaying(false)
+            }
+          }}
+          aria-label={playing ? '暂停视频' : '播放视频'}
+        >{playing ? 'Ⅱ' : '▶'}</button>
         <span className="cctv-camera-name">{camera.name}</span>
         <div className="cctv-legend"><span><i className="legend-color legend-color--water" />积水区域</span><span><i className="legend-color legend-color--vehicle" />车辆</span><span><i className="legend-color legend-color--person" />行人</span></div>
       </div>
     </Panel>
+  )
+}
+
+export interface VisionDepthDrawerProps {
+  open: boolean
+  mode: 'local' | 'url'
+  sourceValue: string
+  sourcePreviewUrl?: string | null
+  fileName?: string
+  state: 'idle' | 'loading' | 'error' | 'ready'
+  errorMessage?: string | null
+  observation: VisionDepthObservation | null
+  onClose: () => void
+  onModeChange: (mode: 'local' | 'url') => void
+  onSourceChange: (value: string) => void
+  onFileChange: (file: File | null) => void
+  onAnalyze: () => void
+}
+
+const VISION_METHOD_LABEL: Record<VisionDepthObservation['method'], string> = {
+  VISUAL_RANGE: '视觉范围',
+  NO_REFERENCE: '无参考物',
+  PERSON_REFERENCE: '人员参考物',
+  VEHICLE_REFERENCE: '车辆参考物',
+  TRAFFIC_SIGN_REFERENCE: '交通标志参考物',
+  FIXED_CAMERA_REFERENCE: '固定摄像头参考物',
+}
+
+export function VisionDepthDrawer({
+  open,
+  mode,
+  sourceValue,
+  sourcePreviewUrl = null,
+  fileName,
+  state,
+  errorMessage,
+  observation,
+  onClose,
+  onModeChange,
+  onSourceChange,
+  onFileChange,
+  onAnalyze,
+}: VisionDepthDrawerProps) {
+  const [mediaView, setMediaView] = useState<'original' | 'mask'>('original')
+  if (!open) return null
+
+  const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
+  const maskUrl = observation?.waterMaskPath && (/^(https?:)?\//.test(observation.waterMaskPath) ? observation.waterMaskPath : null)
+  const range = observation?.depth.rangeCm ?? [null, null]
+
+  return (
+    <aside className="vision-drawer" aria-label="VisionDepth 水深证据抽屉">
+      <div className="vision-drawer-head">
+        <div><span className="vision-drawer-kicker">VISION DEPTH · CONTRACT EVIDENCE</span><h2>图像水深估计</h2></div>
+        <button type="button" className="vision-close" onClick={onClose} aria-label="关闭视觉水深证据">×</button>
+      </div>
+      <div className="vision-source-tabs" role="tablist" aria-label="视觉证据来源">
+        <button type="button" role="tab" aria-selected={mode === 'local'} className={mode === 'local' ? 'is-active' : ''} onClick={() => onModeChange('local')}>本地上传</button>
+        <button type="button" role="tab" aria-selected={mode === 'url'} className={mode === 'url' ? 'is-active' : ''} onClick={() => onModeChange('url')}>直接 URL</button>
+      </div>
+      <div className="vision-source-form">
+        {mode === 'local' ? (
+          <label className="vision-file-input">选择图片<input type="file" accept="image/*" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} /></label>
+        ) : (
+          <label className="vision-url-input">图片 URL<input type="url" value={sourceValue} onChange={(event) => onSourceChange(event.target.value)} placeholder="https://…" /></label>
+        )}
+        <button type="button" className="vision-analyze-button" onClick={onAnalyze} disabled={state === 'loading' || (mode === 'local' ? !fileName : !sourceValue.trim())}>{state === 'loading' ? '读取中…' : '读取证据'}</button>
+      </div>
+      {fileName && <p className="vision-source-name">source.local · {fileName}</p>}
+      {state === 'error' && <p className="vision-state vision-state--error" role="alert">{errorMessage ?? 'VisionDepth 读取失败'}</p>}
+      {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
+
+      <div className="vision-media-tabs" role="tablist" aria-label="原图与水域掩膜">
+        <button type="button" role="tab" aria-selected={mediaView === 'original'} className={mediaView === 'original' ? 'is-active' : ''} onClick={() => setMediaView('original')}>original</button>
+        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>mask</button>
+      </div>
+      <div className="vision-media-preview">
+        {mediaView === 'original' && originalUrl ? <img src={originalUrl} alt="VisionDepth 原始图像" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
+        {mediaView === 'mask' && maskUrl ? <img src={maskUrl} alt="VisionDepth 水域掩膜" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
+        {mediaView === 'mask' && observation && !maskUrl && <div className="vision-media-unavailable"><strong>MASK PATH · NOT ATTACHED</strong><code>{observation.waterMaskPath}</code></div>}
+        {((mediaView === 'original' && !originalUrl) || (mediaView === 'mask' && !observation)) && <div className="vision-media-unavailable">等待 {mediaView === 'original' ? 'original' : 'mask'} evidence</div>}
+      </div>
+
+      {observation ? (
+        <div className="vision-observation" data-quality={observation.quality}>
+          <div className="vision-observation-head"><span>{observation.floodDetected ? 'FLOOD DETECTED' : 'NO FLOOD'}</span><strong>{observation.synthetic ? 'DEMO / SYNTHETIC' : observation.quality}</strong></div>
+          <div className="vision-depth-grid">
+            <span><small>level</small><b>{observation.depth.level}</b></span>
+            <span><small>estimatedDepthCm</small><b>{observation.depth.estimatedDepthCm === null ? 'null' : `${observation.depth.estimatedDepthCm.toFixed(1)} cm`}</b></span>
+            <span><small>rangeCm</small><b>{range[0] === null || range[1] === null ? 'null' : `${range[0]}–${range[1]} cm`}</b></span>
+            <span><small>confidence</small><b>{Math.round(observation.depth.confidence * 100)}%</b></span>
+          </div>
+          <dl className="vision-observation-meta">
+            <div><dt>method</dt><dd>{VISION_METHOD_LABEL[observation.method]}</dd></div>
+            <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
+            <div><dt>source</dt><dd>{observation.source.type} · {observation.source.value}</dd></div>
+            <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
+          </dl>
+        </div>
+      ) : <div className="vision-observation-empty">尚未产生 VisionDepthObservation。</div>}
+    </aside>
   )
 }
 

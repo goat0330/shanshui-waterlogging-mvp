@@ -30,6 +30,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     camera: event.cameraId ? cameras.find((camera) => camera.id === event.cameraId) ?? null : null,
     analysis,
     timeline,
+    sensor: null,
   }
 }
 
@@ -58,6 +59,7 @@ export function useDashboardData(): UseDashboardDataResult {
       if (!current) return current
       return {
         ...current,
+        sensor,
         points: current.points.map((point) => point.id === mapping.floodPointId ? { ...point, depthCm: sensor.depthCm } : point),
         event: current.event?.id === mapping.eventId ? { ...current.event, currentDepthCm: sensor.depthCm } : current.event,
       }

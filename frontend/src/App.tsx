@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getForecastSurfaceAdapter } from './adapters/forecastSurfaceAdapter'
 import {
   AIAnalysisPanel,
@@ -9,16 +9,20 @@ import {
   ForecastPreview,
   RankingPanel,
   RainfallPanel,
+  SensorEvidence,
   StatusPanel,
   TimelineBar,
   TopNav,
+  VisionDepthDrawer,
   type LayerVisibility,
 } from './components'
 import { homeFixtures } from './data/homeFixtures'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
-import type { Camera, DashboardData, FloodEvent, ForecastKey, RainfallSnapshot } from './types'
+import { DATA_SOURCE } from './services/apiClient'
+import { analyzeVisionDepthUpload, analyzeVisionDepthUrl } from './services/visionDepthClient'
+import type { Camera, DashboardData, FloodEvent, ForecastKey, RainfallSnapshot, SensorState, VisionDepthObservation } from './types'
 import './styles.css'
 
 const DEFAULT_LAYERS: LayerVisibility = {
@@ -51,6 +55,40 @@ const offlineCamera: Camera = {
   status: 'OFFLINE',
 }
 
+function createDemoSensorEvidence(event: FloodEvent): SensorState {
+  return {
+    sensorId: 'SSZJ-NODE-001',
+    siteId: 'SITE-RML-BJDD',
+    coordinates: event.coordinates,
+    depthMm: event.currentDepthCm * 10,
+    depthCm: event.currentDepthCm,
+    waterDetected: event.currentDepthCm > 0,
+    observedAt: event.startedAt,
+    receivedAt: homeFixtures.overview.updatedAt,
+    transport: 'SIMULATOR',
+    source: 'DEMO_DEVICE',
+  }
+}
+
+const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
+  imageId: 'DEMO-VISION-DEPTH',
+  source: { type: 'local', value: 'DEMO_FIXTURE' },
+  floodDetected: true,
+  depth: {
+    level: 0,
+    estimatedDepthCm: null,
+    rangeCm: [null, null],
+    confidence: 0,
+  },
+  method: 'NO_REFERENCE',
+  referenceObjects: [],
+  waterMaskPath: 'DEMO_FIXTURE_MASK_NOT_ATTACHED',
+  quality: 'REJECT',
+  qualityFlags: ['DEMO_FIXTURE', 'NO_REFERENCE'],
+  model: { waterSegmentation: 'fixture-only' },
+  synthetic: true,
+}
+
 export default function App() {
   const isGallery = window.location.pathname.replace(/\/+$/, '') === '/gallery'
   return isGallery ? <GalleryPage /> : <DashboardPage />
@@ -69,6 +107,14 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
+  const [visionOpen, setVisionOpen] = useState(false)
+  const [visionMode, setVisionMode] = useState<'local' | 'url'>('local')
+  const [visionSourceValue, setVisionSourceValue] = useState('')
+  const [visionFile, setVisionFile] = useState<File | null>(null)
+  const [visionPreviewUrl, setVisionPreviewUrl] = useState<string | null>(null)
+  const [visionState, setVisionState] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
+  const [visionError, setVisionError] = useState<string | null>(null)
+  const [visionObservation, setVisionObservation] = useState<VisionDepthObservation | null>(null)
   const selectedEvent = useSelectedEventCoordinator({
     selectedPointId,
     points: data.points,
@@ -78,10 +124,60 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     camera: data.camera,
   })
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
-  const currentDepth = selectedEvent.event?.currentDepthCm ?? selectedEvent.selectedPoint?.depthCm
+  const sensor = data.sensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event ? createDemoSensorEvidence(selectedEvent.event) : null)
+  const currentDepth = sensor?.depthCm ?? selectedEvent.event?.currentDepthCm ?? selectedEvent.selectedPoint?.depthCm
+
+  useEffect(() => {
+    if (!visionFile) {
+      setVisionPreviewUrl(null)
+      return
+    }
+    const nextUrl = URL.createObjectURL(visionFile)
+    setVisionPreviewUrl(nextUrl)
+    return () => URL.revokeObjectURL(nextUrl)
+  }, [visionFile])
 
   const toggleLayer = (layer: keyof LayerVisibility) => {
     setLayers((current) => ({ ...current, [layer]: !current[layer] }))
+  }
+
+  const selectVisionFile = (file: File | null) => {
+    setVisionFile(file)
+    setVisionSourceValue(file?.name ?? '')
+    setVisionObservation(null)
+    setVisionError(null)
+    setVisionState('idle')
+  }
+
+  const analyzeVision = async () => {
+    if (visionMode === 'local' && !visionFile) {
+      setVisionError('请先选择本地图片')
+      setVisionState('error')
+      return
+    }
+    if (visionMode === 'url' && !visionSourceValue.trim()) {
+      setVisionError('请先输入图片 URL')
+      setVisionState('error')
+      return
+    }
+
+    setVisionState('loading')
+    setVisionError(null)
+    try {
+      const observation = DATA_SOURCE === 'api'
+        ? visionMode === 'local'
+          ? await analyzeVisionDepthUpload(visionFile as File)
+          : await analyzeVisionDepthUrl(visionSourceValue.trim())
+        : {
+            ...DEMO_VISION_OBSERVATION,
+            source: { type: visionMode, value: visionMode === 'local' ? visionFile?.name ?? 'DEMO_FIXTURE' : visionSourceValue.trim() },
+          }
+      setVisionObservation(observation)
+      setVisionState('ready')
+    } catch (reason: unknown) {
+      setVisionError(reason instanceof Error ? reason.message : String(reason))
+      setVisionState('error')
+    }
   }
 
   return (
@@ -103,12 +199,37 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         <RankingPanel ranking={data.rainfallRanking} />
       </div>
       <div className="dashboard-side dashboard-side--right">
-        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} />
+        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
         <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} onChange={setActiveForecast} />
         <CctvCard camera={selectedEvent.camera} showOverlay={layers.video} overlayData={{ waterDepthCm: currentDepth }} />
       </div>
       <TimelineBar timeline={data.timeline} activeKey={activeForecast} onForecastChange={setActiveForecast} />
       <div className="dashboard-demo-badge">{dataBadge}</div>
+      <VisionDepthDrawer
+        open={visionOpen}
+        mode={visionMode}
+        sourceValue={visionSourceValue}
+        sourcePreviewUrl={visionPreviewUrl}
+        fileName={visionFile?.name}
+        state={visionState}
+        errorMessage={visionError}
+        observation={visionObservation}
+        onClose={() => setVisionOpen(false)}
+        onModeChange={(mode) => {
+          setVisionMode(mode)
+          setVisionObservation(null)
+          setVisionError(null)
+          setVisionState('idle')
+        }}
+        onSourceChange={(value) => {
+          setVisionSourceValue(value)
+          setVisionObservation(null)
+          setVisionError(null)
+          setVisionState('idle')
+        }}
+        onFileChange={selectVisionFile}
+        onAnalyze={analyzeVision}
+      />
     </div>
   )
 }
@@ -192,7 +313,7 @@ function GalleryPage() {
           <GallerySectionTitle title="Selected Event / Forecast / CCTV" note="风险、预测控制器与现场证据状态" />
           <div className="gallery-grid gallery-grid--panels">
             <GalleryCard title="EventPanel" stateName="selected / high-risk">
-              <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} />
+              <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} sensor={createDemoSensorEvidence(homeFixtures.event)} />
             </GalleryCard>
             <GalleryCard title="EventPanel" stateName="critical">
               <EventPanel event={criticalEventFixture} analysis={homeFixtures.analysis} />
@@ -215,7 +336,7 @@ function GalleryPage() {
             <GalleryCard title="ForecastPreview" stateName="empty">
               <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" onChange={() => undefined} state="empty" />
             </GalleryCard>
-            <GalleryCard title="CctvCard" stateName="live + AI overlay">
+            <GalleryCard title="CctvCard" stateName="media seam + overlay">
               <CctvCard camera={homeFixtures.camera} />
             </GalleryCard>
             <GalleryCard title="CctvCard" stateName="offline">
@@ -226,6 +347,12 @@ function GalleryPage() {
             </GalleryCard>
             <GalleryCard title="CctvCard" stateName="empty">
               <CctvCard camera={homeFixtures.camera} state="empty" />
+            </GalleryCard>
+            <GalleryCard title="SensorEvidence" stateName="DEMO_DEVICE / stale fixture">
+              <SensorEvidence sensor={createDemoSensorEvidence(homeFixtures.event)} />
+            </GalleryCard>
+            <GalleryCard title="VisionDepthDrawer" stateName="local upload / contract empty">
+              <VisionDepthGalleryPreview />
             </GalleryCard>
           </div>
         </section>
@@ -268,6 +395,52 @@ function GalleryPage() {
         <footer className="gallery-footer">状态：<strong>IMPLEMENTED</strong> / <strong>VISUAL_REVIEW</strong> · 等待用户进行视觉 Review · 不代表 Cesium、后端或真实视频已验证</footer>
       </div>
     </AppShell>
+  )
+}
+
+function VisionDepthGalleryPreview() {
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<'local' | 'url'>('local')
+  const [sourceValue, setSourceValue] = useState('')
+  const [fileName, setFileName] = useState<string>()
+  const [state, setState] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [observation, setObservation] = useState<VisionDepthObservation | null>(null)
+
+  const showState = (nextState: 'idle' | 'loading' | 'error' | 'ready') => {
+    setOpen(true)
+    setState(nextState)
+    setErrorMessage(nextState === 'error' ? 'Gallery error state · API unavailable' : null)
+    setObservation(nextState === 'ready' ? { ...DEMO_VISION_OBSERVATION, source: { type: mode, value: sourceValue || 'DEMO_FIXTURE' } } : null)
+  }
+
+  return (
+    <div className="gallery-vision-preview">
+      <p>同页入口：local upload / direct URL；状态由真实 Drawer 展示。</p>
+      <div className="gallery-vision-actions">
+        <button type="button" onClick={() => showState('idle')}>empty</button>
+        <button type="button" onClick={() => showState('loading')}>loading</button>
+        <button type="button" onClick={() => showState('error')}>error</button>
+        <button type="button" onClick={() => showState('ready')}>ready</button>
+      </div>
+      <VisionDepthDrawer
+        open={open}
+        mode={mode}
+        sourceValue={sourceValue}
+        fileName={fileName}
+        state={state}
+        errorMessage={errorMessage}
+        observation={observation}
+        onClose={() => setOpen(false)}
+        onModeChange={setMode}
+        onSourceChange={setSourceValue}
+        onFileChange={(file) => {
+          setFileName(file?.name)
+          setSourceValue(file?.name ?? '')
+        }}
+        onAnalyze={() => showState('ready')}
+      />
+    </div>
   )
 }
 
