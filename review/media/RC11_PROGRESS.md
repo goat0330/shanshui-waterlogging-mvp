@@ -110,4 +110,4 @@ source/license/synthetic/quality 字段，查询时与 SensorState、FloodPoint
 5. `RequestsDependencyWarning` 说明环境依赖版本存在警告；本轮未修改环境，
    也未将此 warning 伪装成通过的依赖治理结论。
 
-Checkpoint commit：PENDING（代码提交后回填实际 SHA）。
+Checkpoint commit：`a81b5de`（`feat(video): add offline VisionDepth evidence sampler`）。
