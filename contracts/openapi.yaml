@@ -157,6 +157,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/ScenarioTimeline"
 
+  /api/v1/vision-depth/analyze/upload:
+    post:
+      operationId: analyzeVisionDepthUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/VisionDepthUploadRequest"
+      responses:
+        "200":
+          description: Vision depth evidence observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisionDepthObservation"
+        "400":
+          description: Invalid image input
+        "413":
+          description: Image too large
+        "415":
+          description: Unsupported media type
+
+  /api/v1/vision-depth/analyze/url:
+    post:
+      operationId: analyzeVisionDepthUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisionDepthUrlRequest"
+      responses:
+        "200":
+          description: Vision depth evidence observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisionDepthObservation"
+        "400":
+          description: Invalid image URL or media
+        "502":
+          description: Image fetch or inference failure
+
   /api/v1/telemetry/observations:
     post:
       operationId: createTelemetryObservation
@@ -541,3 +585,91 @@ components:
         selectedForecastKey:
           type: string
           enum: [NOW, PLUS_10, PLUS_30]
+
+    VisionDepthUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+        imageId:
+          type: string
+
+    VisionDepthUrlRequest:
+      type: object
+      required: [url]
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          format: uri
+        imageId:
+          type: string
+
+    VisionDepthObservation:
+      type: object
+      required:
+        [imageId, source, floodDetected, depth, method, referenceObjects, waterMaskPath, quality, qualityFlags, model, synthetic]
+      additionalProperties: false
+      properties:
+        imageId:
+          type: string
+        source:
+          type: object
+          required: [type, value]
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum: [url, local]
+            value:
+              type: string
+        floodDetected:
+          type: boolean
+        depth:
+          type: object
+          required: [level, estimatedDepthCm, rangeCm, confidence]
+          additionalProperties: false
+          properties:
+            level:
+              type: integer
+              minimum: 0
+              maximum: 5
+            estimatedDepthCm:
+              type: number
+              minimum: 0
+              nullable: true
+            rangeCm:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+                nullable: true
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+        method:
+          type: string
+          enum: [VISUAL_RANGE, NO_REFERENCE, PERSON_REFERENCE, VEHICLE_REFERENCE, TRAFFIC_SIGN_REFERENCE, FIXED_CAMERA_REFERENCE]
+        referenceObjects:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        waterMaskPath:
+          type: string
+        quality:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, REJECT]
+        qualityFlags:
+          type: array
+          items:
+            type: string
+        model:
+          type: object
+          additionalProperties: true
+        synthetic:
+          type: boolean
