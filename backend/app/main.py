@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
 from .models import (
     AIAnalysis,
@@ -17,8 +18,11 @@ from .models import (
     ScenarioTimeline,
     SensorState,
     TelemetryObservation,
+    VisionDepthObservation,
+    VisionDepthUrlRequest,
 )
 from .repository import UnknownSensorError, build_repository
+from .vision_depth import VisionDepthAdapter, VisionDepthError
 
 
 app = FastAPI(
@@ -39,6 +43,7 @@ repository = build_repository()
 sensor_repository = repository
 realtime_clients: set[WebSocket] = set()
 SENSOR_SOURCE = "DEMO_DEVICE"
+vision_depth_adapter = VisionDepthAdapter()
 
 
 def not_found(resource: str, identifier: str) -> HTTPException:
@@ -51,6 +56,10 @@ def not_found(resource: str, identifier: str) -> HTTPException:
             "message": f"{resource} '{identifier}' was not found",
         },
     )
+
+
+def vision_error(error: VisionDepthError) -> HTTPException:
+    return HTTPException(status_code=error.status_code, detail=error.detail())
 
 
 @app.get("/api/v1/dashboard/overview", response_model=DashboardOverview, operation_id="getDashboardOverview")
@@ -174,6 +183,42 @@ async def post_telemetry_observation(payload: TelemetryObservation) -> SensorSta
     return state
 
 
+@app.post(
+    "/api/v1/vision-depth/analyze/upload",
+    response_model=VisionDepthObservation,
+    operation_id="analyzeVisionDepthUpload",
+    responses={
+        400: {"description": "Invalid image input"},
+        413: {"description": "Image too large"},
+        415: {"description": "Unsupported media type"},
+    },
+)
+async def analyze_vision_depth_upload(
+    file: UploadFile = File(...),
+    imageId: str | None = Form(default=None),
+) -> VisionDepthObservation:
+    try:
+        return await vision_depth_adapter.analyze_upload(file, imageId)
+    except VisionDepthError as exc:
+        raise vision_error(exc) from exc
+
+
+@app.post(
+    "/api/v1/vision-depth/analyze/url",
+    response_model=VisionDepthObservation,
+    operation_id="analyzeVisionDepthUrl",
+    responses={
+        400: {"description": "Invalid image URL or media"},
+        502: {"description": "Image fetch or inference failure"},
+    },
+)
+def analyze_vision_depth_url(payload: VisionDepthUrlRequest) -> VisionDepthObservation:
+    try:
+        return vision_depth_adapter.analyze_url(payload.url, payload.imageId)
+    except VisionDepthError as exc:
+        raise vision_error(exc) from exc
+
+
 @app.get(
     "/api/v1/sensors/{sensor_id}",
     response_model=SensorState,
@@ -211,3 +256,34 @@ async def realtime_stub(websocket: WebSocket) -> None:
         return
     finally:
         realtime_clients.discard(websocket)
+
+
+def _contract_openapi() -> dict:
+    """Keep FastAPI's multipart operation aligned with the frozen Contract name."""
+
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(title=app.title, version=app.version, description=app.description, routes=app.routes)
+    components = schema.setdefault("components", {}).setdefault("schemas", {})
+    components["VisionDepthUploadRequest"] = {
+        "type": "object",
+        "required": ["file"],
+        "properties": {
+            "file": {"type": "string", "format": "binary"},
+            "imageId": {"type": "string"},
+        },
+    }
+    components.pop("Body_analyzeVisionDepthUpload", None)
+    schema["paths"]["/api/v1/vision-depth/analyze/upload"]["post"]["requestBody"] = {
+        "required": True,
+        "content": {
+            "multipart/form-data": {
+                "schema": {"$ref": "#/components/schemas/VisionDepthUploadRequest"}
+            }
+        },
+    }
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = _contract_openapi

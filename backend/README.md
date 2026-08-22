@@ -2,7 +2,7 @@
 
 状态：`PASS` memory Contract smoke；PostgreSQL/PostGIS 为可选 V1 persistence path，未在本机完成实测，不写成 Production Ready。
 
-实现范围：FastAPI + Pydantic + `FixtureRepository`。默认 `REPOSITORY_BACKEND=memory`，保留现有演示路径；设置 `REPOSITORY_BACKEND=postgres` 后使用 SQLAlchemy 2.x + psycopg + GeoAlchemy2。Forecast 与 Analysis 通过 `ForecastAdapter` / `AnalysisAdapter` 读取上级 `contracts/fixtures/`，是可替换的最小内部边界。CORS 已开放给本地前端。
+实现范围：FastAPI + Pydantic + `FixtureRepository`。默认 `REPOSITORY_BACKEND=memory`，保留现有演示路径；设置 `REPOSITORY_BACKEND=postgres` 后使用 SQLAlchemy 2.x + psycopg + GeoAlchemy2。Forecast 与 Analysis 通过 `ForecastAdapter` / `AnalysisAdapter` 读取上级 `contracts/fixtures/`，是可替换的最小内部边界。VisionDepth 通过 `VisionDepthAdapter` 调用现有 `vision/` pipeline，作为独立 evidence seam。CORS 已开放给本地前端。
 
 Forecast Adapter 启动加载时校验 fixture 的事件存在、`frames` 顺序为 `NOW` → `PLUS_10` → `PLUS_30`、`offsetMinutes` 单调，以及 `maxDepthCm` / `affectedAreaKm2` 非负；不满足时以明确的启动 `ValueError` 失败。Analysis Adapter 当前只提供原有 Analysis fixture fallback，内部来源标记为 `DEMO_SYNTHETIC_FIXTURE`；该标记不会新增到 OpenAPI 响应，也不代表实时 AI。Forecast/Analysis 都不会改写 `riskLevel`、`riseRateCmMin` 或 `pipeLoadPercent`。
 
@@ -41,7 +41,7 @@ Alembic head：`0001_v1_persistence`。
 python -B smoke.py
 ```
 
-`smoke.py` 会启动临时 Uvicorn（默认 `8765` 端口），先检查 memory 默认配置、Alembic head 和 migration 表/extension 声明，再验证正式 12 路 REST、雨量站排行、遥测 POST/GET、mapping projection、未知 event/sensor/scene 的明确 404、非法 `depthMm` 的 422、CORS、JSON 序列化、OpenAPI 路径/枚举、模拟器快速模式，以及可用时的 `scenario.started` 与 `sensor.updated` WebSocket。可用 `SMOKE_PORT=8766 python -B smoke.py` 更换端口。该 smoke 不把 memory 结果当作 PostgreSQL persistence 验证。
+`smoke.py` 会启动临时 Uvicorn（默认 `8765` 端口），先检查 memory 默认配置、Alembic head 和 migration 表/extension 声明，再验证正式 14 路 REST、雨量站排行、遥测 POST/GET、mapping projection、VisionDepth upload/url 与边界错误、未知 event/sensor/scene 的明确 404、非法 `depthMm` 的 422、CORS、JSON 序列化、OpenAPI 路径/枚举、模拟器快速模式，以及可用时的 `scenario.started` 与 `sensor.updated` WebSocket。可用 `SMOKE_PORT=8766 python -B smoke.py` 更换端口。该 smoke 不把 memory 结果当作 PostgreSQL persistence 验证。
 
 ## REST 路径
 
@@ -56,6 +56,8 @@ GET /api/v1/flood-events/{event_id}/analysis
 GET /api/v1/cameras
 GET /api/v1/cameras/{camera_id}
 GET /api/v1/scenarios/{scenario_id}/timeline
+POST /api/v1/vision-depth/analyze/upload
+POST /api/v1/vision-depth/analyze/url
 POST /api/v1/telemetry/observations
 GET /api/v1/sensors/{sensor_id}
 ```
@@ -65,6 +67,15 @@ GET /api/v1/sensors/{sensor_id}
 遥测 POST 必填 `sensorId`、`observedAt`、`depthMm`；`sequence`、`transport`、`batteryMv`、`signalDbm` 可选。`transport` 使用 `WIFI`、`CELLULAR_4G` 或 `SIMULATOR`。服务端生成 `receivedAt`，按 `depthCm=depthMm/10`、`waterDetected=depthMm>0` 归一化，不接受或推导 `riskLevel`、`riseRateCmMin`、`pipeLoadPercent`。
 
 GET sensor 在已注册但尚未上报时返回明确 404；上报后直接返回 `SensorState`，不再包裹 `latestObservation`。mapping fixture 将 `SSZJ-NODE-001` 投影到 `FP-001` 与 `FP202506010024`，只更新水深，不改风险等级、上涨速度或管网负荷。`SceneSensorInput` 若由其他层使用，其正式 `type` 为 `WATER_LEVEL_SENSOR`；本 backend 当前不直接输出该对象。
+
+VisionDepth Evidence API：
+
+```text
+POST /api/v1/vision-depth/analyze/upload
+POST /api/v1/vision-depth/analyze/url
+```
+
+两个端点都返回冻结 Contract 的 `VisionDepthObservation`。上传输入只接受 JPEG/PNG/WebP，当前限制为 15 MB；URL 输入只接受 HTTP/HTTPS，并由现有 `vision.ingest` 重新校验最终媒体，拒绝 HTML 和不可用媒体。错误分别使用明确的 `400`、上传 `413`、上传 `415` 和 URL fetch/inference `502`。该结果是独立的 VisionDepth evidence，不写入 `SensorState`、`FloodPoint.currentDepthCm` 或 `FloodEvent`，也不覆盖 telemetry；`source.type` 为 `local` 或 `url`。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
 
 ## Simulator
 

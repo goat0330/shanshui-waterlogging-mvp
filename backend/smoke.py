@@ -4,9 +4,12 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from pathlib import Path
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
@@ -25,6 +28,27 @@ BASE_URL = f"http://127.0.0.1:{PORT}"
 LOCAL_OPENER = build_opener(ProxyHandler({}))
 
 
+class QuietImageHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+    def do_GET(self) -> None:
+        if self.path == "/html":
+            body = b"<html><body>not an image</body></html>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if self.path == "/unavailable":
+            self.send_response(503)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            return
+        super().do_GET()
+
+
 def request(path: str, method: str = "GET", payload: dict[str, object] | None = None) -> tuple[int, object]:
     headers = {"Accept": "application/json"}
     data = None
@@ -35,6 +59,40 @@ def request(path: str, method: str = "GET", payload: dict[str, object] | None = 
         with LOCAL_OPENER.open(
             Request(f"{BASE_URL}{path}", data=data, headers=headers, method=method),
             timeout=3,
+        ) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        return error.code, json.loads(error.read().decode("utf-8"))
+
+
+def multipart_request(
+    path: str,
+    filename: str,
+    content: bytes,
+    content_type: str,
+    image_id: str | None = None,
+) -> tuple[int, object]:
+    boundary = "----CodexVisionDepthBoundary"
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + content + b"\r\n"
+    if image_id is not None:
+        body += (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="imageId"\r\n\r\n'
+            f"{image_id}\r\n"
+        ).encode("utf-8")
+    body += f"--{boundary}--\r\n".encode("utf-8")
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    }
+    try:
+        with LOCAL_OPENER.open(
+            Request(f"{BASE_URL}{path}", data=body, headers=headers, method="POST"),
+            timeout=45,
         ) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
@@ -94,8 +152,12 @@ def main() -> None:
         "/api/v1/telemetry/observations",
         "/api/v1/sensors/{sensor_id}",
     }
+    vision_paths = {
+        "/api/v1/vision-depth/analyze/upload",
+        "/api/v1/vision-depth/analyze/url",
+    }
     spec = app.openapi()
-    assert set(spec["paths"]) == formal_paths | telemetry_paths
+    assert set(spec["paths"]) == formal_paths | telemetry_paths | vision_paths
     assert spec["components"]["schemas"]["RiskLevel"]["enum"] == ["NORMAL", "WARNING", "HIGH", "CRITICAL"]
     assert spec["components"]["schemas"]["ForecastKey"]["enum"] == ["NOW", "PLUS_10", "PLUS_30"]
     assert spec["components"]["schemas"]["TelemetryTransport"]["enum"] == ["WIFI", "CELLULAR_4G", "SIMULATOR"]
@@ -122,6 +184,38 @@ def main() -> None:
     assert set(ranking_schema["required"]) == {"stationId", "stationName", "intensityMmH"}
     assert ranking_schema["additionalProperties"] is False
     assert spec["paths"]["/api/v1/rainfall/stations/ranking"]["get"]["operationId"] == "listRainfallStationRanking"
+    assert spec["paths"]["/api/v1/vision-depth/analyze/upload"]["post"]["operationId"] == "analyzeVisionDepthUpload"
+    assert spec["paths"]["/api/v1/vision-depth/analyze/url"]["post"]["operationId"] == "analyzeVisionDepthUrl"
+    upload_request = spec["paths"]["/api/v1/vision-depth/analyze/upload"]["post"]["requestBody"]
+    assert upload_request["content"]["multipart/form-data"]["schema"] == {
+        "$ref": "#/components/schemas/VisionDepthUploadRequest"
+    }
+    assert set(spec["components"]["schemas"]["VisionDepthUploadRequest"]["required"]) == {"file"}
+    vision_schema = spec["components"]["schemas"]["VisionDepthObservation"]
+    assert set(vision_schema["required"]) == {
+        "imageId",
+        "source",
+        "floodDetected",
+        "depth",
+        "method",
+        "referenceObjects",
+        "waterMaskPath",
+        "quality",
+        "qualityFlags",
+        "model",
+        "synthetic",
+    }
+    assert vision_schema["additionalProperties"] is False
+    assert spec["components"]["schemas"]["VisionDepthSourceType"]["enum"] == ["url", "local"]
+    assert spec["components"]["schemas"]["VisionDepthMethod"]["enum"] == [
+        "VISUAL_RANGE",
+        "NO_REFERENCE",
+        "PERSON_REFERENCE",
+        "VEHICLE_REFERENCE",
+        "TRAFFIC_SIGN_REFERENCE",
+        "FIXED_CAMERA_REFERENCE",
+    ]
+    assert spec["components"]["schemas"]["VisionDepthQuality"]["enum"] == ["LOW", "MEDIUM", "HIGH", "REJECT"]
     registry_entry = sensor_repository.get_entry("SSZJ-NODE-001")
     assert registry_entry is not None
     assert registry_entry.sensorType.value == "WATER_DEPTH"
@@ -137,9 +231,11 @@ def main() -> None:
     assert analysis_adapter.source == "DEMO_SYNTHETIC_FIXTURE"
     assert analysis_adapter.synthetic is True
     assert analysis_adapter.get("FP202506010024") is not None
-    print("PASS OpenAPI formal paths/enums, SensorRegistryEntry, and adapter fixture validation")
+    print("PASS OpenAPI formal paths/enums, VisionDepth Contract shape, SensorRegistryEntry, and adapter fixture validation")
 
     websocket_client = None
+    vision_server = None
+    vision_thread = None
     process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(PORT)],
         cwd=Path(__file__).resolve().parent,
@@ -148,6 +244,15 @@ def main() -> None:
     )
     try:
         wait_until_ready()
+        vision_input = backend_dir.parent / "vision" / "artifacts" / "smoke_inputs" / "flood_person.jpg"
+        assert vision_input.is_file(), vision_input
+        vision_server = ThreadingHTTPServer(
+            ("127.0.0.1", 0),
+            partial(QuietImageHandler, directory=str(vision_input.parent)),
+        )
+        vision_thread = threading.Thread(target=vision_server.serve_forever, daemon=True)
+        vision_thread.start()
+        vision_base_url = f"http://127.0.0.1:{vision_server.server_port}"
         with LOCAL_OPENER.open(
             Request(
                 f"{BASE_URL}/api/v1/dashboard/overview",
@@ -276,6 +381,135 @@ def main() -> None:
         assert event["pipeLoadPercent"] == 91
         print("PASS projection at 28.6cm with risk fields preserved")
 
+        vision_bytes = vision_input.read_bytes()
+        status, upload_observation = multipart_request(
+            "/api/v1/vision-depth/analyze/upload",
+            vision_input.name,
+            vision_bytes,
+            "image/jpeg",
+            "IMG-RC11-UPLOAD",
+        )
+        assert status == 200, (status, upload_observation)
+        assert set(upload_observation) == {
+            "imageId",
+            "source",
+            "floodDetected",
+            "depth",
+            "method",
+            "referenceObjects",
+            "waterMaskPath",
+            "quality",
+            "qualityFlags",
+            "model",
+            "synthetic",
+        }
+        assert upload_observation["imageId"] == "IMG-RC11-UPLOAD"
+        assert upload_observation["source"]["type"] == "local"
+        assert upload_observation["synthetic"] is False
+        json.dumps(upload_observation, ensure_ascii=False)
+        print("PASS 200 VisionDepth multipart upload and Contract response")
+
+        status, url_observation = request(
+            "/api/v1/vision-depth/analyze/url",
+            method="POST",
+            payload={"url": f"{vision_base_url}/{vision_input.name}", "imageId": "IMG-RC11-URL"},
+        )
+        assert status == 200, (status, url_observation)
+        assert set(url_observation) == set(upload_observation)
+        assert url_observation["imageId"] == "IMG-RC11-URL"
+        assert url_observation["source"]["type"] == "url"
+        assert url_observation["source"]["value"].startswith(vision_base_url)
+        json.dumps(url_observation, ensure_ascii=False)
+        print("PASS 200 VisionDepth URL input and source.type=url")
+
+        status, payload = multipart_request(
+            "/api/v1/vision-depth/analyze/upload",
+            "not-an-image.html",
+            b"<html><body>not an image</body></html>",
+            "text/html",
+            "IMG-RC11-BAD-MIME",
+        )
+        assert status == 415, (status, payload)
+        assert payload["detail"]["code"] == "VISION_UNSUPPORTED_MEDIA_TYPE"
+        print("PASS 415 VisionDepth unsupported upload MIME")
+
+        status, payload = multipart_request(
+            "/api/v1/vision-depth/analyze/upload",
+            "too-large.jpg",
+            b"0" * (15 * 1024 * 1024 + 1),
+            "image/jpeg",
+            "IMG-RC11-TOO-LARGE",
+        )
+        assert status == 413, (status, payload)
+        assert payload["detail"]["code"] == "VISION_IMAGE_TOO_LARGE"
+        print("PASS 413 VisionDepth upload size limit")
+
+        status, payload = request(
+            "/api/v1/vision-depth/analyze/url",
+            method="POST",
+            payload={"url": "ftp://127.0.0.1/not-an-image", "imageId": "IMG-RC11-BAD-URL"},
+        )
+        assert status == 400, (status, payload)
+        assert payload["detail"]["code"] == "VISION_INVALID_URL"
+
+        status, payload = request(
+            "/api/v1/vision-depth/analyze/url",
+            method="POST",
+            payload={"url": f"{vision_base_url}/html", "imageId": "IMG-RC11-HTML"},
+        )
+        assert status == 400, (status, payload)
+        assert payload["detail"]["code"] == "VISION_INVALID_MEDIA"
+
+        status, payload = request(
+            "/api/v1/vision-depth/analyze/url",
+            method="POST",
+            payload={"url": f"{vision_base_url}/unavailable", "imageId": "IMG-RC11-UNAVAILABLE"},
+        )
+        assert status == 502, (status, payload)
+        assert payload["detail"]["code"] == "VISION_FETCH_FAILED"
+        print("PASS VisionDepth 400/415/502 bad URL, HTML, MIME, and unavailable-media errors")
+
+        status, payload = request(
+            "/api/v1/vision-depth/analyze/url",
+            method="POST",
+            payload={},
+        )
+        assert status == 422, (status, payload)
+        assert isinstance(payload, dict) and "detail" in payload
+        json.dumps(payload, ensure_ascii=False)
+        print("PASS VisionDepth request boundary and JSON error serialization")
+
+        def run_concurrent_vision(image_id: str) -> tuple[int, object]:
+            return request(
+                "/api/v1/vision-depth/analyze/url",
+                method="POST",
+                payload={"url": f"{vision_base_url}/{vision_input.name}", "imageId": image_id},
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            concurrent_results = list(executor.map(run_concurrent_vision, ["IMG-RC11-CONCURRENT-1", "IMG-RC11-CONCURRENT-2"]))
+        assert all(status_code == 200 for status_code, _ in concurrent_results), concurrent_results
+        concurrent_payloads = [payload for _, payload in concurrent_results]
+        assert {payload["imageId"] for payload in concurrent_payloads} == {
+            "IMG-RC11-CONCURRENT-1",
+            "IMG-RC11-CONCURRENT-2",
+        }
+        assert all(payload["source"]["type"] == "url" for payload in concurrent_payloads)
+        print("PASS VisionDepth two-request concurrency boundary")
+
+        status, sensor_after_vision = request("/api/v1/sensors/SSZJ-NODE-001")
+        assert status == 200
+        assert sensor_after_vision["depthCm"] == 28.6
+        assert sensor_after_vision["sequence"] == 42
+        status, points_after_vision = request("/api/v1/flood-points")
+        assert status == 200
+        assert next(point for point in points_after_vision if point["id"] == "FP-001")["depthCm"] == 28.6
+        status, event_after_vision = request("/api/v1/flood-events/FP202506010024")
+        assert status == 200
+        assert event_after_vision["currentDepthCm"] == 28.6
+        assert event_after_vision["riskLevel"] == "HIGH"
+        print("PASS VisionDepth evidence did not overwrite SensorState or flood projection")
+
         simulator = subprocess.run(
             [
                 sys.executable,
@@ -358,6 +592,11 @@ def main() -> None:
     finally:
         if websocket_client is not None:
             websocket_client.close()
+        if vision_server is not None:
+            vision_server.shutdown()
+            vision_server.server_close()
+        if vision_thread is not None:
+            vision_thread.join(timeout=2)
         process.terminate()
         process.wait(timeout=5)
 

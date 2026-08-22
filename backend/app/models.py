@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -211,3 +212,63 @@ class ScenarioTimeline(BaseModel):
     currentTime: datetime
     mode: ScenarioMode
     selectedForecastKey: ForecastKey | None = None
+
+
+class VisionDepthMethod(str, Enum):
+    VISUAL_RANGE = "VISUAL_RANGE"
+    NO_REFERENCE = "NO_REFERENCE"
+    PERSON_REFERENCE = "PERSON_REFERENCE"
+    VEHICLE_REFERENCE = "VEHICLE_REFERENCE"
+    TRAFFIC_SIGN_REFERENCE = "TRAFFIC_SIGN_REFERENCE"
+    FIXED_CAMERA_REFERENCE = "FIXED_CAMERA_REFERENCE"
+
+
+class VisionDepthQuality(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    REJECT = "REJECT"
+
+
+class VisionDepthSourceType(str, Enum):
+    URL = "url"
+    LOCAL = "local"
+
+
+class VisionDepthSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: VisionDepthSourceType
+    value: str = Field(min_length=1)
+
+
+class VisionDepthEstimate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    level: int = Field(ge=0, le=5)
+    estimatedDepthCm: float | None = Field(default=None, ge=0)
+    rangeCm: list[float | None] = Field(min_length=2, max_length=2)
+    confidence: float = Field(ge=0, le=1)
+
+
+class VisionDepthObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    imageId: str
+    source: VisionDepthSource
+    floodDetected: bool
+    depth: VisionDepthEstimate
+    method: VisionDepthMethod
+    referenceObjects: list[dict[str, Any]]
+    waterMaskPath: str
+    quality: VisionDepthQuality
+    qualityFlags: list[str]
+    model: dict[str, Any]
+    synthetic: bool
+
+
+class VisionDepthUrlRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    url: str = Field(min_length=1, json_schema_extra={"format": "uri"})
+    imageId: str | None = None
