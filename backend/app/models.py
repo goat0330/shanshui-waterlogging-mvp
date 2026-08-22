@@ -242,6 +242,32 @@ class VisionDepthSource(BaseModel):
     value: str = Field(min_length=1)
 
 
+class VisionDepthProvenanceSourceType(str, Enum):
+    IMAGE = "VISION_IMAGE"
+    VIDEO = "VISION_VIDEO"
+
+
+class VisionDepthLicenseReview(str, Enum):
+    APPROVED = "approved"
+    PENDING = "pending"
+    NOT_REQUIRED = "not_required"
+
+
+class VisionDepthRuntimePolicy(str, Enum):
+    RESEARCH_MVP = "research_mvp"
+    PRODUCTION = "production"
+
+
+class VisionDepthProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sourceType: VisionDepthProvenanceSourceType
+    sourceId: str = Field(min_length=1)
+    observedAt: datetime | None
+    licenseReview: VisionDepthLicenseReview
+    runtimePolicy: VisionDepthRuntimePolicy
+
+
 class VisionDepthEstimate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -256,6 +282,7 @@ class VisionDepthObservation(BaseModel):
 
     imageId: str
     source: VisionDepthSource
+    provenance: VisionDepthProvenance
     floodDetected: bool
     depth: VisionDepthEstimate
     method: VisionDepthMethod

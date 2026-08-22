@@ -1,40 +1,37 @@
 # RC2 VisionDepth provenance contract proposal
 
-状态：`CONDITIONAL`，本文件只记录跨边界差异，未修改 `contracts/**`。
+状态：`RESOLVED BY MAIN d5e568b`，本文件保留为历史跨边界记录，未修改 `contracts/**`。
 
 ## Observed frozen Contract
 
-`main/5954570` 与当前 worker worktree 的 `VisionDepthObservation` 均要求根级字段：
+此前 `main/5954570` 与 worker worktree 的 `VisionDepthObservation` 均要求根级字段：
 
 ```text
 imageId, source, floodDetected, depth, method, referenceObjects,
 waterMaskPath, quality, qualityFlags, model, synthetic
 ```
 
-根对象 `additionalProperties: false`；`source.type` 只有 `url|local`。
+根对象 `additionalProperties: false`；`source.type` 只有 `url|local`。该历史状态已由 Main 的 `d5e568b` 向后兼容扩展。
 
-## RC2 request that cannot be added locally
+## Approved Contract now implemented
 
-RC2 派发要求 public output 额外包含：
+Main `d5e568b` 已将 `provenance` 加入 `VisionDepthObservation.required`，并冻结：
 
 ```text
-sourceType, sourceId, observedAt, confidence, quality, method,
-evidence/mask ref, estimatedDepthCm, synthetic, licenseReview, runtimePolicy
+provenance.sourceType = VISION_IMAGE | VISION_VIDEO
+provenance.sourceId = non-empty string
+provenance.observedAt = date-time | null
+provenance.licenseReview = approved | pending | not_required
+provenance.runtimePolicy = research_mvp | production
 ```
 
-其中 `sourceType=VISION_IMAGE|VISION_VIDEO` 与当前 `source.type=url|local` 语义不同；`sourceId`、`observedAt`、`licenseReview`、`runtimePolicy` 也不在冻结 schema 中。直接添加会违反根级 `additionalProperties:false`，也违反“不自行发明 public contract 字段”。
+backend image upload/url 现按 `VISION_IMAGE` 组装该对象，保留旧 `source.type=url|local`，并不把 provenance 塞入 `model`。
 
-## Minimal proposal for Architect/Main
+## Remaining boundary note
 
-请在 `contracts/**` 中冻结一个版本化的 provenance response（或为当前 observation 增加正式可选 provenance object），明确：
+`VISION_VIDEO` 仍仅为 schema 预留；当前视频 evidence 由 Vision worker 的 local-only artifacts 提供，本 worker 不修改算法或媒体原始数据。正式 Contract 文件仍由 Main/Architect 所有，本 worker 未修改 `contracts/**`。
 
-- image 与 video 的 source enum 和 source identifier；
-- observedAt 与 confidence 的时区/nullable 语义；
-- evidence/mask reference 的 URI/path 规则；
-- `licenseReview`、`runtimePolicy` 的 enum/required 语义；
-- 是否继续保留当前 `source` / `depth` 结构以及兼容期。
-
-在该 Contract 落地前，backend 只返回当前冻结的 `VisionDepthObservation`，不把 provenance 字段塞入 `model` 或其他未约定位置。
+审计合入后的 Main tree 还显示 `contracts/schemas/vision-depth-observation.schema.json` 保留旧 required 集；本 worker 按边界未改该 Contract-owned 文件。若该 JSON 也是 canonical schema，需要 Main/Architect 后续同步 `provenance`，backend 本轮只以已批准的 OpenAPI/runtime shape 做 smoke。
 
 ## Ownership note
 

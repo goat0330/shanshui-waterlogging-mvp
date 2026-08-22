@@ -1,37 +1,41 @@
 # RC2 Backend Evidence API
 
-状态：`CONDITIONAL`。
+状态：`PASS` memory backend 与 VisionDepth image provenance smoke；PostgreSQL/PostGIS、真实视频链路和生产运行保持 `NOT VERIFIED`。
 
-## Audit
+## Audit and merge
 
 - Worker worktree：`worktrees/backend-rc11`。
 - Branch：`worker/rc11-backend`。
-- Worker code checkpoint：`cd20b1dd71bc03699a5d8839e1bb3345b86e91e7`。
-- Worker HEAD：`76ad77ca25ff04665ec0ccdf72285c28d7b45e7d`（progress evidence refresh）。
-- Main baseline：`5954570`。
-- Current Main tip：`7ebb829`；Main 已包含当前 worker 的 RC1 ancestor，但尚未包含本 RC2 checkpoint，并另外包含 frontend/media/`backend/visiondepth_v2` 等其他 worker-owned 改动；本轮未触碰这些范围。
+- Worker baseline：`de6c529`，审计时 worktree clean。
+- Main approved Contract commit：`d5e568b`。
+- 实际合入结果：fast-forward 到 `72159e2`，该 tip 包含 `d5e568b`；没有 reset、覆盖或回滚未提交改动。
+- Main 同步带入的 frontend/media/visiondepth_v2 产物属于其他 worker；本轮手工修改仅限 `backend/**` 与 `review/backend/**`。
 
-## P0 status
+## Implemented
 
-- 既有 upload/url endpoint、VisionDepthAdapter 和 Telemetry/WS/Forecast/Analysis regression 保持可复用。
-- 当前 frozen Contract 不包含 RC2 要求的 provenance public fields；详细差异见 `RC2_CONTRACT_PROPOSAL.md`。
-- 在不改 Contract 的前提下，已补 URL HTTP/HTTPS、timeout、MIME/size/HTML/SVG、逐跳 redirect 和 private-target/SSRF 边界；URL fetch 关闭环境代理。
-- Vision 结果继续只作为 evidence，不写 `SensorState`、`FloodPoint.currentDepthCm` 或 telemetry projection。
+- `VisionDepthProvenance` 使用严格 Pydantic enums/model，且 `VisionDepthObservation.provenance` 为必填、禁止额外字段。
+- upload/url image adapter 组装 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=pending`、`runtimePolicy=research_mvp`。
+- provenance 不写入 `model`，Vision evidence 不写 `SensorState`、`FloodPoint.currentDepthCm`、`FloodEvent` 或 telemetry projection。
+- 保留 `source.type=url|local` 兼容字段及既有 URL HTTP/HTTPS、timeout、逐跳 redirect、MIME/size、HTML/SVG、private-target/SSRF 防护。
+- `VISION_VIDEO` 仅为 Contract 预留；当前视频 evidence 仍是 Vision worker 的 local-only artifacts，本 worker 未复制或修改算法。
 
-## RC2 commands and results
+## Actual commands and results
 
 ```text
-python -m compileall -q app tools                 PASS
-python -B smoke.py                                PASS
-git diff --check                                  PASS
-git status --short --branch                       PASS (after commit expected clean)
+python -m compileall -q app tools    PASS (exit 0)
+python -B smoke.py                   PASS (exit 0)
+git diff --check                     PASS (exit 0; only LF/CRLF warnings)
 ```
 
-Smoke 实测：upload 200、private URL 400、invalid URL 400、upload MIME 415、upload size 413、HTML/SVG/unavailable/redirect guard、request JSON error、轻量并发、sensor-vs-vision ownership，以及既有 REST/WS/telemetry/forecast/analysis 全部通过。
+Smoke 实测包含：OpenAPI provenance required/enum/nullable shape、upload 200 JSON、direct controlled URL adapter provenance、upload 后 SensorState 未变化、旧 REST/telemetry/projection/WS/Forecast/Analysis 回归、private URL/redirect/HTML/SVG/size/error/concurrency 边界；所有断言通过。运行时仅有既有 requests dependency warning，不影响 exit 0。
+
+## Contract differences
+
+- backend runtime response 与 Main `d5e568b` 更新的 `contracts/openapi.yaml` 对齐；本 worker 未修改 `contracts/**`。
+- 合入后的 `contracts/schemas/vision-depth-observation.schema.json` 仍显示旧 required 集，未包含 provenance；这是 Contract-owned 文件的同步差异，本轮按边界未改，需 Main/Architect 后续确认其是否为独立 canonical schema。该差异不阻塞本轮 OpenAPI/runtime smoke，但不应宣称所有 Contract artifacts 已一致。
 
 ## NOT VERIFIED / blockers
 
-- RC2 provenance response cannot be public-implemented until Main/Architect updates frozen `contracts/**`.
-- 本轮使用受控 loopback fixture 直接验证 adapter URL media path；由于 SSRF policy 会拒绝 loopback，公网/global URL 的 endpoint 200 尚未在本机 smoke 中实测。
-- `backend/visiondepth_v2` video seam is worker-owned and not modified here.
-- PostgreSQL/PostGIS, Docker, real hardware, production model, license approval, external services and production deployment remain `NOT VERIFIED`.
+- 公网/global URL 的 endpoint 200 未在本机验证；loopback 仅通过受控 patch 验证 adapter media path，真实 endpoint 仍按 SSRF policy 拒绝 private target。
+- PostgreSQL/PostGIS migration、seed、POST→restart→GET、WGS84 round-trip、`ST_DWithin`、forecast geometry 查询。
+- 真实 ESP32/STM32、4G/Wi-Fi 物理链路、MQTT、鉴权、官方 API、真实 AI/预测模型、生产部署、高并发可靠性、视频 backend public endpoint。

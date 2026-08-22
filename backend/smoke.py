@@ -203,6 +203,7 @@ def main() -> None:
     assert set(vision_schema["required"]) == {
         "imageId",
         "source",
+        "provenance",
         "floodDetected",
         "depth",
         "method",
@@ -215,6 +216,30 @@ def main() -> None:
     }
     assert vision_schema["additionalProperties"] is False
     assert spec["components"]["schemas"]["VisionDepthSourceType"]["enum"] == ["url", "local"]
+    provenance_schema = spec["components"]["schemas"]["VisionDepthProvenance"]
+    assert set(provenance_schema["required"]) == {
+        "sourceType",
+        "sourceId",
+        "observedAt",
+        "licenseReview",
+        "runtimePolicy",
+    }
+    assert provenance_schema["additionalProperties"] is False
+    assert spec["components"]["schemas"]["VisionDepthProvenanceSourceType"]["enum"] == [
+        "VISION_IMAGE",
+        "VISION_VIDEO",
+    ]
+    assert spec["components"]["schemas"]["VisionDepthLicenseReview"]["enum"] == [
+        "approved",
+        "pending",
+        "not_required",
+    ]
+    assert spec["components"]["schemas"]["VisionDepthRuntimePolicy"]["enum"] == [
+        "research_mvp",
+        "production",
+    ]
+    assert provenance_schema["properties"]["sourceId"]["minLength"] == 1
+    assert {"type": "null"} in provenance_schema["properties"]["observedAt"]["anyOf"]
     assert spec["components"]["schemas"]["VisionDepthMethod"]["enum"] == [
         "VISUAL_RANGE",
         "NO_REFERENCE",
@@ -278,6 +303,13 @@ def main() -> None:
             direct_url_observation = VisionDepthAdapter().analyze_url(local_image_url, "IMG-RC2-DIRECT-URL")
         assert direct_url_observation.source.type.value == "url"
         assert direct_url_observation.imageId == "IMG-RC2-DIRECT-URL"
+        assert direct_url_observation.provenance.model_dump(mode="json") == {
+            "sourceType": "VISION_IMAGE",
+            "sourceId": "IMG-RC2-DIRECT-URL",
+            "observedAt": None,
+            "licenseReview": "pending",
+            "runtimePolicy": "research_mvp",
+        }
         with patch.object(VisionDepthAdapter, "_validate_public_url", return_value=None):
             try:
                 VisionDepthAdapter._download_public_url(f"{vision_base_url}/html")
@@ -443,6 +475,7 @@ def main() -> None:
         assert set(upload_observation) == {
             "imageId",
             "source",
+            "provenance",
             "floodDetected",
             "depth",
             "method",
@@ -455,9 +488,22 @@ def main() -> None:
         }
         assert upload_observation["imageId"] == "IMG-RC11-UPLOAD"
         assert upload_observation["source"]["type"] == "local"
+        assert upload_observation["provenance"] == {
+            "sourceType": "VISION_IMAGE",
+            "sourceId": "IMG-RC11-UPLOAD",
+            "observedAt": None,
+            "licenseReview": "pending",
+            "runtimePolicy": "research_mvp",
+        }
+        assert "provenance" not in upload_observation["model"]
         assert upload_observation["synthetic"] is False
         json.dumps(upload_observation, ensure_ascii=False)
         print("PASS 200 VisionDepth multipart upload and Contract response")
+
+        status, sensor_after_upload = request("/api/v1/sensors/SSZJ-NODE-001")
+        assert status == 200
+        assert sensor_after_upload == sensor
+        print("PASS VisionDepth upload preserved current SensorState")
 
         status, url_observation = request(
             "/api/v1/vision-depth/analyze/url",

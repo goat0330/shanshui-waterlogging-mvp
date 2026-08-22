@@ -191,6 +191,13 @@ class VisionDepthAdapter:
 
         observation["imageId"] = image_id
         observation["source"] = {"type": source_type, "value": source_value}
+        observation["provenance"] = {
+            "sourceType": "VISION_IMAGE",
+            "sourceId": image_id,
+            "observedAt": None,
+            "licenseReview": "pending",
+            "runtimePolicy": "research_mvp",
+        }
         try:
             return VisionDepthObservation.model_validate(observation)
         except Exception as exc:
