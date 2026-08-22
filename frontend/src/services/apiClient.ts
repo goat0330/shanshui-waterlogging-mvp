@@ -9,6 +9,7 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  SensorState,
 } from '../types'
 
 export type DataSource = 'fixture' | 'api'
@@ -34,6 +35,7 @@ export const apiClient: DashboardDataClient = {
   getFloodAnalysis: (eventId: string) => requestJson<AIAnalysis>(`/api/v1/flood-events/${encodeURIComponent(eventId)}/analysis`),
   listCameras: () => requestJson<Camera[]>('/api/v1/cameras'),
   getCamera: (cameraId: string) => requestJson<Camera>(`/api/v1/cameras/${encodeURIComponent(cameraId)}`),
+  getSensorState: (sensorId: string) => requestJson<SensorState>(`/api/v1/sensors/${encodeURIComponent(sensorId)}`),
   getTimeline: (scenarioId: string) => requestJson<ScenarioTimeline>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/timeline`),
 }
 

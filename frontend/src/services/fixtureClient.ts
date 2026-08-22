@@ -8,12 +8,25 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  SensorState,
 } from '../types'
 
 const fixtureEvent = homeFixtures.event
 const fixtureForecast = homeFixtures.forecast
 const fixtureAnalysis = homeFixtures.analysis
 const fixtureCamera = homeFixtures.camera
+const fixtureSensor: SensorState = {
+  sensorId: 'SSZJ-NODE-001',
+  siteId: 'SITE-RML-BJDD',
+  coordinates: fixtureEvent.coordinates,
+  depthMm: fixtureEvent.currentDepthCm * 10,
+  depthCm: fixtureEvent.currentDepthCm,
+  waterDetected: fixtureEvent.currentDepthCm > 0,
+  observedAt: fixtureEvent.startedAt,
+  receivedAt: homeFixtures.overview.updatedAt,
+  transport: 'SIMULATOR',
+  source: 'DEMO_DEVICE',
+}
 
 function notFound(resource: string, id: string): Error {
   return new Error(`Fixture ${resource} not found: ${id}`)
@@ -40,6 +53,10 @@ export const fixtureClient: DashboardDataClient = {
   getCamera: async (cameraId: string) => {
     if (fixtureCamera.id !== cameraId) throw notFound('camera', cameraId)
     return fixtureCamera
+  },
+  getSensorState: async (sensorId: string): Promise<SensorState> => {
+    if (fixtureSensor.sensorId !== sensorId) throw notFound('sensor', sensorId)
+    return fixtureSensor
   },
   getTimeline: async (scenarioId: string): Promise<ScenarioTimeline> => {
     if (homeFixtures.timeline.scenarioId !== scenarioId) throw notFound('timeline', scenarioId)

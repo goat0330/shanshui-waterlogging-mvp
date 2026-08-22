@@ -173,6 +173,7 @@ export interface DashboardDataClient {
   getFloodAnalysis(eventId: string): Promise<AIAnalysis>
   listCameras(): Promise<Camera[]>
   getCamera(cameraId: string): Promise<Camera>
+  getSensorState(sensorId: string): Promise<SensorState>
   getTimeline(scenarioId: string): Promise<ScenarioTimeline>
 }
 
