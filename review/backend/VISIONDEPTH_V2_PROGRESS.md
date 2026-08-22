@@ -134,3 +134,4 @@ manifest 使用 `license=MVP_REVIEW`、`authorized=true`。这里的 `authorized
 
 - 上一实现 checkpoint：`61fae2b`（`feat(visiondepth): add guarded video evidence scaffold`）。
 - 本轮代码 checkpoint：`6e93c45538da6964bffab597fd63a93329d1bf2e`（`feat(visiondepth): enable research MVP video smoke`）。本报告随后单独提交；runtime MP4、manifest 和 outputs 不进入 Git。
+- RC2 report checkpoint：`bee38d5aa5d0492cf919cdbefef893945ff1ebfa`（本报告内容已提交；本行将随最终 docs commit 固化）。
