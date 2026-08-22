@@ -1,0 +1,40 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "source": "synthetic-demo",
+    "attribution": "Shanshui MVP RC1.1 — hand-authored demo Huangpu River corridor; not official hydrography.",
+    "coordinateSystem": "WGS84 lon/lat",
+    "license": "Project demo geometry; replace with licensed GIS before production use."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "featureRole": "huangpu-river-demo",
+        "source": "synthetic-demo",
+        "attribution": "Hand-authored corridor for geographic layer smoke; not surveyed data."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.435, 31.285],
+            [121.464, 31.273],
+            [121.489, 31.251],
+            [121.515, 31.228],
+            [121.538, 31.205],
+            [121.554, 31.180],
+            [121.563, 31.155],
+            [121.545, 31.147],
+            [121.532, 31.174],
+            [121.508, 31.198],
+            [121.482, 31.220],
+            [121.456, 31.245],
+            [121.425, 31.274],
+            [121.435, 31.285]
+          ]
+        ]
+      }
+    }
+  ]
+}
