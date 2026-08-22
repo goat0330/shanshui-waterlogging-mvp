@@ -6,6 +6,7 @@ import pytest
 
 from src.visiondepth.backends.external_command import ExternalCommandBackend
 from src.visiondepth.engine import guard_observation
+from tools.check_third_party import _allows_local_research
 
 
 def _observation() -> dict[str, object]:
@@ -71,3 +72,27 @@ def test_approved_external_backend_expands_paths(tmp_path) -> None:
         license_approved=True,
     )
     assert backend.run("frame.png", "mask.png", metadata_path) == {"ok": True}
+
+
+def test_research_profile_does_not_open_production_gate() -> None:
+    assert _allows_local_research(
+        {
+            "runtime_profile": "research_mvp",
+            "redistribution": False,
+            "external_models_enabled": False,
+        }
+    )
+    assert not _allows_local_research(
+        {
+            "runtime_profile": "production",
+            "redistribution": False,
+            "external_models_enabled": False,
+        }
+    )
+    assert not _allows_local_research(
+        {
+            "runtime_profile": "research_mvp",
+            "redistribution": True,
+            "external_models_enabled": False,
+        }
+    )

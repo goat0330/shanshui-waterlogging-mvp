@@ -3,6 +3,10 @@ paths:
   output_root: "../outputs"
   third_party_root: "../../../../../third_party"
 
+runtime_profile: research_mvp
+redistribution: false
+external_models_enabled: false
+
 video:
   sample_every_n_frames: 15
   max_samples: 12
