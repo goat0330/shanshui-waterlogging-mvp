@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import type { FloodEvent, FloodPoint, ForecastFrame, ForecastKey } from './types'
+import { addDemoCityBlocks } from './scene/demoCityLayer'
+import { HUANGPU_RIVER_GEOJSON_URL, HUANGPU_RIVER_SOURCE_LABEL, loadHuangpuHydroSystemLayer } from './scene/hydroSystemLayer'
+import { addGeographicSensorEntity } from './scene/sensorEntity'
 
 const CORE_TILES_URL = '/data/shanghai-core/tileset.json'
 const CESIUM_ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN?.trim()
@@ -10,11 +13,6 @@ const HUANGPU_SHP_CENTER = { lon: 121.47797014, lat: 31.21940076 }
 const HUANGPU_MODEL_CENTER_LOCAL = { x: 80.3409, y: -53.0326, z: 90 }
 const DEFAULT_EVENT = { lon: 121.4874, lat: 31.2297 }
 const OSM_BUILDING_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#86a8b9', 0.94)" })
-const FORECAST_GEOMETRY_URLS: Record<ForecastKey, string> = {
-  NOW: '/demo/forecast/now.geojson',
-  PLUS_10: '/demo/forecast/plus10.geojson',
-  PLUS_30: '/demo/forecast/plus30.geojson',
-}
 const FORECAST_FILL: Record<ForecastKey, Cesium.Color> = {
   NOW: new Cesium.Color(0.14, 0.84, 0.91, 0.36),
   PLUS_10: new Cesium.Color(0.15, 0.48, 1, 0.38),
@@ -25,13 +23,6 @@ const FORECAST_STROKE: Record<ForecastKey, Cesium.Color> = {
   PLUS_10: new Cesium.Color(0.48, 0.68, 1, 0.96),
   PLUS_30: new Cesium.Color(1, 0.67, 0.3, 0.98),
 }
-const MARKER_COLOR: Record<FloodPoint['riskLevel'], Cesium.Color> = {
-  NORMAL: new Cesium.Color(0.17, 0.84, 0.78, 1),
-  WARNING: new Cesium.Color(1, 0.6, 0.22, 1),
-  HIGH: new Cesium.Color(0.95, 0.5, 0.3, 1),
-  CRITICAL: new Cesium.Color(0.94, 0.33, 0.3, 1),
-}
-
 interface CesiumSceneProps {
   event: FloodEvent | null
   points: FloodPoint[]
@@ -71,16 +62,36 @@ function placeHuangpuByRange(tileset: Cesium.Cesium3DTileset) {
   tileset.modelMatrix = Cesium.Matrix4.multiply(targetFrame, sourceInverse, new Cesium.Matrix4())
 }
 
+function flyToTarget(viewer: Cesium.Viewer, target: { lon: number; lat: number }, duration = 0.8) {
+  viewer.camera.flyToBoundingSphere(
+    new Cesium.BoundingSphere(
+      Cesium.Cartesian3.fromDegrees(target.lon, target.lat, 0),
+      900,
+    ),
+    {
+      offset: new Cesium.HeadingPitchRange(
+        Cesium.Math.toRadians(28),
+        Cesium.Math.toRadians(-34),
+        3200,
+      ),
+      duration,
+    },
+  )
+}
+
 export function CesiumScene({ event, points, activeForecast, forecastFrame, selectedPointId, layers, onPointSelect }: CesiumSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const cityLayerRef = useRef<Cesium.PrimitiveCollection | null>(null)
+  const hydroDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const forecastDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const layersDepthRef = useRef(layers.depth)
   const [viewerReady, setViewerReady] = useState(false)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [source, setSource] = useState<'osm' | 'local' | null>(null)
-  const [forecastStatus, setForecastStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [source, setSource] = useState<'osm' | 'local' | 'demo' | null>(null)
+  const [hydroStatus, setHydroStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [forecastStatus, setForecastStatus] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading')
+  const [sensorEntityCount, setSensorEntityCount] = useState(0)
   const selectedPoint = points.find((point) => point.id === selectedPointId) ?? null
   const target = event?.coordinates ?? selectedPoint?.coordinates ?? DEFAULT_EVENT
 
@@ -114,22 +125,6 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
     setViewerReady(true)
 
     let disposed = false
-    const flyToShanghai = () => {
-      viewer.camera.flyToBoundingSphere(
-        new Cesium.BoundingSphere(
-          Cesium.Cartesian3.fromDegrees(target.lon, target.lat, 0),
-          1200,
-        ),
-        {
-          offset: new Cesium.HeadingPitchRange(
-            Cesium.Math.toRadians(28),
-            Cesium.Math.toRadians(-28),
-            4000,
-          ),
-          duration: 1,
-        },
-      )
-    }
 
     const loadLocalCore = async () => {
       try {
@@ -152,7 +147,15 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
           duration: 0.8,
         })
       } catch {
-        if (!disposed) setStatus('error')
+        if (disposed) return
+        try {
+          addDemoCityBlocks(cityLayer)
+          setSource('demo')
+          setStatus('ready')
+          flyToTarget(viewer, target)
+        } catch {
+          setStatus('error')
+        }
       }
     }
 
@@ -176,7 +179,7 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
         cityLayer.add(tileset)
         setSource('osm')
         setStatus('ready')
-        flyToShanghai()
+        flyToTarget(viewer, target, 1)
 
         if (!disposed) {
           const imageryLayer = viewer.imageryLayers.addImageryProvider(
@@ -197,12 +200,46 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
     return () => {
       disposed = true
       cityLayerRef.current = null
+      hydroDataSourceRef.current = null
       forecastDataSourceRef.current = null
       viewerRef.current = null
       setViewerReady(false)
       viewer.destroy()
     }
-  }, [target.lat, target.lon])
+  }, [])
+
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !viewerReady) return
+    flyToTarget(viewer, target)
+  }, [target.lat, target.lon, viewerReady])
+
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !viewerReady) return
+
+    let cancelled = false
+    setHydroStatus('loading')
+    void loadHuangpuHydroSystemLayer(viewer).then((dataSource) => {
+      if (cancelled || viewerRef.current !== viewer || viewer.isDestroyed()) {
+        if (!viewer.isDestroyed()) viewer.dataSources.remove(dataSource, true)
+        return
+      }
+      dataSource.show = layers.water
+      hydroDataSourceRef.current = dataSource
+      setHydroStatus('ready')
+    }).catch(() => {
+      if (!cancelled) setHydroStatus('error')
+    })
+
+    return () => {
+      cancelled = true
+      if (hydroDataSourceRef.current && viewerRef.current === viewer && !viewer.isDestroyed()) {
+        viewer.dataSources.remove(hydroDataSourceRef.current, true)
+        hydroDataSourceRef.current = null
+      }
+    }
+  }, [viewerReady])
 
   useEffect(() => {
     layersDepthRef.current = layers.depth
@@ -210,13 +247,18 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
   }, [layers.depth])
 
   useEffect(() => {
+    if (hydroDataSourceRef.current) hydroDataSourceRef.current.show = layers.water
+  }, [layers.water])
+
+  useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer || !viewerReady) return
 
     const markerData: Array<{
-      id: string
-      selectId: string
-      name: string
+        id: string
+        selectId: string
+        sensorId: string
+        name: string
       coordinates: FloodPoint['coordinates']
       depthCm: number
       riskLevel: FloodPoint['riskLevel']
@@ -224,6 +266,7 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       ? points.map((point) => ({
         id: point.id,
         selectId: point.id,
+        sensorId: `scene-sensor-${point.id}`,
         name: point.name,
         coordinates: point.coordinates,
         depthCm: point.depthCm,
@@ -233,6 +276,7 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
         ? [{
           id: `event-${event.id}`,
           selectId: selectedPointId || 'FP-001',
+          sensorId: `scene-sensor-${event.id}`,
           name: event.name,
           coordinates: event.coordinates,
           depthCm: event.currentDepthCm,
@@ -240,37 +284,17 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
         }]
         : []
 
-    const entities = markerData.map((marker) => {
-      const selected = marker.selectId === selectedPointId
-      return viewer.entities.add({
-        id: `flood-point-${marker.id}`,
-        name: marker.name,
-        // Contract coordinates are WGS84 lon/lat; fromDegrees performs the geographic placement.
-        position: Cesium.Cartesian3.fromDegrees(marker.coordinates.lon, marker.coordinates.lat, 0),
-        point: new Cesium.PointGraphics({
-          show: true,
-          pixelSize: selected ? 16 : 10,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          color: MARKER_COLOR[marker.riskLevel],
-          outlineColor: Cesium.Color.WHITE.withAlpha(0.92),
-          outlineWidth: selected ? 3 : 2,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        }),
-        label: selected
-          ? new Cesium.LabelGraphics({
-            text: `${marker.id} · ${marker.depthCm.toFixed(1)} cm`,
-            font: '11px sans-serif',
-            fillColor: Cesium.Color.fromCssColorString('#ffe0ac'),
-            showBackground: true,
-            backgroundColor: Cesium.Color.fromCssColorString('#1d2022').withAlpha(0.8),
-            pixelOffset: new Cesium.Cartesian2(14, -14),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-          })
-          : undefined,
-        properties: { floodPointId: marker.selectId },
-      })
-    })
+    const entities = markerData.map((marker) => addGeographicSensorEntity(viewer, {
+      entityId: marker.id,
+      sensorId: marker.sensorId,
+      floodPointId: marker.selectId,
+      name: marker.name,
+      coordinates: marker.coordinates,
+      depthCm: marker.depthCm,
+      riskLevel: marker.riskLevel,
+      selected: marker.selectId === selectedPointId,
+    }))
+    setSensorEntityCount(entities.length)
 
     return () => {
       if (!viewer.isDestroyed()) entities.forEach((entity) => viewer.entities.remove(entity))
@@ -289,14 +313,16 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
     }
 
     viewer.screenSpaceEventHandler.setInputAction(handleClick, Cesium.ScreenSpaceEventType.LEFT_CLICK)
-    return () => viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK)
+    return () => {
+      if (!viewer.isDestroyed()) viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK)
+    }
   }, [onPointSelect, viewerReady])
 
   useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer || !viewerReady) return
 
-    const geometryUrl = forecastFrame?.geometryUrl ?? FORECAST_GEOMETRY_URLS[activeForecast]
+    const geometryUrl = forecastFrame?.geometryUrl
     const fill = FORECAST_FILL[activeForecast]
     const stroke = FORECAST_STROKE[activeForecast]
     let cancelled = false
@@ -304,6 +330,12 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
     const previousDataSource = forecastDataSourceRef.current
     forecastDataSourceRef.current = null
     if (previousDataSource) viewer.dataSources.remove(previousDataSource, true)
+    if (!geometryUrl) {
+      setForecastStatus('empty')
+      return () => {
+        cancelled = true
+      }
+    }
     setForecastStatus('loading')
 
     void Cesium.GeoJsonDataSource.load(geometryUrl, {
@@ -349,12 +381,18 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       ref={containerRef}
       aria-label="上海 Cesium 三维城市底座"
       data-source={source ?? 'loading'}
+      data-coordinate-system="WGS84 lon/lat"
+      data-hydro-source={HUANGPU_RIVER_GEOJSON_URL}
+      data-hydro-attribution={HUANGPU_RIVER_SOURCE_LABEL}
+      data-hydro-status={hydroStatus}
+      data-sensor-entity-count={sensorEntityCount}
       data-forecast-source={activeForecast}
+      data-forecast-geometry={forecastFrame?.geometryUrl ?? 'none'}
       data-forecast-status={forecastStatus}
     >
       {status === 'loading' && <span className="cesium-scene-status">{CESIUM_ION_TOKEN ? 'OSM BUILDINGS LOADING' : 'LOCAL CITY LOADING'}</span>}
       {status === 'error' && <span className="cesium-scene-status cesium-scene-status--error">CITY DATA UNAVAILABLE</span>}
-      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · GLOBAL' : 'LOCAL HUANGPU · FALLBACK'}</span>}
+      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · GLOBAL' : source === 'local' ? 'LOCAL HUANGPU · FALLBACK' : 'DEMO CITY BLOCKS · FALLBACK'}</span>}
     </div>
   )
 }
