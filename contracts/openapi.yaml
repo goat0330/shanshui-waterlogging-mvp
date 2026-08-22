@@ -610,7 +610,7 @@ components:
     VisionDepthObservation:
       type: object
       required:
-        [imageId, source, floodDetected, depth, method, referenceObjects, waterMaskPath, quality, qualityFlags, model, synthetic]
+        [imageId, source, provenance, floodDetected, depth, method, referenceObjects, waterMaskPath, quality, qualityFlags, model, synthetic]
       additionalProperties: false
       properties:
         imageId:
@@ -625,6 +625,8 @@ components:
               enum: [url, local]
             value:
               type: string
+        provenance:
+          $ref: "#/components/schemas/VisionDepthProvenance"
         floodDetected:
           type: boolean
         depth:
@@ -673,3 +675,26 @@ components:
           additionalProperties: true
         synthetic:
           type: boolean
+
+    VisionDepthProvenance:
+      type: object
+      required: [sourceType, sourceId, observedAt, licenseReview, runtimePolicy]
+      additionalProperties: false
+      properties:
+        sourceType:
+          type: string
+          enum: [VISION_IMAGE, VISION_VIDEO]
+        sourceId:
+          type: string
+          minLength: 1
+        observedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Capture/observation time when known; null means the source did not provide it.
+        licenseReview:
+          type: string
+          enum: [approved, pending, not_required]
+        runtimePolicy:
+          type: string
+          enum: [research_mvp, production]
