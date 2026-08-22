@@ -125,7 +125,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   })
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
   const sensor = data.sensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event ? createDemoSensorEvidence(selectedEvent.event) : null)
-  const currentDepth = sensor?.depthCm ?? selectedEvent.event?.currentDepthCm ?? selectedEvent.selectedPoint?.depthCm
+  const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
 
   useEffect(() => {
     if (!visionFile) {
@@ -200,8 +200,8 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       </div>
       <div className="dashboard-side dashboard-side--right">
         <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
-        <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} onChange={setActiveForecast} />
-        <CctvCard camera={selectedEvent.camera} showOverlay={layers.video} overlayData={{ waterDepthCm: currentDepth }} />
+        <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+        <CctvCard camera={selectedEvent.camera} showOverlay={layers.video} />
       </div>
       <TimelineBar timeline={data.timeline} activeKey={activeForecast} onForecastChange={setActiveForecast} />
       <div className="dashboard-demo-badge">{dataBadge}</div>
@@ -316,7 +316,7 @@ function GalleryPage() {
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} sensor={createDemoSensorEvidence(homeFixtures.event)} />
             </GalleryCard>
             <GalleryCard title="EventPanel" stateName="critical">
-              <EventPanel event={criticalEventFixture} analysis={homeFixtures.analysis} />
+              <EventPanel event={criticalEventFixture} analysis={homeFixtures.analysis} sensor={createDemoSensorEvidence(criticalEventFixture)} />
             </GalleryCard>
             <GalleryCard title="EventPanel" stateName="loading">
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} state="loading" />
@@ -325,10 +325,10 @@ function GalleryPage() {
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} state="empty" />
             </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="NOW active">
-              <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" onChange={() => undefined} />
+              <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" measuredDepthCm={createDemoSensorEvidence(homeFixtures.event).depthCm} onChange={() => undefined} />
             </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="+30 active">
-              <ForecastPreview forecast={homeFixtures.forecast} activeKey="PLUS_30" onChange={() => undefined} />
+              <ForecastPreview forecast={homeFixtures.forecast} activeKey="PLUS_30" measuredDepthCm={createDemoSensorEvidence(homeFixtures.event).depthCm} onChange={() => undefined} />
             </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="loading">
               <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" onChange={() => undefined} state="loading" />

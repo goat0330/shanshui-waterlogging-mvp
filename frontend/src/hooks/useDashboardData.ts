@@ -6,9 +6,10 @@ import type { DashboardData, SensorState } from '../types'
 
 const client = DATA_SOURCE === 'api' ? apiClient : fixtureClient
 const defaultEventId = FORMAL_EVENT_BY_FLOOD_POINT[DEFAULT_FLOOD_POINT_ID]
+const defaultSensorId = SENSOR_FLOOD_POINT_MAPPINGS[0]?.sensorId ?? 'SSZJ-NODE-001'
 
 async function loadDashboardData(): Promise<DashboardData> {
-  const [overview, rainfall, rainfallRanking, points, event, forecast, analysis, cameras, timeline] = await Promise.all([
+  const [overview, rainfall, rainfallRanking, points, event, forecast, analysis, cameras, timeline, sensor] = await Promise.all([
     client.getOverview(),
     client.getRainfall(),
     client.getRainfallStationRanking(),
@@ -18,6 +19,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     client.getFloodAnalysis(defaultEventId),
     client.listCameras(),
     client.getTimeline(DEFAULT_SCENARIO_ID),
+    client.getSensorState(defaultSensorId).catch(() => null),
   ])
 
   return {
@@ -30,7 +32,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     camera: event.cameraId ? cameras.find((camera) => camera.id === event.cameraId) ?? null : null,
     analysis,
     timeline,
-    sensor: null,
+    sensor,
   }
 }
 

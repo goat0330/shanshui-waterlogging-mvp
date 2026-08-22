@@ -1034,6 +1034,13 @@ a {
   font-weight: 400;
 }
 
+.forecast-source-label {
+  color: #8bbbc5;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
 .mini-map {
   display: block;
   height: 39px;
@@ -1264,6 +1271,7 @@ a {
 .cctv-depth-tag,
 .cctv-source-tag,
 .cctv-media-status,
+.cctv-overlay-status,
 .cctv-empty-copy {
   position: absolute;
   z-index: 5;
@@ -1282,7 +1290,22 @@ a {
 .cctv-source-tag {
   bottom: 7px;
   left: 7px;
+  max-width: 68%;
+  overflow: hidden;
   color: #c5d5d9;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cctv-overlay-status {
+  bottom: 24px;
+  left: 7px;
+  max-width: 80%;
+  overflow: hidden;
+  color: #9ab7bf;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cctv-media-status {
