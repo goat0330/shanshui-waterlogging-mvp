@@ -1,0 +1,3 @@
+video_id,path,source_url,license,authorized,captured_at,camera_id,scenario
+demo001,videos/flood_with_reference/demo001.mp4,https://example.org/source,REVIEW_REQUIRED,false,unknown,CAM-DEMO-01,flood_with_reference
+

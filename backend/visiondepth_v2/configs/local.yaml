@@ -1,0 +1,13 @@
+paths:
+  data_root: "../../../../../data/visiondepth"
+  output_root: "../outputs"
+  third_party_root: "../../../../../third_party"
+
+video:
+  sample_every_n_frames: 15
+  max_samples: 12
+
+guard:
+  require_authorized_video: true
+  require_license_approval_for_external: true
+  allow_uncalibrated_depth_cm: false
