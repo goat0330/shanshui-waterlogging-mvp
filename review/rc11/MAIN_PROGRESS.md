@@ -51,9 +51,41 @@ Workers must not modify `contracts/**`; contract changes return as a proposal to
 ## Status
 
 ```text
-MAIN: ACTIVE
-BACKEND: DISPATCHED / P0
-DASHBOARD: DISPATCHED / P0
-CESIUM: DISPATCHED / P0
-VISION-VIDEO: DISPATCHED / P0
+MAIN: ACCEPTANCE COMPLETE / RC1.1 CHECKPOINT
+BACKEND: MERGED / P0 PASS / a6d9d04
+DASHBOARD: MERGED / P0 PASS / 876a03e
+CESIUM: MERGED / P0 PASS / 07c0d06
+VISION-VIDEO: MERGED / P0 PASS CONDITIONAL / a81b5de + 79933c5
 ```
+
+## Main Integration
+
+- Current Main merge head before this ledger update: `1929009` (`merge(rc11): add dashboard evidence seams`).
+- Integrated merge commits: backend `a6d9d04`; video evidence `8951c28`; Cesium `c86bf0b`; Dashboard `1929009`.
+- All four worker worktrees remain isolated and clean at their checkpoint commits.
+- Main did not modify `contracts/**` during worker merges; the frozen VisionDepth upload/URL contract remains the source of truth.
+
+## Independent Acceptance Evidence
+
+| Check | Result | Evidence |
+|---|---|---|
+| Backend REST/WebSocket/telemetry/VisionDepth | PASS | `python -B backend/smoke.py` |
+| Frontend typecheck/build | PASS | `npm run typecheck`, `npm run build` |
+| VisionDepth three-image baseline | PASS | `python -m vision.smoke` |
+| Video evidence wrapper | CONDITIONAL | `python -m media.smoke` → `VIDEO_SOURCE_REQUIRED`; no legal MP4 present |
+| API → WS → telemetry → UI | PASS | `frontend/scripts/api_realtime_browser_smoke.py` |
+| WS failure → REST fallback → reconnect | PASS / CONDITIONAL | `review/e2e/api-realtime-browser-smoke.json`; page errors 0, expected network errors during forced outage |
+| 60-second main chain | PASS / CONDITIONAL | `review/e2e/60-second-chain.json`; NOW/+10/+30 and fallback passed, expected outage logs |
+| Legacy screen-space business layer | PASS | no `MARKER_POSITIONS`, `floodPath`, selected popup, network overlay or `.scene-overlay` business symbol under `frontend/src` |
+
+## Evidence Boundaries
+
+- `source=demo` / local demo city blocks is explicit when the real Shanghai Core Local tileset is unavailable.
+- Huangpu River geometry is synthetic WGS84 demo GeoJSON, not official hydrography.
+- VisionDepth is an OpenCV baseline/evidence adapter; production accuracy, internet-image reliability and model upgrade are `NOT VERIFIED`.
+- CCTV remains a real `<video>` seam with `DEMO / PLACEHOLDER` fallback; no licensed local MP4 was found.
+- Backend smoke uses memory mode. PostgreSQL/PostGIS persistence, physical ESP32/STM32, 4G/Wi-Fi and official live Shanghai feeds remain `NOT VERIFIED`.
+
+## Next Gate
+
+No new feature dispatch in this cycle. The remaining gate is user visual review plus, when assets/credentials become available, verification of licensed city/hydro data, legal MP4 and production VisionDepth accuracy. Main should push only this accepted integration line.
