@@ -9,7 +9,9 @@
   "features": [
     {
       "type": "Feature",
+      "id": "HUANGPU-RIVER-DEMO-001",
       "properties": {
+        "layerId": "HUANGPU-RIVER-DEMO-001",
         "featureRole": "huangpu-river-demo",
         "source": "synthetic-demo",
         "attribution": "Hand-authored corridor for geographic layer smoke; not surveyed data."

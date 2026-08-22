@@ -4,6 +4,8 @@
     {
       "type": "Feature",
       "properties": {
+        "eventId": "FP202506010024",
+        "floodPointId": "FP-001",
         "forecastKey": "PLUS_10",
         "source": "synthetic-demo",
         "coordinateSystem": "WGS84 lon/lat",

@@ -6,8 +6,9 @@ import { addDemoCityBlocks } from './scene/demoCityLayer'
 import { HUANGPU_RIVER_GEOJSON_URL, HUANGPU_RIVER_SOURCE_LABEL, loadHuangpuHydroSystemLayer } from './scene/hydroSystemLayer'
 import { addGeographicSensorEntity } from './scene/sensorEntity'
 
-const CORE_TILES_URL = '/data/shanghai-core/tileset.json'
+const CORE_TILES_URL = '/data/runtime/shanghai-core/tileset.json'
 const CESIUM_ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN?.trim()
+const GEOGRAPHIC_SENSOR_SOURCE = 'dashboard-input'
 const BIMANGLE_ORIGIN = { lon: 116.46, lat: 39.92 }
 const HUANGPU_SHP_CENTER = { lon: 121.47797014, lat: 31.21940076 }
 const HUANGPU_MODEL_CENTER_LOCAL = { x: 80.3409, y: -53.0326, z: 90 }
@@ -255,10 +256,12 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
     if (!viewer || !viewerReady) return
 
     const markerData: Array<{
-        id: string
-        selectId: string
-        sensorId: string
-        name: string
+      id: string
+      selectId: string
+      sensorId: string
+      eventId?: string
+      name: string
+      source: string
       coordinates: FloodPoint['coordinates']
       depthCm: number
       riskLevel: FloodPoint['riskLevel']
@@ -267,7 +270,9 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
         id: point.id,
         selectId: point.id,
         sensorId: `scene-sensor-${point.id}`,
+        eventId: point.id === selectedPointId ? event?.id : undefined,
         name: point.name,
+        source: GEOGRAPHIC_SENSOR_SOURCE,
         coordinates: point.coordinates,
         depthCm: point.depthCm,
         riskLevel: point.riskLevel,
@@ -277,7 +282,9 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
           id: `event-${event.id}`,
           selectId: selectedPointId || 'FP-001',
           sensorId: `scene-sensor-${event.id}`,
+          eventId: event.id,
           name: event.name,
+          source: GEOGRAPHIC_SENSOR_SOURCE,
           coordinates: event.coordinates,
           depthCm: event.currentDepthCm,
           riskLevel: event.riskLevel,
@@ -293,6 +300,8 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       depthCm: marker.depthCm,
       riskLevel: marker.riskLevel,
       selected: marker.selectId === selectedPointId,
+      source: marker.source,
+      eventId: marker.eventId,
     }))
     setSensorEntityCount(entities.length)
 
@@ -381,11 +390,14 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       ref={containerRef}
       aria-label="上海 Cesium 三维城市底座"
       data-source={source ?? 'loading'}
+      data-local-tileset={CORE_TILES_URL}
       data-coordinate-system="WGS84 lon/lat"
       data-hydro-source={HUANGPU_RIVER_GEOJSON_URL}
       data-hydro-attribution={HUANGPU_RIVER_SOURCE_LABEL}
       data-hydro-status={hydroStatus}
       data-sensor-entity-count={sensorEntityCount}
+      data-selected-point-id={selectedPointId}
+      data-selected-event-id={event?.id ?? 'none'}
       data-forecast-source={activeForecast}
       data-forecast-geometry={forecastFrame?.geometryUrl ?? 'none'}
       data-forecast-status={forecastStatus}
