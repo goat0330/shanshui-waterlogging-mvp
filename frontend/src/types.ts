@@ -121,12 +121,22 @@ export interface SensorState {
   source?: string
 }
 
+export interface VisionDepthProvenance {
+  sourceType: 'VISION_IMAGE' | 'VISION_VIDEO'
+  sourceId: string
+  observedAt: string | null
+  licenseReview: 'approved' | 'pending' | 'not_required'
+  runtimePolicy: 'research_mvp' | 'production'
+}
+
 export interface VisionDepthObservation {
   imageId: string
   source: {
     type: 'url' | 'local'
     value: string
   }
+  /** Legacy fixture observations predate the required API provenance block. */
+  provenance?: VisionDepthProvenance
   floodDetected: boolean
   depth: {
     level: number

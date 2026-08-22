@@ -649,6 +649,10 @@ export function VisionDepthDrawer({
             <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
             <div><dt>contract source</dt><dd>VISION_IMAGE · {observation.source.type} · {observation.source.value}</dd></div>
             <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
+            <div><dt>sourceType</dt><dd>{observation.provenance?.sourceType ?? 'NOT ATTACHED'}</dd></div>
+            <div><dt>sourceId</dt><dd>{observation.provenance?.sourceId ?? 'NOT ATTACHED'}</dd></div>
+            <div><dt>licenseReview</dt><dd>{observation.provenance?.licenseReview ?? 'NOT ATTACHED'}</dd></div>
+            <div><dt>runtimePolicy</dt><dd>{observation.provenance?.runtimePolicy ?? 'NOT ATTACHED'}</dd></div>
           </dl>
         </div>
       ) : <div className="vision-observation-empty">尚未产生 VisionDepthObservation。</div>}

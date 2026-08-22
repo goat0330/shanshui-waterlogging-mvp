@@ -53,3 +53,10 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 ## Checkpoint
 
 - Commit: checkpoint committed; full SHA is reported in the handoff below.
+
+## Targeted provenance repair
+
+- Added strict `VisionDepthProvenance` unions for `sourceType`, `licenseReview`, and `runtimePolicy`, plus `sourceId` and nullable `observedAt`.
+- The existing VisionDepth observation block now shows `sourceType`, `sourceId`, `licenseReview`, and `runtimePolicy` without adding another panel.
+- Existing legacy fixture observations do not carry the new API provenance block, so the UI shows `NOT ATTACHED` rather than inferring approval, production policy, or a real source.
+- SENSOR measured and FORECAST semantics were not changed.
