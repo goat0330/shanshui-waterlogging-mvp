@@ -7,6 +7,7 @@
   "required": [
     "imageId",
     "source",
+    "provenance",
     "floodDetected",
     "depth",
     "method",
@@ -26,6 +27,18 @@
       "properties": {
         "type": {"type": "string", "enum": ["url", "local"]},
         "value": {"type": "string"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceType", "sourceId", "observedAt", "licenseReview", "runtimePolicy"],
+      "properties": {
+        "sourceType": {"type": "string", "enum": ["VISION_IMAGE", "VISION_VIDEO"]},
+        "sourceId": {"type": "string", "minLength": 1},
+        "observedAt": {"type": ["string", "null"], "format": "date-time"},
+        "licenseReview": {"type": "string", "enum": ["approved", "pending", "not_required"]},
+        "runtimePolicy": {"type": "string", "enum": ["research_mvp", "production"]}
       }
     },
     "floodDetected": {"type": "boolean"},
