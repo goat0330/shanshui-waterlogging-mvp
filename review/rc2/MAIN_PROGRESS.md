@@ -21,7 +21,7 @@ Sensor measured depth
 ```text
 Public repository: https://github.com/goat0330/shanshui-waterlogging-mvp
 RC2 integrated code checkpoint: 5faa0bd
-Public release: `rc2-evidence-demo` tag (final docs commit follows)
+Public release: `rc2-evidence-demo` tag
 Canonical branch: main
 Viewport target: 1920x1080
 Current decision: CONDITIONAL / RC2 + VISUAL_REVIEW
