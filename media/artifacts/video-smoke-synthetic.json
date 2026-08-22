@@ -1,0 +1,201 @@
+{
+  "videoId": "VIDEO-SMOKE-SYNTHETIC",
+  "status": "COMPLETED",
+  "source": {
+    "type": "local",
+    "value": "C:\\Users\\WangChi\\AppData\\Local\\Temp\\vision-video-smoke-ul9414yz\\synthetic-smoke.mp4",
+    "mediaType": "video/mp4",
+    "licenseStatus": "SYNTHETIC_ONLY"
+  },
+  "video": {
+    "width": 320,
+    "height": 240,
+    "fps": 8.0,
+    "frameCount": 6,
+    "decodedFrameCount": 5,
+    "durationSec": 0.75,
+    "sampleIntervalSec": 0.25,
+    "sampleStrideFrames": 2,
+    "sampledFrameCount": 3,
+    "timestampUnit": "milliseconds",
+    "sampler": "opencv_video_capture_sequential_stride"
+  },
+  "frames": [
+    {
+      "frameIndex": 0,
+      "timestampMs": 0.0,
+      "timestampSec": 0.0,
+      "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000000.png",
+      "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000.json",
+      "observation": {
+        "imageId": "VIDEO-SMOKE-SYNTHETIC-F000000",
+        "source": {
+          "type": "local",
+          "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\worktrees\\vision-video-rc11\\media\\artifacts\\VIDEO-SMOKE-SYNTHETIC-frames\\VIDEO-SMOKE-SYNTHETIC-F000000.png"
+        },
+        "floodDetected": false,
+        "depth": {
+          "level": 0,
+          "estimatedDepthCm": null,
+          "rangeCm": [
+            0,
+            0
+          ],
+          "confidence": 0.328
+        },
+        "method": "VISUAL_RANGE",
+        "referenceObjects": [],
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000-water-mask.png",
+        "quality": "LOW",
+        "qualityFlags": [
+          "BASELINE_ONLY",
+          "MODEL_WEIGHT_MISSING",
+          "NO_WATER",
+          "NO_REFERENCE"
+        ],
+        "model": {
+          "waterSegmentation": "opencv_baseline",
+          "referenceDetection": "opencv_hog_and_color_heuristic",
+          "geometrySupport": "none"
+        },
+        "synthetic": false
+      },
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000000.png",
+        "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000.json",
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000-water-mask.png",
+        "referenceEvidenceCount": 0,
+        "reliableReferenceCount": 0,
+        "referenceBoxes": [],
+        "floodDetected": false,
+        "level": 0,
+        "method": "VISUAL_RANGE"
+      }
+    },
+    {
+      "frameIndex": 2,
+      "timestampMs": 250.0,
+      "timestampSec": 0.25,
+      "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000002.png",
+      "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002.json",
+      "observation": {
+        "imageId": "VIDEO-SMOKE-SYNTHETIC-F000002",
+        "source": {
+          "type": "local",
+          "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\worktrees\\vision-video-rc11\\media\\artifacts\\VIDEO-SMOKE-SYNTHETIC-frames\\VIDEO-SMOKE-SYNTHETIC-F000002.png"
+        },
+        "floodDetected": false,
+        "depth": {
+          "level": 0,
+          "estimatedDepthCm": null,
+          "rangeCm": [
+            0,
+            0
+          ],
+          "confidence": 0.35
+        },
+        "method": "VISUAL_RANGE",
+        "referenceObjects": [],
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002-water-mask.png",
+        "quality": "LOW",
+        "qualityFlags": [
+          "BASELINE_ONLY",
+          "MODEL_WEIGHT_MISSING",
+          "NO_WATER",
+          "NO_REFERENCE"
+        ],
+        "model": {
+          "waterSegmentation": "opencv_baseline",
+          "referenceDetection": "opencv_hog_and_color_heuristic",
+          "geometrySupport": "none"
+        },
+        "synthetic": false
+      },
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000002.png",
+        "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002.json",
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002-water-mask.png",
+        "referenceEvidenceCount": 0,
+        "reliableReferenceCount": 0,
+        "referenceBoxes": [],
+        "floodDetected": false,
+        "level": 0,
+        "method": "VISUAL_RANGE"
+      }
+    },
+    {
+      "frameIndex": 4,
+      "timestampMs": 500.0,
+      "timestampSec": 0.5,
+      "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000004.png",
+      "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004.json",
+      "observation": {
+        "imageId": "VIDEO-SMOKE-SYNTHETIC-F000004",
+        "source": {
+          "type": "local",
+          "value": "D:\\研究生作业\\上海城市内涝_智慧平台\\worktrees\\vision-video-rc11\\media\\artifacts\\VIDEO-SMOKE-SYNTHETIC-frames\\VIDEO-SMOKE-SYNTHETIC-F000004.png"
+        },
+        "floodDetected": false,
+        "depth": {
+          "level": 0,
+          "estimatedDepthCm": null,
+          "rangeCm": [
+            0,
+            0
+          ],
+          "confidence": 0.351
+        },
+        "method": "VISUAL_RANGE",
+        "referenceObjects": [],
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004-water-mask.png",
+        "quality": "LOW",
+        "qualityFlags": [
+          "BASELINE_ONLY",
+          "MODEL_WEIGHT_MISSING",
+          "NO_WATER",
+          "NO_REFERENCE"
+        ],
+        "model": {
+          "waterSegmentation": "opencv_baseline",
+          "referenceDetection": "opencv_hog_and_color_heuristic",
+          "geometrySupport": "none"
+        },
+        "synthetic": false
+      },
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "framePath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000004.png",
+        "resultPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004.json",
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004-water-mask.png",
+        "referenceEvidenceCount": 0,
+        "reliableReferenceCount": 0,
+        "referenceBoxes": [],
+        "floodDetected": false,
+        "level": 0,
+        "method": "VISUAL_RANGE"
+      }
+    }
+  ],
+  "quality": "LOW",
+  "qualityFlags": [
+    "BASELINE_ONLY",
+    "MODEL_WEIGHT_MISSING",
+    "OVERLAY_METADATA_ONLY",
+    "LICENSE_NOT_VERIFIED",
+    "SYNTHETIC_INPUT"
+  ],
+  "model": {
+    "framePipeline": "vision.pipeline.run_pipeline",
+    "waterSegmentation": "opencv_baseline",
+    "referenceDetection": "opencv_hog_and_color_heuristic",
+    "geometrySupport": "none",
+    "weights": "not_used",
+    "licenseStatus": "no_external_model_weights"
+  },
+  "synthetic": true
+}
