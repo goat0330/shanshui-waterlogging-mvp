@@ -6,9 +6,9 @@
 
 - Worker worktree：`worktrees/backend-rc11`。
 - Branch：`worker/rc11-backend`。
-- Worker HEAD：`a6d9d0402c931c5c09d4db7706f852b066e7f981`。
+- Worker HEAD：`cd20b1dd71bc03699a5d8839e1bb3345b86e91e7`。
 - Main baseline：`5954570`。
-- Main 已包含当前 worker 的 RC1 ancestor，并另外包含 frontend/media/`backend/visiondepth_v2` 等其他 worker-owned 改动；本轮未触碰这些范围。
+- Current Main tip：`7ebb829`；Main 已包含当前 worker 的 RC1 ancestor，但尚未包含本 RC2 checkpoint，并另外包含 frontend/media/`backend/visiondepth_v2` 等其他 worker-owned 改动；本轮未触碰这些范围。
 
 ## P0 status
 
