@@ -121,6 +121,28 @@ export interface SensorState {
   source?: string
 }
 
+export interface VisionDepthObservation {
+  imageId: string
+  source: {
+    type: 'url' | 'local'
+    value: string
+  }
+  floodDetected: boolean
+  depth: {
+    level: number
+    estimatedDepthCm: number | null
+    rangeCm: [number | null, number | null]
+    confidence: number
+  }
+  method: 'VISUAL_RANGE' | 'NO_REFERENCE' | 'PERSON_REFERENCE' | 'VEHICLE_REFERENCE' | 'TRAFFIC_SIGN_REFERENCE' | 'FIXED_CAMERA_REFERENCE'
+  referenceObjects: Array<Record<string, unknown>>
+  waterMaskPath: string
+  quality: 'LOW' | 'MEDIUM' | 'HIGH' | 'REJECT'
+  qualityFlags: string[]
+  model: Record<string, unknown>
+  synthetic: boolean
+}
+
 export interface SensorFloodPointMapping {
   sensorId: string
   siteId: string
@@ -138,6 +160,7 @@ export interface DashboardData {
   camera: Camera | null
   analysis: AIAnalysis | null
   timeline: ScenarioTimeline
+  sensor?: SensorState | null
 }
 
 export interface DashboardDataClient {

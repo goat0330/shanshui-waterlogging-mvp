@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type {
   AIAnalysis,
   Camera,
@@ -12,6 +12,8 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  SensorState,
+  VisionDepthObservation,
 } from './types'
 import { CesiumScene } from './CesiumScene'
 
@@ -35,31 +37,6 @@ const PANEL_STATE_LABEL: Record<Exclude<PanelState, 'ready'>, string> = {
   empty: '暂无可展示数据',
   error: '数据暂不可用',
 }
-
-const MARKER_POSITIONS: Record<string, { x: number; y: number }> = {
-  'FP-001': { x: 608, y: 444 },
-  'FP-002': { x: 508, y: 553 },
-  'FP-003': { x: 560, y: 575 },
-  'FP-004': { x: 723, y: 531 },
-  'FP-005': { x: 684, y: 337 },
-}
-
-const BUILDINGS = [
-  [106, 166, 42, 110], [160, 204, 32, 86], [203, 142, 34, 135],
-  [248, 232, 52, 96], [320, 177, 39, 118], [368, 248, 58, 128],
-  [434, 141, 34, 102], [478, 211, 46, 144], [532, 174, 32, 106],
-  [585, 235, 40, 132], [630, 151, 52, 112], [696, 206, 38, 126],
-  [752, 175, 55, 94], [818, 231, 44, 134], [871, 150, 33, 112],
-  [148, 362, 44, 127], [204, 407, 35, 83], [252, 348, 49, 148],
-  [319, 407, 34, 97], [374, 362, 58, 123], [450, 399, 40, 78],
-  [504, 343, 34, 140], [554, 392, 52, 101], [623, 353, 41, 118],
-  [680, 414, 58, 84], [758, 360, 35, 120], [812, 402, 48, 96],
-  [866, 340, 36, 142], [118, 522, 50, 83], [181, 548, 38, 112],
-  [237, 502, 44, 98], [302, 557, 52, 70], [385, 514, 35, 110],
-  [440, 559, 50, 87], [520, 505, 38, 107], [578, 553, 45, 76],
-  [652, 515, 52, 91], [725, 560, 39, 76], [780, 504, 55, 111],
-  [858, 545, 45, 85],
-] as const
 
 export interface AppShellProps {
   children: ReactNode
@@ -214,8 +191,8 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
       <div className="status-content">
         <div className="status-ring" style={ringStyle} aria-label={`严重 ${critical}，警戒 ${warning}，正常 ${normal}`}>
           <div className="status-ring-hole">
-            <span className="cloud-glyph">☁</span>
-            <span className="cloud-rain">···</span>
+            <strong className="status-ring-value">{overview.activeFloodPoints}</strong>
+            <span className="status-ring-label">活跃点位</span>
           </div>
         </div>
         <div className="status-list">
@@ -344,10 +321,12 @@ export function RankingPanel({ ranking, state = 'ready' }: RankingPanelProps) {
 export interface EventPanelProps {
   event: FloodEvent | null
   analysis: AIAnalysis | null
+  sensor?: SensorState | null
+  onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   if (!event) {
     return (
@@ -363,10 +342,13 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
       <PanelHeader title="内涝事件" icon="▮" meta={<span>事件 ID：{event.id}</span>} />
       <div className="event-title-row">
         <h3>{event.name}</h3>
-        <span className="risk-badge">{RISK_LABEL[event.riskLevel]}</span>
+        <div className="event-title-actions">
+          <span className="risk-badge">{RISK_LABEL[event.riskLevel]}</span>
+          {onOpenVision && <button type="button" className="vision-entry-button" onClick={onOpenVision}>视觉水深证据</button>}
+        </div>
       </div>
       <div className="event-metrics">
-        <EventMetric label="当前水深" value={event.currentDepthCm.toFixed(1)} unit="cm" />
+        <EventMetric label={sensor ? '实测水深' : '事件水深'} value={(sensor?.depthCm ?? event.currentDepthCm).toFixed(1)} unit="cm" />
         <EventMetric label="上涨速度" value={event.riseRateCmMin.toFixed(1)} unit="cm/min" />
         <EventMetric label="管网负荷" value={String(event.pipeLoadPercent)} unit="%" />
         <EventMetric label="风险等级" value={RISK_LABEL[event.riskLevel]} unit="" />
@@ -377,6 +359,7 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
         <span>事件类型 <strong>{event.eventType}</strong></span>
         <span>持续时长 <strong>00:{String(durationMinutes).padStart(2, '0')}:41</strong></span>
       </div>
+      <SensorEvidence sensor={sensor} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
   )
@@ -384,6 +367,48 @@ export function EventPanel({ event, analysis, state = 'ready' }: EventPanelProps
 
 function EventMetric({ label, value, unit }: { label: string; value: string; unit: string }) {
   return <div className="event-metric"><span>{label}</span><strong>{value}<small>{unit}</small></strong></div>
+}
+
+export interface SensorEvidenceProps {
+  sensor: SensorState | null
+}
+
+type SensorFreshnessStatus = 'ONLINE' | 'STALE' | 'OFFLINE' | 'NO_EVIDENCE'
+
+function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
+  if (!sensor) return 'NO_EVIDENCE'
+  const receivedAt = new Date(sensor.receivedAt).getTime()
+  if (!Number.isFinite(receivedAt)) return 'OFFLINE'
+  const ageMs = Date.now() - receivedAt
+  if (ageMs > 30 * 60 * 1000) return 'OFFLINE'
+  if (ageMs > 2 * 60 * 1000) return 'STALE'
+  return 'ONLINE'
+}
+
+export function SensorEvidence({ sensor }: SensorEvidenceProps) {
+  const status = getSensorFreshness(sensor)
+  if (!sensor) {
+    return (
+      <div className="sensor-evidence sensor-evidence--empty" role="status">
+        <div className="sensor-evidence-head"><span>SENSOR EVIDENCE</span><strong>NO EVIDENCE</strong></div>
+        <p>当前没有可验证的传感器状态；事件水深不等同于实测水深。</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`sensor-evidence sensor-evidence--${status.toLowerCase()}`}>
+      <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · 实测水深</span><strong>{status}</strong></div>
+      <div className="sensor-evidence-grid">
+        <span><small>sensorId</small><b>{sensor.sensorId}</b></span>
+        <span><small>current depth</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
+        <span><small>observedAt</small><b>{formatClock(sensor.observedAt)}</b></span>
+        <span><small>freshness</small><b>{status}</b></span>
+        <span><small>source</small><b>{sensor.source ?? 'UNKNOWN'}</b></span>
+        <span><small>waterDetected</small><b>{sensor.waterDetected ? 'YES' : 'NO'}</b></span>
+      </div>
+    </div>
+  )
 }
 
 export interface ForecastPreviewProps {
@@ -413,7 +438,7 @@ export function ForecastPreview({ forecast, activeKey, onChange, state = 'ready'
             onClick={() => onChange(frame.timeKey)}
             aria-pressed={frame.timeKey === activeKey}
           >
-            <span className="forecast-card-label">{FORECAST_LABEL[frame.timeKey]}</span>
+            <span className="forecast-card-label">{FORECAST_LABEL[frame.timeKey]} <small>{frame.timeKey === 'NOW' ? '实测基准' : '预测'}</small></span>
             <span className={`mini-map mini-map--${frame.timeKey.toLowerCase()}`}>
               <svg viewBox="0 0 120 78" aria-hidden="true">
                 <path d="M42-8c-7 18-1 25 9 34 8 8 4 15-5 21-8 5-8 14-2 28" className="mini-river" />
@@ -425,7 +450,7 @@ export function ForecastPreview({ forecast, activeKey, onChange, state = 'ready'
           </button>
         ))}
       </div>
-      <div className="forecast-summary"><span>水深(cm)</span><strong>{forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm.toFixed(1)} <small>当前帧最大水深</small></strong></div>
+      <div className="forecast-summary"><span>水深(cm) · {activeKey === 'NOW' ? '实测基准' : '预测最大值'}</span><strong>{forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm.toFixed(1)} <small>{activeKey === 'NOW' ? 'Sensor baseline' : '当前预测帧最大水深'}</small></strong></div>
       <DepthLegend compact />
     </Panel>
   )
@@ -459,6 +484,14 @@ const DEFAULT_CCTV_OVERLAY: CctvOverlayData = {
 
 export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData = DEFAULT_CCTV_OVERLAY }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
+  const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    setMediaState(camera?.mediaUrl ? 'loading' : 'unavailable')
+    setPlaying(false)
+  }, [camera?.mediaUrl])
+
   if (!camera) {
     return (
       <Panel className="cctv-panel" state={state === 'ready' ? 'empty' : state}>
@@ -470,13 +503,25 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
   return (
     <Panel className="cctv-panel" state={state}>
       <PanelHeader title="视频监控" icon="▮" meta={<span>{camera.name}</span>} />
-      <div className="cctv-viewport" aria-label="CCTV 演示占位画面">
+      <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${camera.name} 视频证据 seam`}>
+        <video
+          ref={videoRef}
+          className="cctv-video"
+          src={camera.mediaUrl || undefined}
+          controls={mediaState === 'ready'}
+          muted
+          playsInline
+          preload="metadata"
+          onCanPlay={() => setMediaState('ready')}
+          onLoadedData={() => setMediaState('ready')}
+          onError={() => setMediaState('unavailable')}
+        />
         <div className="cctv-video-placeholder" />
         <div className="cctv-skyline" />
         <div className="cctv-road"><span className="road-lane road-lane--left" /><span className="road-lane road-lane--right" /></div>
         <div className="cctv-car cctv-car--one" /><div className="cctv-car cctv-car--two" /><div className="cctv-car cctv-car--three" />
         <div className="cctv-water-line" />
-        {showOverlay && state === 'ready' && overlayData.objects?.map((object, index) => (
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData.objects?.map((object, index) => (
           <span
             className={`cctv-box cctv-box--${object.type}`}
             key={`${object.type}-${index}`}
@@ -485,17 +530,134 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        {showOverlay && state === 'ready' && <span className="cctv-depth-tag">WATER {overlayData.waterDepthCm?.toFixed(1) ?? '--'} cm</span>}
-        <span className="cctv-source-tag">{state === 'ready' ? 'DEMO FEED · 场景占位' : 'MEDIA NOT ATTACHED'}</span>
-        <span className={`cctv-live ${camera.status === 'ONLINE' ? 'cctv-live--demo' : 'cctv-live--offline'}`}><i />{camera.status === 'ONLINE' ? 'DEMO LIVE' : camera.status}</span>
-        {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供路径，待本地 MP4 接入</span>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && <span className="cctv-depth-tag">WATER {overlayData.waterDepthCm?.toFixed(1) ?? '--'} cm</span>}
+        <span className="cctv-source-tag">{mediaState === 'ready' ? `MEDIA · ${camera.mediaType}` : 'DEMO / PLACEHOLDER'}</span>
+        <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? camera.status : mediaState === 'loading' ? 'MEDIA CHECKING' : `${camera.status} · PLACEHOLDER`}</span>
+        {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
       <div className="cctv-controls">
-        <button type="button" className="cctv-play" onClick={() => setPlaying((value) => !value)} aria-label={playing ? '暂停演示视频' : '播放演示视频'}>{playing ? 'Ⅱ' : '▶'}</button>
+        <button
+          type="button"
+          className="cctv-play"
+          disabled={mediaState !== 'ready'}
+          onClick={() => {
+            const video = videoRef.current
+            if (!video || mediaState !== 'ready') return
+            if (video.paused) {
+              void video.play()
+              setPlaying(true)
+            } else {
+              video.pause()
+              setPlaying(false)
+            }
+          }}
+          aria-label={playing ? '暂停视频' : '播放视频'}
+        >{playing ? 'Ⅱ' : '▶'}</button>
         <span className="cctv-camera-name">{camera.name}</span>
         <div className="cctv-legend"><span><i className="legend-color legend-color--water" />积水区域</span><span><i className="legend-color legend-color--vehicle" />车辆</span><span><i className="legend-color legend-color--person" />行人</span></div>
       </div>
     </Panel>
+  )
+}
+
+export interface VisionDepthDrawerProps {
+  open: boolean
+  mode: 'local' | 'url'
+  sourceValue: string
+  sourcePreviewUrl?: string | null
+  fileName?: string
+  state: 'idle' | 'loading' | 'error' | 'ready'
+  errorMessage?: string | null
+  observation: VisionDepthObservation | null
+  onClose: () => void
+  onModeChange: (mode: 'local' | 'url') => void
+  onSourceChange: (value: string) => void
+  onFileChange: (file: File | null) => void
+  onAnalyze: () => void
+}
+
+const VISION_METHOD_LABEL: Record<VisionDepthObservation['method'], string> = {
+  VISUAL_RANGE: '视觉范围',
+  NO_REFERENCE: '无参考物',
+  PERSON_REFERENCE: '人员参考物',
+  VEHICLE_REFERENCE: '车辆参考物',
+  TRAFFIC_SIGN_REFERENCE: '交通标志参考物',
+  FIXED_CAMERA_REFERENCE: '固定摄像头参考物',
+}
+
+export function VisionDepthDrawer({
+  open,
+  mode,
+  sourceValue,
+  sourcePreviewUrl = null,
+  fileName,
+  state,
+  errorMessage,
+  observation,
+  onClose,
+  onModeChange,
+  onSourceChange,
+  onFileChange,
+  onAnalyze,
+}: VisionDepthDrawerProps) {
+  const [mediaView, setMediaView] = useState<'original' | 'mask'>('original')
+  if (!open) return null
+
+  const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
+  const maskUrl = observation?.waterMaskPath && (/^(https?:)?\//.test(observation.waterMaskPath) ? observation.waterMaskPath : null)
+  const range = observation?.depth.rangeCm ?? [null, null]
+
+  return (
+    <aside className="vision-drawer" aria-label="VisionDepth 水深证据抽屉">
+      <div className="vision-drawer-head">
+        <div><span className="vision-drawer-kicker">VISION DEPTH · CONTRACT EVIDENCE</span><h2>图像水深估计</h2></div>
+        <button type="button" className="vision-close" onClick={onClose} aria-label="关闭视觉水深证据">×</button>
+      </div>
+      <div className="vision-source-tabs" role="tablist" aria-label="视觉证据来源">
+        <button type="button" role="tab" aria-selected={mode === 'local'} className={mode === 'local' ? 'is-active' : ''} onClick={() => onModeChange('local')}>本地上传</button>
+        <button type="button" role="tab" aria-selected={mode === 'url'} className={mode === 'url' ? 'is-active' : ''} onClick={() => onModeChange('url')}>直接 URL</button>
+      </div>
+      <div className="vision-source-form">
+        {mode === 'local' ? (
+          <label className="vision-file-input">选择图片<input type="file" accept="image/*" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} /></label>
+        ) : (
+          <label className="vision-url-input">图片 URL<input type="url" value={sourceValue} onChange={(event) => onSourceChange(event.target.value)} placeholder="https://…" /></label>
+        )}
+        <button type="button" className="vision-analyze-button" onClick={onAnalyze} disabled={state === 'loading' || (mode === 'local' ? !fileName : !sourceValue.trim())}>{state === 'loading' ? '读取中…' : '读取证据'}</button>
+      </div>
+      {fileName && <p className="vision-source-name">source.local · {fileName}</p>}
+      {state === 'error' && <p className="vision-state vision-state--error" role="alert">{errorMessage ?? 'VisionDepth 读取失败'}</p>}
+      {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
+
+      <div className="vision-media-tabs" role="tablist" aria-label="原图与水域掩膜">
+        <button type="button" role="tab" aria-selected={mediaView === 'original'} className={mediaView === 'original' ? 'is-active' : ''} onClick={() => setMediaView('original')}>original</button>
+        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>mask</button>
+      </div>
+      <div className="vision-media-preview">
+        {mediaView === 'original' && originalUrl ? <img src={originalUrl} alt="VisionDepth 原始图像" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
+        {mediaView === 'mask' && maskUrl ? <img src={maskUrl} alt="VisionDepth 水域掩膜" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
+        {mediaView === 'mask' && observation && !maskUrl && <div className="vision-media-unavailable"><strong>MASK PATH · NOT ATTACHED</strong><code>{observation.waterMaskPath}</code></div>}
+        {((mediaView === 'original' && !originalUrl) || (mediaView === 'mask' && !observation)) && <div className="vision-media-unavailable">等待 {mediaView === 'original' ? 'original' : 'mask'} evidence</div>}
+      </div>
+
+      {observation ? (
+        <div className="vision-observation" data-quality={observation.quality}>
+          <div className="vision-observation-head"><span>{observation.floodDetected ? 'FLOOD DETECTED' : 'NO FLOOD'}</span><strong>{observation.synthetic ? 'DEMO / SYNTHETIC' : observation.quality}</strong></div>
+          <div className="vision-depth-grid">
+            <span><small>level</small><b>{observation.depth.level}</b></span>
+            <span><small>estimatedDepthCm</small><b>{observation.depth.estimatedDepthCm === null ? 'null' : `${observation.depth.estimatedDepthCm.toFixed(1)} cm`}</b></span>
+            <span><small>rangeCm</small><b>{range[0] === null || range[1] === null ? 'null' : `${range[0]}–${range[1]} cm`}</b></span>
+            <span><small>confidence</small><b>{Math.round(observation.depth.confidence * 100)}%</b></span>
+          </div>
+          <dl className="vision-observation-meta">
+            <div><dt>method</dt><dd>{VISION_METHOD_LABEL[observation.method]}</dd></div>
+            <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
+            <div><dt>source</dt><dd>{observation.source.type} · {observation.source.value}</dd></div>
+            <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
+          </dl>
+        </div>
+      ) : <div className="vision-observation-empty">尚未产生 VisionDepthObservation。</div>}
+    </aside>
   )
 }
 
@@ -546,127 +708,7 @@ export interface DigitalTwinSceneProps {
   compact?: boolean
 }
 
-function formatSceneDepth(event: FloodEvent | null, selectedPoint: FloodPoint | null, activeForecast: ForecastKey, forecastFrame: ForecastFrame | null | undefined) {
-  const depth = activeForecast === 'NOW' ? event?.currentDepthCm ?? selectedPoint?.depthCm : forecastFrame?.maxDepthCm
-  return depth === undefined ? '--' : depth.toFixed(1)
-}
-
-function SvgSceneFallback({ event, points, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, compact = false }: DigitalTwinSceneProps) {
-  const selectedPosition = MARKER_POSITIONS[selectedPointId] ?? MARKER_POSITIONS['FP-001']
-  const selectedPoint = points.find((point) => point.id === selectedPointId) ?? null
-  const floodPath = activeForecast === 'NOW'
-    ? 'M298 520c33-42 70-58 111-52 32 5 54 26 85 22 29-4 54 14 71 42l-15 53-86 26-104-14-68-36Z'
-    : activeForecast === 'PLUS_10'
-      ? 'M250 498c46-52 94-74 148-65 45 8 71 34 107 27 48-9 87 17 109 54l-7 78-108 31-155-17-101-56Z'
-      : 'M190 476c71-75 132-91 194-77 50 12 98 38 140 28 64-15 124 20 157 75l-5 106-139 43-188-22-144-72Z'
-
-  return (
-    <section className={`digital-twin-scene ${compact ? 'digital-twin-scene--compact' : ''}`} aria-label="上海数字孪生场景占位层">
-      <div className="scene-atmosphere" />
-      <svg className="scene-city" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" role="img">
-        <defs>
-          <linearGradient id="sceneSky" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#243c4b" /><stop offset="0.45" stopColor="#193341" /><stop offset="1" stopColor="#081a28" /></linearGradient>
-          <linearGradient id="riverFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#244c5e" /><stop offset="0.5" stopColor="#0d4054" /><stop offset="1" stopColor="#092c42" /></linearGradient>
-          <linearGradient id="floodFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#25d6e9" stopOpacity="0.85" /><stop offset="0.56" stopColor="#2b8dff" stopOpacity="0.72" /><stop offset="1" stopColor="#ff9a37" stopOpacity="0.82" /></linearGradient>
-          <filter id="markerGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        </defs>
-        <rect width="1000" height="760" fill="url(#sceneSky)" />
-        <path d="M0 112c122-51 237-34 347-1 130 40 246 35 346-5 98-39 193-43 307-3v93H0Z" fill="#78909b" opacity="0.18" />
-        <path d="M0 188c129-36 217-38 340-3 142 41 243 31 356-7 111-37 197-38 304-2v60H0Z" fill="#b2c1c4" opacity="0.08" />
-        <g className="scene-river" style={{ opacity: layers.water ? 1 : 0 }}>
-          <path d="M673-40c-55 94-74 148-65 204 10 64 75 88 63 147-13 61-105 75-126 135-24 68 23 138 62 211l178 0c-39-85-86-155-70-225 13-59 79-76 90-137 13-75-58-108-51-170 6-47 51-94 98-165Z" fill="url(#riverFill)" />
-          <path d="M674-16c-38 92-47 144-35 192 13 54 67 85 56 135-13 58-93 75-107 139-14 63 23 120 57 191" fill="none" stroke="#438da1" strokeOpacity="0.45" strokeWidth="4" />
-          <path d="M709 18c-25 74-26 113-7 164 16 42 47 74 38 119-11 52-66 87-77 137-11 48 8 95 25 139" fill="none" stroke="#1f6b85" strokeOpacity="0.68" strokeWidth="2" strokeDasharray="10 14" />
-        </g>
-        <g className="scene-roads">
-          <path d="M-40 629c197-105 310-138 477-120 139 15 272 62 608 13" fill="none" stroke="#6f8590" strokeOpacity="0.25" strokeWidth="22" />
-          <path d="M-40 629c197-105 310-138 477-120 139 15 272 62 608 13" fill="none" stroke="#1b5368" strokeOpacity="0.9" strokeWidth="10" />
-          <path d="M70 130c205 77 335 104 477 91 131-12 259-71 492-52" fill="none" stroke="#5e7c88" strokeOpacity="0.26" strokeWidth="18" />
-          <path d="M70 130c205 77 335 104 477 91 131-12 259-71 492-52" fill="none" stroke="#1b5167" strokeOpacity="0.82" strokeWidth="8" />
-          <path d="M240 760c47-137 89-250 135-360 45-107 72-197 75-380" fill="none" stroke="#224f62" strokeWidth="7" strokeOpacity="0.75" />
-          <path d="M20 391c190-8 341 4 471 46 154 50 281 111 533 97" fill="none" stroke="#2b6074" strokeWidth="5" strokeOpacity="0.7" />
-        </g>
-        <g className="scene-buildings" style={{ opacity: layers.base ? 1 : 0 }}>
-          {BUILDINGS.map(([x, y, width, height], index) => (
-            <g key={`${x}-${y}`} opacity={0.48 + (index % 4) * 0.08}>
-              <rect x={x} y={y} width={width} height={height} rx="2" fill={index % 3 === 0 ? '#365463' : '#2b4655'} />
-              <path d={`M${x + width} ${y + 5}l${Math.round(width * 0.18)} -${Math.round(height * 0.08)}v${height}l-${Math.round(width * 0.18)} ${Math.round(height * 0.08)}Z`} fill="#172f3c" opacity="0.72" />
-              <path d={`M${x + 5} ${y + 8}h${Math.max(width - 12, 8)}M${x + 5} ${y + 24}h${Math.max(width - 12, 8)}M${x + 5} ${y + 40}h${Math.max(width - 12, 8)}`} stroke="#86a1aa" strokeOpacity="0.12" strokeWidth="2" />
-            </g>
-          ))}
-          <g className="scene-landmark" transform="translate(523 108)">
-            <path d="M23 0h8l7 276H15Z" fill="#b4c3c5" opacity="0.82" />
-            <path d="M21 58h12M20 119h14M18 187h18" stroke="#2d5969" strokeWidth="5" />
-            <ellipse cx="27" cy="90" rx="38" ry="7" fill="#2f6172" opacity="0.7" />
-            <ellipse cx="27" cy="155" rx="30" ry="6" fill="#2f6172" opacity="0.7" />
-            <circle cx="27" cy="58" r="9" fill="#c3d0d2" />
-          </g>
-          <g className="scene-landmark scene-landmark--tower" transform="translate(625 167)">
-            <path d="M30 0c-16 32-14 72 0 105 13-33 16-73 0-105Z" fill="#b2c3c8" opacity="0.78" />
-            <path d="M30 98 9 268h42Z" fill="#728e99" opacity="0.48" />
-            <circle cx="30" cy="78" r="22" fill="#d5d7d0" opacity="0.58" />
-            <circle cx="30" cy="172" r="15" fill="#d5d7d0" opacity="0.48" />
-          </g>
-        </g>
-        <g className="scene-network" style={{ opacity: layers.network ? 0.72 : 0 }}>
-          <path d="M124 610c120-40 201-19 274 17 89 44 174 33 267-8 69-31 138-45 210-25" fill="none" stroke="#b86f4d" strokeWidth="2" strokeDasharray="4 8" />
-          <path d="M300 295c71 29 113 68 156 125 33 42 87 71 160 79" fill="none" stroke="#b86f4d" strokeWidth="2" strokeDasharray="4 8" />
-          <circle cx="594" cy="474" r="12" fill="none" stroke="#c77b52" strokeWidth="2" />
-        </g>
-        <g className="scene-flood-surface" style={{ opacity: layers.depth ? 1 : 0 }}>
-          <path d={floodPath} fill="url(#floodFill)" opacity="0.34" stroke="#39d9ef" strokeWidth="3" strokeDasharray="8 6" />
-          <path d={activeForecast === 'PLUS_30' ? 'M314 512c43-28 89-31 126-17 30 12 58 12 94-3' : 'M354 528c37-19 67-20 99-8 26 10 44 9 71-4'} fill="none" stroke="#b0f5ff" strokeOpacity="0.72" strokeWidth="3" />
-        </g>
-        <g className="scene-district-lines" opacity="0.18">
-          <path d="M110 270c167 40 308 26 427-14M155 688c152-43 286-36 431 7M790 270c-62 69-70 154-23 231" fill="none" stroke="#a4c8d1" strokeWidth="1" strokeDasharray="3 9" />
-        </g>
-        {points.map((point) => {
-          const position = MARKER_POSITIONS[point.id] ?? { x: 500, y: 400 }
-          const selected = point.id === selectedPointId
-          return (
-            <g
-              className={`scene-marker scene-marker--${point.riskLevel.toLowerCase()} ${selected ? 'is-selected' : ''}`}
-              key={point.id}
-              transform={`translate(${position.x} ${position.y})`}
-              onClick={() => onPointSelect(point.id)}
-              onKeyDown={(keyboardEvent) => {
-                if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') onPointSelect(point.id)
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`${point.name}，${RISK_LABEL[point.riskLevel]}`}
-            >
-              {selected && <circle r="23" className="marker-pulse" />}
-              <path d="M0-16c-8 0-14 6-14 14 0 10 14 23 14 23S14 8 14-2C14-10 8-16 0-16Z" className="marker-pin" filter={selected ? 'url(#markerGlow)' : undefined} />
-              <circle r="5" className="marker-core" />
-              {selected && <text x="21" y="-13" className="marker-label">{point.depthCm.toFixed(1)} cm</text>}
-            </g>
-          )
-        })}
-        <g className="selected-popup" transform={`translate(${selectedPosition.x - 58} ${selectedPosition.y - 80})`}>
-          <path d="M0 0h158a6 6 0 0 1 6 6v41a6 6 0 0 1-6 6H0Z" fill="#8c4c1d" fillOpacity="0.9" stroke="#f2a14b" strokeWidth="1" />
-          <path d="m71 53 8 14 8-14" fill="#8c4c1d" stroke="#f2a14b" strokeWidth="1" />
-          <text x="12" y="20" className="popup-title">{selectedPoint?.name ?? event?.name ?? '未关联点位'}</text>
-          <text x="12" y="40" className="popup-value">{formatSceneDepth(event, selectedPoint, activeForecast, forecastFrame)} <tspan>cm</tspan></text>
-        </g>
-      </svg>
-      <div className="scene-label scene-label--top"><span className="scene-status-dot" />SHANGHAI DIGITAL TWIN <small>SCENARIO DATA</small></div>
-      <div className="scene-label scene-label--bottom">中心场景：{FORECAST_LABEL[activeForecast]} · {activeForecast === 'NOW' ? '当前积水范围' : '预测积水范围更新中'}</div>
-      <div className="scene-toolbar-wrap"><LayerToolbar layers={layers} onToggle={onLayerToggle} /></div>
-      <div className="scene-depth-legend"><DepthLegend /></div>
-    </section>
-  )
-}
-
 export function DigitalTwinScene({ event, points, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, compact = false }: DigitalTwinSceneProps) {
-  const selectedPosition = MARKER_POSITIONS[selectedPointId] ?? MARKER_POSITIONS['FP-001']
-  const selectedPoint = points.find((point) => point.id === selectedPointId) ?? null
-  const floodPath = activeForecast === 'NOW'
-    ? 'M430 530c28-25 70-31 105-19 31 10 46 25 64 44l-18 43-86 12-80-35Z'
-    : activeForecast === 'PLUS_10'
-      ? 'M350 500c48-38 110-47 158-22 46 24 84 32 111 72l-12 76-115 22-145-52Z'
-      : 'M260 464c74-62 156-74 228-40 58 26 113 30 156 82l-4 102-141 42-199-55-84-81Z'
-
   return (
     <section className={`digital-twin-scene ${compact ? 'digital-twin-scene--compact' : ''}`} aria-label="上海数字孪生场景">
       <CesiumScene
@@ -679,51 +721,8 @@ export function DigitalTwinScene({ event, points, activeForecast, forecastFrame 
         onPointSelect={onPointSelect}
       />
       <div className="scene-atmosphere" />
-      <svg className="scene-overlay" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" role="img" aria-label="风险点与积水 React overlay">
-        <defs>
-          <linearGradient id="overlayFloodFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#3de1ea" stopOpacity="0.55" /><stop offset="0.58" stopColor="#278bff" stopOpacity="0.42" /><stop offset="1" stopColor="#ff9a37" stopOpacity="0.66" /></linearGradient>
-          <filter id="overlayMarkerGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        </defs>
-        <g className="scene-network" style={{ opacity: layers.network ? 0.64 : 0 }}>
-          <path d="M124 610c120-40 201-19 274 17 89 44 174 33 267-8 69-31 138-45 210-25" fill="none" stroke="#d68a5a" strokeWidth="1.5" strokeDasharray="3 9" />
-          <path d="M300 295c71 29 113 68 156 125 33 42 87 71 160 79" fill="none" stroke="#d68a5a" strokeWidth="1.5" strokeDasharray="3 9" />
-        </g>
-        <g className="scene-flood-surface" style={{ opacity: layers.depth ? 1 : 0 }}>
-          <path d={floodPath} fill="url(#overlayFloodFill)" opacity="0.26" stroke="#55dfe8" strokeOpacity="0.72" strokeWidth="2" strokeDasharray="10 8" />
-          <path d={activeForecast === 'PLUS_30' ? 'M314 512c43-28 89-31 126-17 30 12 58 12 94-3' : 'M354 528c37-19 67-20 99-8 26 10 44 9 71-4'} fill="none" stroke="#b8f3f1" strokeOpacity="0.54" strokeWidth="2" />
-        </g>
-        {points.map((point) => {
-          const position = MARKER_POSITIONS[point.id] ?? { x: 500, y: 400 }
-          const selected = point.id === selectedPointId
-          return (
-            <g
-              className={`scene-marker scene-marker--${point.riskLevel.toLowerCase()} ${selected ? 'is-selected' : ''}`}
-              key={point.id}
-              transform={`translate(${position.x} ${position.y})`}
-              onClick={() => onPointSelect(point.id)}
-              onKeyDown={(keyboardEvent) => {
-                if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') onPointSelect(point.id)
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`${point.name}，${RISK_LABEL[point.riskLevel]}`}
-            >
-              {selected && <circle r="18" className="marker-pulse" />}
-              {selected && <path d="M0-28V-8" className="marker-stem" filter="url(#overlayMarkerGlow)" />}
-              <circle r={selected ? 5 : 3.5} className="marker-node" />
-              {selected && <text x="14" y="-18" className="marker-label">{point.depthCm.toFixed(1)} cm</text>}
-            </g>
-          )
-        })}
-        <g className="selected-popup" transform={`translate(${selectedPosition.x - 63} ${selectedPosition.y - 47}) scale(0.74)`}>
-          <path d="M0 0h172a6 6 0 0 1 6 6v39a6 6 0 0 1-6 6H0Z" fill="#653d24" fillOpacity="1" stroke="#e9a056" strokeWidth="1" />
-          <path d="m77 50 8 13 8-13" fill="#653d24" stroke="#e9a056" strokeWidth="1" />
-          <text x="10" y="18" className="popup-title">{selectedPoint?.name ?? event?.name ?? '未关联点位'}</text>
-          <text x="10" y="36" className="popup-value">{formatSceneDepth(event, selectedPoint, activeForecast, forecastFrame)} <tspan>cm</tspan></text>
-        </g>
-      </svg>
       <div className="scene-label scene-label--top"><span className="scene-status-dot" />SHANGHAI DIGITAL TWIN <small>CESIUM CITY · L1</small></div>
-      <div className="scene-label scene-label--bottom">中心场景：{FORECAST_LABEL[activeForecast]} · {activeForecast === 'NOW' ? '当前积水范围' : '预测积水范围更新中'}</div>
+      <div className="scene-label scene-label--bottom">中心场景：{FORECAST_LABEL[activeForecast]} · {activeForecast === 'NOW' ? '当前实测基准' : '预测积水范围更新中'}</div>
       <div className="scene-toolbar-wrap"><LayerToolbar layers={layers} onToggle={onLayerToggle} /></div>
       <div className="scene-depth-legend"><DepthLegend /></div>
     </section>
