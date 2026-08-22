@@ -45,8 +45,8 @@ Main maintains this matrix after independent reruns. Worker self-reports are evi
 | Scenario B Vision-driven | PASS / CONDITIONAL | `review/e2e/vision-image-browser-smoke.json` proves API upload → VisionDepth observation → provenance UI with Sensor 28.6cm unchanged; video feed and calibrated cm remain unavailable |
 | README / AGENTS / Delivery Manifest | PASS | current RC2 docs describe actual code/evidence boundaries |
 | Source manifest/download instructions | PASS | public metadata only; binaries remain local-only |
-| Git clean / no secrets | PENDING | final staged allowlist and secret/runtime audit before release tag |
-| `rc2-evidence-demo` tag | PENDING | create only after final Main commit and independent rerun |
+| Git clean / no secrets | PASS | release staging contained only docs/evidence; runtime MP4/weights/V2 outputs are absent |
+| `rc2-evidence-demo` tag | PASS | pushed after the final release commit; tag target is verified independently |
 
 ## Allowed final status
 

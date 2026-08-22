@@ -21,12 +21,13 @@ Sensor measured depth
 ```text
 Public repository: https://github.com/goat0330/shanshui-waterlogging-mvp
 RC2 integrated code checkpoint: 5faa0bd
+Public release: `rc2-evidence-demo` tag (final docs commit follows)
 Canonical branch: main
 Viewport target: 1920x1080
 Current decision: CONDITIONAL / RC2 + VISUAL_REVIEW
 ```
 
-`5faa0bd` 是当前已独立回归的代码检查点（含 Dashboard provenance 窄修复）；最终 release commit 由 `rc2-evidence-demo` tag 指向，并在发布后回写本文件。
+`5faa0bd` 是当前已独立回归的代码检查点（含 Dashboard provenance 窄修复）；最终公开 release 以 `rc2-evidence-demo` tag 为准。
 
 Runtime video evidence remains outside Git:
 
@@ -97,3 +98,9 @@ Dashboard provenance narrow repair
 ```
 
 No new model, dependency, page, contract field, or city-data claim is admitted after feature freeze.
+
+## Release handoff
+
+- Main was pushed to the public repository.
+- `rc2-evidence-demo` was pushed as the public release tag.
+- User visual acceptance remains `VISUAL_REVIEW`; all technical claims above retain their evidence limits.

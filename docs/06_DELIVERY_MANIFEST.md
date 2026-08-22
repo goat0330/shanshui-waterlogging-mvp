@@ -62,7 +62,7 @@ The public source manifest is `docs/RC2_SOURCE_MANIFEST.csv`. The actual six-row
 
 | Gate | Status | Evidence / exact limit |
 |---|---|---|
-| Main branch and source boundary | PASS / pending final tag | Main is the release line; final staged allowlist and tag audit are still required before publication |
+| Main branch and source boundary | PASS | Main is the release line; release staging and runtime boundary audit passed |
 | Backend memory Contract/Telemetry smoke | PASS | `python -B backend/smoke.py`; REST, CORS, WebSocket, telemetry, simulator, vision upload/URL and 404/422 boundaries |
 | VisionDepth provenance contract | PASS | OpenAPI and JSON schema require `VISION_IMAGE`/`VISION_VIDEO` source provenance fields |
 | Frontend TypeScript/build | PASS | `npm run typecheck`; `npm run build`; only the existing Cesium chunk warning |
@@ -112,9 +112,9 @@ Known deviations:
 - [x] Source/provenance policy and scenarios documented.
 - [x] Public source manifest and download boundary added without binaries.
 - [x] Dashboard provenance narrow repair independently accepted.
-- [ ] Final docs commit and explicit staged allowlist recorded.
-- [ ] GitHub `main` pushed.
-- [ ] `rc2-evidence-demo` tag created and pushed.
+- [x] Final docs commit and explicit staged allowlist recorded.
+- [x] GitHub `main` pushed.
+- [x] `rc2-evidence-demo` tag created and pushed.
 - [ ] User visual review completed.
 
 ## 8. Rollback
