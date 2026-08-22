@@ -1,0 +1,12 @@
+cameraId: CAM-DEMO-01
+intrinsics:
+  fx: null
+  fy: null
+  cx: null
+  cy: null
+extrinsics:
+  heightM: null
+  pitchDeg: null
+referencePlane: null
+calibrationStatus: uncalibrated
+

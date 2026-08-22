@@ -1,0 +1,25 @@
+repositories:
+  - name: V-FloodNet
+    url: https://github.com/xmlyqing00/V-FloodNet
+    purpose: video water segmentation / research depth estimation
+    observed_license_note: "Official README says the paper/source material is all rights reserved"
+    license_review: pending
+    integration: external_command
+    allowed_in_mvp: false
+
+  - name: flood-water-segmentation
+    url: https://github.com/hupi11/flood-water-segmentation
+    purpose: water mask benchmark / optional segmentation backend
+    observed_license_note: "Repository license and dataset terms must be reviewed separately"
+    license_review: pending
+    integration: external_repo
+    allowed_in_mvp: false
+
+  - name: hydrocam-water-segmentation
+    url: https://github.com/hydrocam/water-segmentation
+    purpose: optional edge water segmentation research
+    observed_license_note: "Reference only until license and data terms are reviewed"
+    license_review: pending
+    integration: reference_only
+    allowed_in_mvp: true
+
