@@ -500,6 +500,18 @@ def main() -> None:
         json.dumps(upload_observation, ensure_ascii=False)
         print("PASS 200 VisionDepth multipart upload and Contract response")
 
+        mask_path = upload_observation["waterMaskPath"]
+        assert mask_path.startswith("/api/v1/vision-depth/artifacts/")
+        with LOCAL_OPENER.open(
+            Request(f"{BASE_URL}{mask_path}", headers={"Accept": "image/png"}),
+            timeout=3,
+        ) as mask_response:
+            mask_bytes = mask_response.read()
+            assert mask_response.status == 200
+            assert mask_response.headers.get_content_type() == "image/png"
+            assert mask_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+        print("PASS VisionDepth water mask browser artifact route")
+
         status, sensor_after_upload = request("/api/v1/sensors/SSZJ-NODE-001")
         assert status == 200
         assert sensor_after_upload == sensor

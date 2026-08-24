@@ -76,6 +76,17 @@ class VisionDepthAdapter:
     def _output_path(self, image_id: str) -> Path:
         return self.output_dir / f"{uuid.uuid4().hex}.json"
 
+    def artifact_path(self, filename: str) -> Path:
+        """Resolve one generated mask without allowing path traversal."""
+
+        if Path(filename).name != filename or Path(filename).suffix.lower() != ".png":
+            raise VisionDepthError(404, "VISION_ARTIFACT_NOT_FOUND", "vision artifact was not found")
+        output_dir = self.output_dir.resolve()
+        candidate = (output_dir / filename).resolve()
+        if candidate.parent != output_dir or not candidate.is_file():
+            raise VisionDepthError(404, "VISION_ARTIFACT_NOT_FOUND", "vision artifact was not found")
+        return candidate
+
     @staticmethod
     def _blocked_ip(address: str) -> bool:
         ip = ipaddress.ip_address(address)
@@ -199,6 +210,9 @@ class VisionDepthAdapter:
             "licenseReview": license_review,
             "runtimePolicy": "research_mvp",
         }
+        mask_name = Path(str(observation["waterMaskPath"])).name
+        self.artifact_path(mask_name)
+        observation["waterMaskPath"] = f"/api/v1/vision-depth/artifacts/{mask_name}"
         try:
             return VisionDepthObservation.model_validate(observation)
         except Exception as exc:

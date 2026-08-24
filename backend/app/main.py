@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import FileResponse
 
 from .models import (
     AIAnalysis,
@@ -217,6 +218,15 @@ def analyze_vision_depth_url(payload: VisionDepthUrlRequest) -> VisionDepthObser
         return vision_depth_adapter.analyze_url(payload.url, payload.imageId)
     except VisionDepthError as exc:
         raise vision_error(exc) from exc
+
+
+@app.get("/api/v1/vision-depth/artifacts/{filename}", include_in_schema=False)
+def get_vision_depth_artifact(filename: str) -> FileResponse:
+    try:
+        artifact = vision_depth_adapter.artifact_path(filename)
+    except VisionDepthError as exc:
+        raise vision_error(exc) from exc
+    return FileResponse(artifact, media_type="image/png")
 
 
 @app.get(

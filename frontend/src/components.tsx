@@ -17,6 +17,7 @@ import type {
 } from './types'
 import type { VideoEvidenceState, VideoOverlayData } from './adapters/videoEvidenceAdapter'
 import { CesiumScene } from './CesiumScene'
+import { API_BASE_URL } from './services/apiClient'
 
 const NAV_ITEMS = ['实时监测', '风险预警', '内涝分析', '预测预报', '资源调度', '系统管理']
 
@@ -601,6 +602,21 @@ const VISION_METHOD_LABEL: Record<VisionDepthObservation['method'], string> = {
   FIXED_CAMERA_REFERENCE: '固定摄像头参考物',
 }
 
+function resolveVisionMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (/^https?:\/\//.test(path)) return path
+  if (path.startsWith('/api/')) return `${API_BASE_URL}${path}`
+  if (path.startsWith('/')) return path
+  return null
+}
+
+function formatVisionRange(range: VisionDepthObservation['depth']['rangeCm']): string {
+  const [minimum, maximum] = range
+  if (minimum === null) return maximum === null ? '—' : `≤${maximum} cm`
+  if (maximum === null) return `≥${minimum} cm`
+  return `${minimum}–${maximum} cm`
+}
+
 export function VisionDepthDrawer({
   open,
   mode,
@@ -617,11 +633,15 @@ export function VisionDepthDrawer({
   onAnalyze,
 }: VisionDepthDrawerProps) {
   const [mediaView, setMediaView] = useState<'original' | 'mask'>('original')
-  if (!open) return null
-
   const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
-  const maskUrl = observation?.waterMaskPath && (/^(https?:)?\//.test(observation.waterMaskPath) ? observation.waterMaskPath : null)
+  const maskUrl = resolveVisionMediaUrl(observation?.waterMaskPath)
   const range = observation?.depth.rangeCm ?? [null, null]
+
+  useEffect(() => {
+    if (maskUrl) setMediaView('mask')
+  }, [maskUrl, observation?.imageId])
+
+  if (!open) return null
 
   return (
     <aside className="vision-drawer" aria-label="VisionDepth 水深证据抽屉">
@@ -646,8 +666,8 @@ export function VisionDepthDrawer({
       {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
 
       <div className="vision-media-tabs" role="tablist" aria-label="原图与水域掩膜">
-        <button type="button" role="tab" aria-selected={mediaView === 'original'} className={mediaView === 'original' ? 'is-active' : ''} onClick={() => setMediaView('original')}>original</button>
-        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>mask</button>
+        <button type="button" role="tab" aria-selected={mediaView === 'original'} className={mediaView === 'original' ? 'is-active' : ''} onClick={() => setMediaView('original')}>原图</button>
+        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>水体识别</button>
       </div>
       <div className="vision-media-preview">
         {mediaView === 'original' && originalUrl ? <img src={originalUrl} alt="VisionDepth 原始图像" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
@@ -662,8 +682,7 @@ export function VisionDepthDrawer({
           <div className="vision-depth-grid">
             <span><small>level</small><b>{observation.depth.level}</b></span>
             <span><small>estimatedDepthCm</small><b>{observation.depth.estimatedDepthCm === null ? 'null' : `${observation.depth.estimatedDepthCm.toFixed(1)} cm`}</b></span>
-            <span><small>rangeCm</small><b>{range[0] === null || range[1] === null ? 'null' : `${range[0]}–${range[1]} cm`}</b></span>
-            <span><small>confidence</small><b>{Math.round(observation.depth.confidence * 100)}%</b></span>
+            <span><small>rangeCm</small><b>{formatVisionRange(range)}</b></span>
           </div>
           <dl className="vision-observation-meta">
             <div><dt>method</dt><dd>{VISION_METHOD_LABEL[observation.method]}</dd></div>
