@@ -2,6 +2,16 @@
 
 Main maintains this matrix after independent reruns. Worker self-reports are evidence, not final acceptance.
 
+## RC2.1 Closure — Main independent rerun
+
+| Gate | Status | Evidence / boundary |
+|---|---|---|
+| Synthetic browser video decode | PASS / CONDITIONAL | `flood_cam_017.mp4`: Chrome `readyState=4`, 320×240, 1s; synthetic-only, not CCTV/LIVE |
+| Flat video frame → Dashboard Overlay | PASS / CONDITIONAL | `a018a74` adapter normalizes worker flat frames; playback changes nearest frame; `RESULT FRAME`, `SYNTHETIC_DEMO`, null cm and uncalibrated flags visible |
+| SensorState → Cesium geographic entity | PASS / CONDITIONAL | `SSZJ-NODE-001`, `siteId`, `28.6cm`, WGS84 and `fallback=false` pass through `DigitalTwinScene` into Cesium |
+| Local/remote Vision provenance | PASS | local upload=`not_required`; remote URL=`pending`; no sensor overwrite |
+| Minimal CI workflow | ADDED / NOT VERIFIED | `.github/workflows/ci.yml` is parsed and committed; remote Action run/branch protection not claimed |
+
 ## Regression and integration
 
 | Gate | Status | Evidence / boundary |
@@ -34,7 +44,7 @@ Main maintains this matrix after independent reruns. Worker self-reports are evi
 |---|---|---|
 | Source labels | PASS / VISUAL_REVIEW | Dashboard separates `SENSOR`, `VISION_IMAGE`, `VISION_VIDEO`, `FORECAST`; final legibility is user review |
 | Measured/visual/forecast separation | PASS | NOW uses sensor baseline; future frames use forecast values; vision never overwrites sensor |
-| No fake LIVE / meaningless overlay | PASS / VISUAL_REVIEW | CCTV fallback is explicitly `DEMO / PLACEHOLDER`; final visual interpretation belongs to user |
+| No fake LIVE / meaningless overlay | PASS / VISUAL_REVIEW | current asset is explicitly `SYNTHETIC_DEMO`; timestamped metadata overlay renders only after media readiness; final visual interpretation belongs to user |
 | 1920×1080 states | PASS / VISUAL_REVIEW | default/high-risk/+30/gallery screenshots have no critical overflow; user golden comparison remains open |
 
 ## Scenarios and release
@@ -42,7 +52,7 @@ Main maintains this matrix after independent reruns. Worker self-reports are evi
 | Gate | Status | Evidence / boundary |
 |---|---|---|
 | Scenario A Sensor-driven | PASS | API/WS → 12cm/28.6cm → FP-001/event → geographic forecast → fallback/reconnect; 60s and 5m evidence |
-| Scenario B Vision-driven | PASS / CONDITIONAL | `review/e2e/vision-image-browser-smoke.json` proves API upload → VisionDepth observation → provenance UI with Sensor 28.6cm unchanged; video feed and calibrated cm remain unavailable |
+| Scenario B Vision-driven | PASS / CONDITIONAL | image API evidence plus synthetic browser video `MP4 → timestamped overlay`; Sensor 28.6cm remains unchanged; real CCTV and calibrated cm remain unavailable |
 | README / AGENTS / Delivery Manifest | PASS | current RC2 docs describe actual code/evidence boundaries |
 | Source manifest/download instructions | PASS | public metadata only; binaries remain local-only |
 | Git clean / no secrets | PASS | release staging contained only docs/evidence; runtime MP4/weights/V2 outputs are absent |

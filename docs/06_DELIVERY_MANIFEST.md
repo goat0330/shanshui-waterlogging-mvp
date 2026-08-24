@@ -8,13 +8,13 @@
 ## 1. Candidate / canonical identity
 
 ```text
-Status: CONDITIONAL / RC2 + VISUAL_REVIEW
+Status: CONDITIONAL / RC2.1 + VISUAL_REVIEW
 Canonical branch: main
-Integrated code checkpoint before release docs: 5faa0bd
+Integrated code checkpoint before RC2.1 closure docs: eb122f0
 Release tag: rc2-evidence-demo (points to the final release commit)
 Release tag target SHA: b0a41d1e2245e60ed55eef2777ea03d6b899d6c2
 Public repository: https://github.com/goat0330/shanshui-waterlogging-mvp
-Audit date: 2026-08-23
+Audit date: 2026-08-24
 Viewport target: 1920x1080
 ```
 
@@ -73,6 +73,10 @@ The public source manifest is `docs/RC2_SOURCE_MANIFEST.csv`. The actual six-row
 | Five-minute rehearsal | PASS / CONDITIONAL | `review/e2e/5-minute-rehearsal.json`; 309.3s; CCTV/AI placeholder-conditional |
 | Vision image | PASS / CONDITIONAL | 3-image OpenCV baseline and guarded upload/URL seam pass; generalization/production accuracy unverified |
 | MP4 → frame → evidence | PASS / CONDITIONAL | 4/6 videos pass `>=30` gate; 25 sampled frame JSON, masks, timestamps and overlay metadata; 2 source files have 11 frames |
+| RC2.1 synthetic browser video | PASS / CONDITIONAL | `frontend/public/demo/video/flood_cam_017.mp4` decodes in Chrome; flat frame overlay normalizes to nearest timestamp; all depth cm remain null |
+| RC2.1 SensorState → Cesium | PASS / CONDITIONAL | `SSZJ-NODE-001`, `28.6cm`, `WGS84 lon/lat`, `fallback=false` are passed to the geographic Cesium entity; official calibration remains unverified |
+| RC2.1 provenance semantics | PASS | local upload=`not_required`; remote URL=`pending`; frontend provenance is required and rendered without `NOT ATTACHED` for controlled observations |
+| Minimal GitHub Actions | ADDED / NOT VERIFIED | `.github/workflows/ci.yml` covers backend smoke, frontend typecheck/build and Vision smoke; remote run and branch protection are not independently verified |
 | Camera calibration | NOT VERIFIED | all video `estimatedDepthCm=null`, `CAMERA_UNCALIBRATED` |
 | Model upgrade | NOT VERIFIED | no authorized reproducible checkpoint, GT masks/depth labels or split; no model/accuracy claim |
 | PostGIS | NOT VERIFIED | optional persistence path exists; live migration/spatial query/restart persistence not rerun in RC2 |
@@ -88,6 +92,8 @@ Verified commands on the integrated Main line:
 - `python -m vision.smoke` — PASS for the three existing image evidence cases.
 - From `backend/visiondepth_v2/`: `python -m pytest -q` — `5 passed`; `compileall` — PASS; `data_gate` — `4 usable videos`; `video_smoke` — PASS with `4 videos / 25 sampled frames / synthetic=false`; third-party check — `RESEARCH_MVP_LOCAL_ONLY`.
 - `npm run typecheck` and `npm run build` — PASS.
+- `node review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` — PASS for flat-frame normalization, nearest timestamp selection and null-depth guard.
+- Main browser smoke at `http://127.0.0.1:4173/` — PASS: MP4 `readyState=4`, 320×240, 1s; `RESULT FRAME` changes with playback; `SSZJ-NODE-001` SensorState is visible in the Cesium mount; console errors zero.
 - `review/e2e/api-realtime-browser-smoke.json` — PASS for API/WS/fallback/reconnect.
 - `review/e2e/60-second-chain.json` — PASS for telemetry → event → Cesium → forecast → fallback → reconnect.
 - `review/e2e/5-minute-rehearsal.json` — PASS for 309.3-second rehearsal and stable return.
@@ -99,7 +105,7 @@ Known deviations:
 - Fixture/demo values are not official Shanghai real-time or physical sensor data.
 - Forecast GeoJSON and Huangpu geometry are synthetic/demo fixtures; they prove the integration seam only.
 - OSM Buildings may require an environment token/network; local Core Local and formal building/control-point calibration are not verified.
-- CCTV is a video evidence seam, not a live city camera feed; no fake `LIVE` claim is made.
+- CCTV is a video evidence seam; the current browser asset is explicitly `SYNTHETIC_DEMO` and metadata-only, not a live city camera feed; no fake `LIVE` claim is made.
 - V-FloodNet source metadata remains `licenseReview=pending`; MP4s and weights are not redistributed.
 - Two official source MP4s genuinely contain 11 frames and are rejected by the 30-frame gate; no interpolation or duplicated frames are used.
 - The four accepted videos are uncalibrated; the algorithm reports masks/levels/ranges and null numeric centimetres, not calibrated depth or accuracy.
@@ -113,6 +119,9 @@ Known deviations:
 - [x] Source/provenance policy and scenarios documented.
 - [x] Public source manifest and download boundary added without binaries.
 - [x] Dashboard provenance narrow repair independently accepted.
+- [x] RC2.1 synthetic video Overlay and SensorState → Cesium closure independently accepted on Main.
+- [x] RC2.1 local upload/remote URL provenance semantics independently accepted.
+- [x] Minimal CI workflow added; remote GitHub Actions execution remains unverified.
 - [x] Final docs commit and explicit staged allowlist recorded.
 - [x] GitHub `main` pushed.
 - [x] `rc2-evidence-demo` tag created and pushed.
@@ -124,5 +133,6 @@ Known deviations:
 RC0 rollback anchor: 78e96e7d4a85a4aa24368bbd0465002a0097e45b
 RC1.1 historical checkpoint: 1430e56
 RC2 pre-release integrated checkpoint: 5faa0bd
+RC2.1 code checkpoint before closure docs: eb122f0
 Recovery: use a commit-based revert after the RC2 tag exists; ignored runtime data is not part of Git rollback.
 ```

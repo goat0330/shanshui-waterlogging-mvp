@@ -3,7 +3,7 @@
 ## Project
 山水智鉴｜城市内涝智能防控中心 RC2.1 Closure
 
-当前基线：public Main `b0a41d1`，tag `rc2-evidence-demo`。当前状态为 `CONDITIONAL / VISUAL_REVIEW`；不得把 demo、synthetic、research MVP 或未标定结果表述为生产能力。
+当前基线：public Main 的 RC2 immutable tag 为 `b0a41d1`；本地 RC2.1 closure code checkpoint 为 `eb122f0`，待主线回归后同步远端。当前状态为 `CONDITIONAL / VISUAL_REVIEW`；不得把 demo、synthetic、research MVP 或未标定结果表述为生产能力。
 
 ## Read First
 所有 Worker 开始任何实现前，按顺序阅读：

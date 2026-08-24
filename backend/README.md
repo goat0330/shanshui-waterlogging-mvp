@@ -77,7 +77,7 @@ POST /api/v1/vision-depth/analyze/url
 
 两个端点都返回冻结 Contract 的 `VisionDepthObservation`。上传输入只接受 JPEG/PNG/WebP，当前限制为 15 MB；URL 输入只接受 HTTP/HTTPS，关闭环境代理，逐跳重新校验 redirect，并拒绝 private/local/reserved target、HTML、SVG 和不可用媒体。错误分别使用明确的 `400`、上传 `413`、上传 `415` 和 fetch/inference `502`。该结果是独立的 VisionDepth evidence，不写入 `SensorState`、`FloodPoint.currentDepthCm` 或 `FloodEvent`，也不覆盖 telemetry；`source.type` 保留 `local` 或 `url`。
 
-Main `d5e568b` 批准的 `provenance` 为必填严格对象：image upload/url 使用 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=pending`、`runtimePolicy=research_mvp`。这些字段不塞入 `model`，也不参与 telemetry 或 flood projection。`VISION_VIDEO` 仅在 Contract 中预留；当前视频 evidence 仍由 Vision worker 提供 local-only artifacts，本 backend 不伪造视频 API 或真实媒体链路。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
+Main `d5e568b` 批准的 `provenance` 为必填严格对象：image upload 使用 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=not_required`，remote URL 保持 `licenseReview=pending`，二者均为 `runtimePolicy=research_mvp`。这些字段不塞入 `model`，也不参与 telemetry 或 flood projection。`VISION_VIDEO` 由前端 synthetic browser evidence seam 消费；本 backend 不伪造视频 API 或真实媒体链路。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
 
 ## Simulator
 

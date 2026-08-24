@@ -4,9 +4,10 @@
 
 ## RC2 当前状态
 
-当前版本是 `RC2 — Evidence-Backed Demo`，当前进入 `RC2.1 Closure`，状态仍为 `CONDITIONAL / VISUAL_REVIEW`。RC2 已把 API/WS 遥测、VisionDepth 图片入口、4 个合格 MP4 的本地证据 smoke、Cesium geographic 事件/预测层和 Dashboard source labels 收到演示链；RC2.1 正在补视频 Overlay、真实 SensorState → Cesium 映射和最小 CI。它不代表生产部署、官方实时上海数据、标定厘米水深或第三方素材的最终公开许可。
+当前版本是 `RC2 — Evidence-Backed Demo`，RC2.1 Closure 的代码收口已完成，状态仍为 `CONDITIONAL / VISUAL_REVIEW`。RC2.1 已把 synthetic browser video 的 timestamped Overlay、`SSZJ-NODE-001` SensorState → Cesium geographic entity、Vision provenance 语义和最小 CI workflow 收到主线；它不代表生产部署、官方实时上海数据、标定厘米水深或第三方素材的最终公开许可。
 
 - RC2 总控进度：[review/rc2/MAIN_PROGRESS.md](review/rc2/MAIN_PROGRESS.md)
+- RC2.1 主线进度：[review/rc21/MAIN_PROGRESS.md](review/rc21/MAIN_PROGRESS.md)
 - 验收矩阵：[docs/RC2_ACCEPTANCE.md](docs/RC2_ACCEPTANCE.md)
 - 来源策略：[docs/RC2_SOURCE_PROVENANCE_POLICY.md](docs/RC2_SOURCE_PROVENANCE_POLICY.md)
 - 公开来源清单：[docs/RC2_SOURCE_MANIFEST.csv](docs/RC2_SOURCE_MANIFEST.csv)
