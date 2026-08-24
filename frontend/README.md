@@ -31,6 +31,8 @@ npm run dev
 | `VITE_DATA_SOURCE` | Set to `api` for backend REST/WebSocket; unset/other uses fixtures | Optional; fixture default |
 | `VITE_API_BASE_URL` | API base URL; code default is local `127.0.0.1:8000` | Conditional API mode |
 | `VITE_CESIUM_ION_TOKEN` | OSM Buildings access | Optional for local Huangpu fallback; value must remain local/ignored |
+| `VITE_DEMO_VIDEO_URL` | Local-only verified MP4 served from ignored `public/runtime/` | Optional; default is tracked synthetic browser evidence |
+| `VITE_DEMO_VIDEO_OVERLAY_URL` | Local-only timestamped VisionDepth overlay JSON | Optional; must match `VITE_DEMO_VIDEO_URL` |
 
 Example API-mode setup uses only local, non-secret configuration names:
 
@@ -42,6 +44,8 @@ npm run dev
 
 `VITE_CESIUM_ION_TOKEN` is not required for the local Huangpu fallback. Do not paste its value into this README, manifests, screenshots, build logs or commit messages.
 
+To view the local research video evidence, place the verified MP4 and its derived overlay bundle under the ignored `public/runtime/` directory, set the two `VITE_DEMO_VIDEO_*` names in `.env.local`, and restart Vite. The bundle remains `research_mvp`/local-only: pending-license media is not committed, `LIVE` is not claimed, and an uncalibrated camera keeps `estimatedDepthCm=null`.
+
 `dist/` is generated and ignored. Do not commit or distribute it; a local build can embed locally configured Cesium access material, so the release build must use the parent's secret-safe procedure.
 
 ## Evidence and limits
@@ -50,4 +54,4 @@ Mock Adapter 位于 `src/data/homeFixtures.ts`，直接读取 `../contracts/fixt
 
 The current scene supports an OSM Buildings path and a local Huangpu fallback. The local runtime tiles and source binaries are intentionally outside Git. The integrated browser evidence is `review/dashboard-cesium-1920x1080.png`; technical Cesium/forecast evidence is `review/e2e/rc0-cesium-geographic-smoke.json`. Neither is a final Golden Reference acceptance.
 
-CCTV is explicitly a local placeholder (`public/mock/cctv-placeholder.webp`, `DEMO FEED · 场景占位`), not a real camera/MP4/RTSP feed. VisionDepth is a baseline/local-image evidence path, not calibrated Shanghai CCTV depth. Huangpu alignment is range-level only; formal control-point/building-element calibration is `NOT VERIFIED`. The page remains `VISUAL_REVIEW` until a human compares the integrated 1920×1080 output with `references/golden-dashboard.png`.
+The default fixture CCTV is a tracked synthetic browser evidence asset. With the optional local runtime variables above, `CctvCard` plays a verified research MP4 and selects its timestamped VisionDepth frame evidence; it is still not a live city camera or calibrated Shanghai CCTV depth. Huangpu alignment is range-level only; formal control-point/building-element calibration is `NOT VERIFIED`. The page remains `VISUAL_REVIEW` until a human compares the integrated 1920×1080 output with `references/golden-dashboard.png`.

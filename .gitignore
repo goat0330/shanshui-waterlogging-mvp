@@ -40,6 +40,7 @@ data/runtime/
 spikes/cesium/public/data/runtime/
 frontend/public/data/shanghai-core/
 frontend/public/data/runtime/
+frontend/public/runtime/
 
 # OS/editor noise
 .DS_Store

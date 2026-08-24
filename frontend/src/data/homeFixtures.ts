@@ -12,6 +12,10 @@ import type { HomeFixtures, SensorFloodPointMapping } from '../types'
 
 export const sensorFloodPointMapping = sensorFloodPointMappingFixture as SensorFloodPointMapping
 
+const demoCamera = camerasFixture[0] as HomeFixtures['camera']
+const localDemoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL?.trim()
+const localDemoOverlayUrl = import.meta.env.VITE_DEMO_VIDEO_OVERLAY_URL?.trim()
+
 export const homeFixtures: HomeFixtures = {
   overview: dashboardOverviewFixture as HomeFixtures['overview'],
   rainfall: rainfallFixture as HomeFixtures['rainfall'],
@@ -19,7 +23,11 @@ export const homeFixtures: HomeFixtures = {
   points: floodPointsFixture as HomeFixtures['points'],
   event: eventFixture as HomeFixtures['event'],
   forecast: forecastFixture as HomeFixtures['forecast'],
-  camera: camerasFixture[0] as HomeFixtures['camera'],
+  camera: {
+    ...demoCamera,
+    ...(localDemoVideoUrl ? { mediaUrl: localDemoVideoUrl } : {}),
+    ...(localDemoOverlayUrl ? { overlayUrl: localDemoOverlayUrl } : {}),
+  },
   analysis: analysisFixture as HomeFixtures['analysis'],
   timeline: timelineFixture as HomeFixtures['timeline'],
 }
