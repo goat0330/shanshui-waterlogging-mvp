@@ -1,0 +1,151 @@
+{
+  "videoId": "flood_cam_017",
+  "status": "SYNTHETIC_DEMO",
+  "source": {
+    "type": "local",
+    "value": "/demo/video/flood_cam_017.mp4",
+    "mediaType": "video/mp4",
+    "sourceType": "VISION_VIDEO",
+    "synthetic": true,
+    "licenseReview": "not_required",
+    "runtimePolicy": "research_mvp"
+  },
+  "provenance": {
+    "sourceType": "VISION_VIDEO",
+    "sourceId": "flood_cam_017",
+    "observedAt": null,
+    "licenseReview": "not_required",
+    "runtimePolicy": "research_mvp"
+  },
+  "sourceEvidence": {
+    "kind": "TRACKED_SYNTHETIC_FRAMES",
+    "inputs": [
+      "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000000.png",
+      "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000002.png",
+      "media/artifacts/VIDEO-SMOKE-SYNTHETIC-frames/VIDEO-SMOKE-SYNTHETIC-F000004.png"
+    ],
+    "production": false,
+    "redistribution": false,
+    "maskPolicy": "TRACKED_SOURCE_EVIDENCE",
+    "note": "Generated for browser smoke only; not LIVE or official CCTV."
+  },
+  "synthetic": true,
+  "fps": 3.0,
+  "durationSec": 1.0,
+  "durationMs": 1000.0,
+  "width": 320,
+  "height": 240,
+  "frameCount": 3,
+  "sampledFrameCount": 3,
+  "timestampUnit": "milliseconds",
+  "quality": "LOW",
+  "qualityFlags": [
+    "BASELINE_ONLY",
+    "MODEL_WEIGHT_MISSING",
+    "OVERLAY_METADATA_ONLY",
+    "CAMERA_UNCALIBRATED",
+    "SYNTHETIC_DEMO"
+  ],
+  "model": {
+    "framePipeline": "media.video_pipeline.py -> vision.pipeline.run_pipeline",
+    "waterSegmentation": "opencv_baseline",
+    "referenceDetection": "opencv_hog_and_color_heuristic",
+    "geometrySupport": "none",
+    "weights": "not_used"
+  },
+  "frames": [
+    {
+      "frameIndex": 0,
+      "timestampMs": 0.0,
+      "floodDetected": false,
+      "level": 0,
+      "rangeCm": [
+        0,
+        0
+      ],
+      "estimatedDepthCm": null,
+      "confidence": 0.329,
+      "method": "VISUAL_RANGE",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING",
+        "NO_WATER",
+        "NO_REFERENCE",
+        "CAMERA_UNCALIBRATED",
+        "SYNTHETIC_DEMO"
+      ],
+      "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000-water-mask.png",
+      "referenceObjects": [],
+      "referenceBoxes": [],
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000000-water-mask.png",
+        "referenceBoxes": []
+      }
+    },
+    {
+      "frameIndex": 1,
+      "timestampMs": 333.333,
+      "floodDetected": false,
+      "level": 0,
+      "rangeCm": [
+        0,
+        0
+      ],
+      "estimatedDepthCm": null,
+      "confidence": 0.334,
+      "method": "VISUAL_RANGE",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING",
+        "NO_WATER",
+        "NO_REFERENCE",
+        "CAMERA_UNCALIBRATED",
+        "SYNTHETIC_DEMO"
+      ],
+      "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002-water-mask.png",
+      "referenceObjects": [],
+      "referenceBoxes": [],
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000002-water-mask.png",
+        "referenceBoxes": []
+      }
+    },
+    {
+      "frameIndex": 2,
+      "timestampMs": 666.667,
+      "floodDetected": false,
+      "level": 0,
+      "rangeCm": [
+        0,
+        0
+      ],
+      "estimatedDepthCm": null,
+      "confidence": 0.335,
+      "method": "VISUAL_RANGE",
+      "quality": "LOW",
+      "qualityFlags": [
+        "BASELINE_ONLY",
+        "MODEL_WEIGHT_MISSING",
+        "NO_WATER",
+        "NO_REFERENCE",
+        "CAMERA_UNCALIBRATED",
+        "SYNTHETIC_DEMO"
+      ],
+      "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004-water-mask.png",
+      "referenceObjects": [],
+      "referenceBoxes": [],
+      "overlay": {
+        "status": "METADATA_ONLY",
+        "rendered": false,
+        "waterMaskPath": "media/artifacts/VIDEO-SMOKE-SYNTHETIC-F000004-water-mask.png",
+        "referenceBoxes": []
+      }
+    }
+  ]
+}

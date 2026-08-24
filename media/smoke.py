@@ -49,8 +49,11 @@ def _source_required() -> dict[str, object]:
 
 
 def _discover_mp4() -> Path | None:
+    demo_root = (ROOT.parent / "frontend" / "public" / "demo").resolve()
     for path in ROOT.parent.rglob("*.mp4"):
         if any(part in {".git", "node_modules", "__pycache__"} for part in path.parts):
+            continue
+        if path.resolve().is_relative_to(demo_root):
             continue
         return path
     return None
