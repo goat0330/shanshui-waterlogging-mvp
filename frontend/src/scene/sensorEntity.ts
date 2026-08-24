@@ -12,6 +12,8 @@ export interface GeographicSensorInput {
   selected: boolean
   source: string
   eventId?: string
+  siteId?: string
+  fallback?: boolean
 }
 
 const SENSOR_COLOR: Record<FloodPoint['riskLevel'], Cesium.Color> = {
@@ -38,7 +40,7 @@ export function addGeographicSensorEntity(viewer: Cesium.Viewer, sensor: Geograp
     }),
     label: sensor.selected
       ? new Cesium.LabelGraphics({
-        text: `${sensor.floodPointId} · ${sensor.depthCm.toFixed(1)} cm`,
+        text: `${sensor.fallback ? sensor.floodPointId : sensor.sensorId} · ${sensor.depthCm.toFixed(1)} cm`,
         font: '11px sans-serif',
         fillColor: Cesium.Color.fromCssColorString('#ffe0ac'),
         showBackground: true,
@@ -52,12 +54,19 @@ export function addGeographicSensorEntity(viewer: Cesium.Viewer, sensor: Geograp
       entityType: 'sensor',
       floodPointId: sensor.floodPointId,
       sensorId: sensor.sensorId,
+      siteId: sensor.siteId ?? null,
       eventId: sensor.eventId ?? null,
+      depthCm: sensor.depthCm,
+      coordinates: {
+        lon: sensor.coordinates.lon,
+        lat: sensor.coordinates.lat,
+      },
       coordinateSystem: 'WGS84 lon/lat',
       longitude: sensor.coordinates.lon,
       latitude: sensor.coordinates.lat,
       selected: sensor.selected,
       source: sensor.source,
+      fallback: sensor.fallback ?? false,
     },
   })
 }

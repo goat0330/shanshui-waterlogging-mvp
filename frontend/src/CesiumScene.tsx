@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import type { FloodEvent, FloodPoint, ForecastFrame, ForecastKey } from './types'
+import type { FloodEvent, FloodPoint, ForecastFrame, ForecastKey, SensorState } from './types'
 import { addDemoCityBlocks } from './scene/demoCityLayer'
 import { HUANGPU_RIVER_GEOJSON_URL, HUANGPU_RIVER_SOURCE_LABEL, loadHuangpuHydroSystemLayer } from './scene/hydroSystemLayer'
 import { addGeographicSensorEntity } from './scene/sensorEntity'
 
 const CORE_TILES_URL = '/data/runtime/shanghai-core/tileset.json'
 const CESIUM_ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN?.trim()
-const GEOGRAPHIC_SENSOR_SOURCE = 'dashboard-input'
+const SENSOR_STATE_SOURCE = 'sensor-state-input'
+const FLOOD_POINT_FALLBACK_SOURCE = 'floodpoint-fallback'
+const EVENT_FALLBACK_SOURCE = 'event-fallback'
 const BIMANGLE_ORIGIN = { lon: 116.46, lat: 39.92 }
 const HUANGPU_SHP_CENTER = { lon: 121.47797014, lat: 31.21940076 }
 const HUANGPU_MODEL_CENTER_LOCAL = { x: 80.3409, y: -53.0326, z: 90 }
@@ -27,6 +29,7 @@ const FORECAST_STROKE: Record<ForecastKey, Cesium.Color> = {
 interface CesiumSceneProps {
   event: FloodEvent | null
   points: FloodPoint[]
+  sensor?: SensorState | null
   activeForecast: ForecastKey
   forecastFrame: ForecastFrame | null
   selectedPointId: string
@@ -80,7 +83,7 @@ function flyToTarget(viewer: Cesium.Viewer, target: { lon: number; lat: number }
   )
 }
 
-export function CesiumScene({ event, points, activeForecast, forecastFrame, selectedPointId, layers, onPointSelect }: CesiumSceneProps) {
+export function CesiumScene({ event, points, sensor = null, activeForecast, forecastFrame, selectedPointId, layers, onPointSelect }: CesiumSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const cityLayerRef = useRef<Cesium.PrimitiveCollection | null>(null)
@@ -259,37 +262,55 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       id: string
       selectId: string
       sensorId: string
+      siteId?: string
       eventId?: string
       name: string
       source: string
       coordinates: FloodPoint['coordinates']
       depthCm: number
       riskLevel: FloodPoint['riskLevel']
-    }> = points.length > 0
-      ? points.map((point) => ({
-        id: point.id,
-        selectId: point.id,
-        sensorId: `scene-sensor-${point.id}`,
-        eventId: point.id === selectedPointId ? event?.id : undefined,
-        name: point.name,
-        source: GEOGRAPHIC_SENSOR_SOURCE,
-        coordinates: point.coordinates,
-        depthCm: point.depthCm,
-        riskLevel: point.riskLevel,
-      }))
-      : event
-        ? [{
-          id: `event-${event.id}`,
-          selectId: selectedPointId || 'FP-001',
-          sensorId: `scene-sensor-${event.id}`,
-          eventId: event.id,
-          name: event.name,
-          source: GEOGRAPHIC_SENSOR_SOURCE,
-          coordinates: event.coordinates,
-          depthCm: event.currentDepthCm,
-          riskLevel: event.riskLevel,
-        }]
-        : []
+      fallback: boolean
+    }> = sensor
+      ? [{
+        id: sensor.sensorId,
+        selectId: selectedPointId || 'FP-001',
+        sensorId: sensor.sensorId,
+        siteId: sensor.siteId,
+        eventId: event?.id,
+        name: event?.name ?? selectedPoint?.name ?? sensor.siteId,
+        source: sensor.source ?? SENSOR_STATE_SOURCE,
+        coordinates: sensor.coordinates,
+        depthCm: sensor.depthCm,
+        riskLevel: event?.riskLevel ?? selectedPoint?.riskLevel ?? 'NORMAL',
+        fallback: false,
+      }]
+      : points.length > 0
+        ? points.map((point) => ({
+          id: `floodpoint-fallback-${point.id}`,
+          selectId: point.id,
+          sensorId: `floodpoint-fallback-${point.id}`,
+          eventId: point.id === selectedPointId ? event?.id : undefined,
+          name: point.name,
+          source: FLOOD_POINT_FALLBACK_SOURCE,
+          coordinates: point.coordinates,
+          depthCm: point.depthCm,
+          riskLevel: point.riskLevel,
+          fallback: true,
+        }))
+        : event
+          ? [{
+            id: `event-fallback-${event.id}`,
+            selectId: selectedPointId || 'FP-001',
+            sensorId: `event-fallback-${event.id}`,
+            eventId: event.id,
+            name: event.name,
+            source: EVENT_FALLBACK_SOURCE,
+            coordinates: event.coordinates,
+            depthCm: event.currentDepthCm,
+            riskLevel: event.riskLevel,
+            fallback: true,
+          }]
+          : []
 
     const entities = markerData.map((marker) => addGeographicSensorEntity(viewer, {
       entityId: marker.id,
@@ -302,13 +323,15 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       selected: marker.selectId === selectedPointId,
       source: marker.source,
       eventId: marker.eventId,
+      siteId: marker.siteId,
+      fallback: marker.fallback,
     }))
     setSensorEntityCount(entities.length)
 
     return () => {
       if (!viewer.isDestroyed()) entities.forEach((entity) => viewer.entities.remove(entity))
     }
-  }, [event, points, selectedPointId, viewerReady])
+  }, [event, points, selectedPointId, sensor, selectedPoint, viewerReady])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -396,6 +419,10 @@ export function CesiumScene({ event, points, activeForecast, forecastFrame, sele
       data-hydro-attribution={HUANGPU_RIVER_SOURCE_LABEL}
       data-hydro-status={hydroStatus}
       data-sensor-entity-count={sensorEntityCount}
+      data-sensor-mode={sensor ? 'sensor-state' : 'floodpoint-fallback'}
+      data-sensor-id={sensor?.sensorId ?? 'none'}
+      data-sensor-source={sensor?.source ?? (sensor ? SENSOR_STATE_SOURCE : FLOOD_POINT_FALLBACK_SOURCE)}
+      data-sensor-depth-cm={sensor ? String(sensor.depthCm) : 'none'}
       data-selected-point-id={selectedPointId}
       data-selected-event-id={event?.id ?? 'none'}
       data-forecast-source={activeForecast}
