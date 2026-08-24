@@ -75,4 +75,4 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 - Main `27d2917` now serves generated image masks through `/api/v1/vision-depth/artifacts/{filename}` and resolves the backend base URL in the API-mode drawer.
 - After upload, the drawer defaults to `水体识别`; open-ended `[50, null]` ranges render as `≥50 cm` instead of `null`.
-- Main runtime smoke verified `flood_no_reference.jpg` as `floodDetected=true` with a PNG mask response `HTTP 200`; calibrated centimetres and generalization remain conditional.
+- Main runtime smoke verified `flood_no_reference.jpg` as `floodDetected=true` with a PNG mask response `HTTP 200`; the result card now shows `约50 cm · 粗略视觉估计` from optional `approximateDepthCm`, while calibrated centimetres and generalization remain conditional.

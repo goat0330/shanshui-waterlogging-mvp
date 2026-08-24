@@ -140,6 +140,7 @@ export interface VisionDepthObservation {
   depth: {
     level: number
     estimatedDepthCm: number | null
+    approximateDepthCm?: number | null
     rangeCm: [number | null, number | null]
     confidence: number
   }

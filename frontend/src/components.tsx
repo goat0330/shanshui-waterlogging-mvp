@@ -617,6 +617,63 @@ function formatVisionRange(range: VisionDepthObservation['depth']['rangeCm']): s
   return `${minimum}–${maximum} cm`
 }
 
+function getVisionBusinessResult(observation: VisionDepthObservation) {
+  if (!observation.floodDetected) {
+    return {
+      status: '未检测到积水',
+      depth: '未发现积水',
+      note: '当前图像未检测到明确积水区域。',
+    }
+  }
+
+  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
+    return {
+      status: '检测到积水',
+      depth: `约 ${observation.depth.approximateDepthCm.toFixed(0)} cm`,
+      note: '粗略视觉估计：依据当前积水范围代表值，不等同于传感器实测水深。',
+    }
+  }
+
+  if (observation.depth.estimatedDepthCm === null) {
+    return {
+      status: '检测到积水',
+      depth: '水深暂不可量化',
+      note: '当前证据不足以形成可复核厘米值；不会用 level 或 range 代替精确水深。',
+    }
+  }
+
+  return {
+    status: '检测到积水',
+    depth: `约 ${observation.depth.estimatedDepthCm.toFixed(1)} cm`,
+    note: '视觉估计值仅作为独立证据，不覆盖传感器当前实测水深。',
+  }
+}
+
+function getVisionPassability(observation: VisionDepthObservation) {
+  if (!observation.floodDetected) {
+    return {
+      label: '未发现积水阻断证据',
+      note: '仅代表当前图像证据，不代表道路整体通行条件。',
+    }
+  }
+  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
+    return {
+      label: '粗略参考 · 待水深标定',
+      note: '当前数值用于演示和初筛，正式通行判断仍需标定水深。',
+    }
+  }
+  if (observation.depth.estimatedDepthCm === null) {
+    return {
+      label: '待水深标定',
+      note: '没有可复核厘米值，不进行通行能力推断。',
+    }
+  }
+  return {
+    label: '待通行阈值判定',
+    note: '当前 Contract 未提供车型/道路通行阈值，避免由单一水深值直接推断可通行性。',
+  }
+}
+
 export function VisionDepthDrawer({
   open,
   mode,
@@ -632,21 +689,26 @@ export function VisionDepthDrawer({
   onFileChange,
   onAnalyze,
 }: VisionDepthDrawerProps) {
-  const [mediaView, setMediaView] = useState<'original' | 'mask'>('original')
+  const [mediaView, setMediaView] = useState<'result' | 'original' | 'mask'>('result')
   const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
   const maskUrl = resolveVisionMediaUrl(observation?.waterMaskPath)
   const range = observation?.depth.rangeCm ?? [null, null]
+  const businessResult = observation ? getVisionBusinessResult(observation) : null
+  const passability = observation ? getVisionPassability(observation) : null
+  const calibrationLabel = observation?.qualityFlags.includes('CAMERA_UNCALIBRATED')
+    ? '未标定（CAMERA_UNCALIBRATED）'
+    : '当前 Contract 未显式提供 CameraProfile 标定状态'
 
   useEffect(() => {
-    if (maskUrl) setMediaView('mask')
-  }, [maskUrl, observation?.imageId])
+    if (observation?.imageId) setMediaView('result')
+  }, [observation?.imageId])
 
   if (!open) return null
 
   return (
     <aside className="vision-drawer" aria-label="VisionDepth 水深证据抽屉">
       <div className="vision-drawer-head">
-        <div><span className="vision-drawer-kicker">VISION_IMAGE · CONTRACT EVIDENCE</span><h2>图像水深估计</h2></div>
+        <div><span className="vision-drawer-kicker">VISION_IMAGE · AI EVIDENCE</span><h2>图像积水识别</h2></div>
         <button type="button" className="vision-close" onClick={onClose} aria-label="关闭视觉水深证据">×</button>
       </div>
       <div className="vision-source-tabs" role="tablist" aria-label="视觉证据来源">
@@ -665,35 +727,61 @@ export function VisionDepthDrawer({
       {state === 'error' && <p className="vision-state vision-state--error" role="alert">{errorMessage ?? 'VisionDepth 读取失败'}</p>}
       {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
 
-      <div className="vision-media-tabs" role="tablist" aria-label="原图与水域掩膜">
+      {observation && businessResult && passability && (
+        <section className={`vision-business-card ${observation.floodDetected ? 'is-flood' : 'is-clear'}`} aria-label="图像积水业务结论">
+          <div className="vision-business-status"><i />{businessResult.status}</div>
+          <strong className="vision-business-depth">{businessResult.depth}</strong>
+          <p className="vision-business-note">{businessResult.note}</p>
+          <div className="vision-passability">
+            <span>通行状态</span>
+            <b>{passability.label}</b>
+            <small>{passability.note}</small>
+          </div>
+        </section>
+      )}
+
+      <div className="vision-media-tabs" role="tablist" aria-label="AI结果、原图与水体Mask">
+        <button type="button" role="tab" aria-selected={mediaView === 'result'} className={mediaView === 'result' ? 'is-active' : ''} onClick={() => setMediaView('result')}>AI结果</button>
         <button type="button" role="tab" aria-selected={mediaView === 'original'} className={mediaView === 'original' ? 'is-active' : ''} onClick={() => setMediaView('original')}>原图</button>
-        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>水体识别</button>
+        <button type="button" role="tab" aria-selected={mediaView === 'mask'} className={mediaView === 'mask' ? 'is-active' : ''} onClick={() => setMediaView('mask')}>水体Mask</button>
       </div>
-      <div className="vision-media-preview">
+      <div className={`vision-media-preview vision-media-preview--${mediaView}`}>
+        {mediaView === 'result' && observation && originalUrl ? (
+          <div className="vision-ai-result">
+            <img className="vision-ai-original" src={originalUrl} alt="VisionDepth AI 识别结果原图" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+            {maskUrl && <img className="vision-ai-mask" src={maskUrl} alt="" aria-hidden="true" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+            <span className="vision-ai-result-label">AI RESULT · {maskUrl ? 'WATER MASK OVERLAY' : 'MASK NOT ATTACHED'}</span>
+          </div>
+        ) : null}
         {mediaView === 'original' && originalUrl ? <img src={originalUrl} alt="VisionDepth 原始图像" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
         {mediaView === 'mask' && maskUrl ? <img src={maskUrl} alt="VisionDepth 水域掩膜" onError={(event) => { event.currentTarget.style.display = 'none' }} /> : null}
         {mediaView === 'mask' && observation && !maskUrl && <div className="vision-media-unavailable"><strong>MASK PATH · NOT ATTACHED</strong><code>{observation.waterMaskPath}</code></div>}
-        {((mediaView === 'original' && !originalUrl) || (mediaView === 'mask' && !observation)) && <div className="vision-media-unavailable">等待 {mediaView === 'original' ? 'original' : 'mask'} evidence</div>}
+        {((mediaView === 'result' && (!observation || !originalUrl)) || (mediaView === 'original' && !originalUrl) || (mediaView === 'mask' && !observation)) && <div className="vision-media-unavailable">等待 {mediaView === 'result' ? 'AI result' : mediaView === 'original' ? 'original' : 'mask'} evidence</div>}
       </div>
 
       {observation ? (
         <div className="vision-observation" data-quality={observation.quality}>
-          <div className="vision-observation-head"><span>{observation.floodDetected ? 'FLOOD DETECTED' : 'NO FLOOD'}</span><strong>VISION_IMAGE · {observation.synthetic ? 'DEMO / SYNTHETIC' : observation.quality}</strong></div>
-          <div className="vision-depth-grid">
-            <span><small>level</small><b>{observation.depth.level}</b></span>
-            <span><small>estimatedDepthCm</small><b>{observation.depth.estimatedDepthCm === null ? 'null' : `${observation.depth.estimatedDepthCm.toFixed(1)} cm`}</b></span>
-            <span><small>rangeCm</small><b>{formatVisionRange(range)}</b></span>
-          </div>
-          <dl className="vision-observation-meta">
-            <div><dt>method</dt><dd>{VISION_METHOD_LABEL[observation.method]}</dd></div>
-            <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
-            <div><dt>contract source</dt><dd>VISION_IMAGE · {observation.source.type} · {observation.source.value}</dd></div>
-            <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
-            <div><dt>sourceType</dt><dd>{observation.provenance.sourceType}</dd></div>
-            <div><dt>sourceId</dt><dd>{observation.provenance.sourceId}</dd></div>
-            <div><dt>licenseReview</dt><dd>{observation.provenance.licenseReview}</dd></div>
-            <div><dt>runtimePolicy</dt><dd>{observation.provenance.runtimePolicy}</dd></div>
-          </dl>
+          <div className="vision-observation-head"><span>证据边界</span><strong>{observation.synthetic ? 'DEMO / SYNTHETIC' : 'VISION_IMAGE'}</strong></div>
+          <details className="vision-tech-details">
+            <summary>技术详情</summary>
+            <dl className="vision-observation-meta">
+              <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
+              <div><dt>sourceId</dt><dd>{observation.provenance.sourceId}</dd></div>
+              <div><dt>sourceType</dt><dd>{observation.provenance.sourceType}</dd></div>
+              <div><dt>method</dt><dd>{VISION_METHOD_LABEL[observation.method]}</dd></div>
+              <div><dt>level</dt><dd>{observation.depth.level}</dd></div>
+              <div><dt>approximateDepthCm</dt><dd>{observation.depth.approximateDepthCm == null ? 'null' : `${observation.depth.approximateDepthCm.toFixed(1)} cm · rough`}</dd></div>
+              <div><dt>rangeCm</dt><dd>{formatVisionRange(range)}</dd></div>
+              <div><dt>referenceObjects</dt><dd><code>{JSON.stringify(observation.referenceObjects)}</code></dd></div>
+              <div><dt>quality</dt><dd>{observation.quality}</dd></div>
+              <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
+              <div><dt>model</dt><dd><code>{JSON.stringify(observation.model)}</code></dd></div>
+              <div><dt>camera calibration</dt><dd>{calibrationLabel}</dd></div>
+              <div><dt>runtimePolicy</dt><dd>{observation.provenance.runtimePolicy}</dd></div>
+              <div><dt>licenseReview</dt><dd>{observation.provenance.licenseReview}</dd></div>
+              <div><dt>waterMaskPath</dt><dd><code>{observation.waterMaskPath}</code></dd></div>
+            </dl>
+          </details>
         </div>
       ) : <div className="vision-observation-empty">尚未产生 VisionDepthObservation。</div>}
     </aside>

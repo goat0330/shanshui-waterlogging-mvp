@@ -488,6 +488,8 @@ def main() -> None:
         }
         assert upload_observation["imageId"] == "IMG-RC11-UPLOAD"
         assert upload_observation["source"]["type"] == "local"
+        assert upload_observation["depth"]["estimatedDepthCm"] == 25.4
+        assert upload_observation["depth"]["approximateDepthCm"] is None
         assert upload_observation["provenance"] == {
             "sourceType": "VISION_IMAGE",
             "sourceId": "IMG-RC11-UPLOAD",

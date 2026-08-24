@@ -53,6 +53,7 @@ def main() -> int:
         elif sample["expected"] == "flood_without_reliable_reference":
             assert result["floodDetected"], result
             assert result["depth"]["estimatedDepthCm"] is None, result
+            assert result["depth"]["approximateDepthCm"] is not None, result
             assert "NO_REFERENCE" in result["qualityFlags"], result
         else:
             assert not result["floodDetected"], result
@@ -67,6 +68,7 @@ def main() -> int:
         print(
             f"- {item['name']}: flood={result['floodDetected']} "
             f"level={result['depth']['level']} estimate={result['depth']['estimatedDepthCm']} "
+            f"approximate={result['depth']['approximateDepthCm']} "
             f"method={result['method']} confidence={result['depth']['confidence']}"
         )
     print(f"summary={summary.as_posix()}")
@@ -75,4 +77,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

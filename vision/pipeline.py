@@ -30,7 +30,12 @@ def _save_mask(mask: np.ndarray, path: Path) -> None:
     Image.fromarray(mask.astype(np.uint8), mode="L").save(path, format="PNG")
 
 
-def _quality(segmentation: Any, references: list[Any], flood_detected: bool) -> tuple[str, list[str]]:
+def _quality(
+    segmentation: Any,
+    references: list[Any],
+    flood_detected: bool,
+    approximate_depth_cm: float | None = None,
+) -> tuple[str, list[str]]:
     flags = ["BASELINE_ONLY", "MODEL_WEIGHT_MISSING"]
     if not flood_detected:
         flags.append("NO_WATER")
@@ -38,6 +43,8 @@ def _quality(segmentation: Any, references: list[Any], flood_detected: bool) -> 
         flags.append("NO_REFERENCE")
     if segmentation.score < 0.32:
         flags.append("WATER_MASK_WEAK")
+    if approximate_depth_cm is not None:
+        flags.append("ROUGH_VISUAL_ESTIMATE")
     return "LOW", flags
 
 
@@ -52,7 +59,12 @@ def run_pipeline(source: str, output_path: str | Path, image_id: str = "IMG-0000
     mask_path = output.parent / f"{image_id}-water-mask.png"
     _save_mask(segmentation.mask, mask_path)
 
-    quality, quality_flags = _quality(segmentation, references, estimate["floodDetected"])
+    quality, quality_flags = _quality(
+        segmentation,
+        references,
+        estimate["floodDetected"],
+        estimate["approximateDepthCm"],
+    )
     reference_objects = [reference.as_dict() for reference in references]
     observation: dict[str, Any] = {
         "imageId": image_id,
@@ -61,6 +73,7 @@ def run_pipeline(source: str, output_path: str | Path, image_id: str = "IMG-0000
         "depth": {
             "level": estimate["level"],
             "estimatedDepthCm": estimate["estimatedDepthCm"],
+            "approximateDepthCm": estimate["approximateDepthCm"],
             "rangeCm": estimate["rangeCm"],
             "confidence": estimate["confidence"],
         },

@@ -642,6 +642,10 @@ components:
               type: number
               minimum: 0
               nullable: true
+            approximateDepthCm:
+              type: number
+              minimum: 0
+              nullable: true
             rangeCm:
               type: array
               minItems: 2

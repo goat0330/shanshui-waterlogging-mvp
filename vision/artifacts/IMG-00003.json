@@ -8,6 +8,7 @@
   "depth": {
     "level": 0,
     "estimatedDepthCm": null,
+    "approximateDepthCm": null,
     "rangeCm": [
       0,
       0

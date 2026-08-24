@@ -1426,7 +1426,7 @@ a {
   right: 18px;
   bottom: 88px;
   display: flex;
-  width: 382px;
+  width: 430px;
   overflow-y: auto;
   flex-direction: column;
   gap: 9px;
@@ -1551,9 +1551,75 @@ a {
 
 .vision-state--error { color: #ff9f8f; }
 
+.vision-business-card {
+  display: grid;
+  gap: 7px;
+  padding: 12px 13px;
+  border: 1px solid rgba(78, 170, 194, 0.28);
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgba(7, 44, 61, 0.76), rgba(4, 23, 37, 0.78));
+}
+
+.vision-business-card.is-flood {
+  border-color: rgba(255, 154, 55, 0.46);
+  box-shadow: inset 3px 0 0 rgba(255, 154, 55, 0.72);
+}
+
+.vision-business-card.is-clear {
+  border-color: rgba(42, 215, 199, 0.38);
+  box-shadow: inset 3px 0 0 rgba(42, 215, 199, 0.64);
+}
+
+.vision-business-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #cfe8ed;
+  font-size: 11px;
+}
+
+.vision-business-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 9px rgba(255, 154, 55, 0.58);
+}
+
+.vision-business-card.is-clear .vision-business-status i {
+  background: var(--normal);
+  box-shadow: 0 0 9px rgba(42, 215, 199, 0.48);
+}
+
+.vision-business-depth {
+  color: #f4fbfd;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.vision-business-note {
+  margin: 0;
+  color: #8eafb9;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.vision-passability {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 3px 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(85, 169, 191, 0.16);
+}
+
+.vision-passability span { color: #789daa; font-size: 9px; }
+.vision-passability b { color: #dceff2; font-size: 11px; font-weight: 500; }
+.vision-passability small { grid-column: 2; color: #6f909b; font-size: 8px; line-height: 1.4; }
+
 .vision-media-preview {
   display: grid;
-  min-height: 140px;
+  min-height: 220px;
   place-items: center;
   overflow: hidden;
   border: 1px solid rgba(70, 165, 193, 0.22);
@@ -1563,8 +1629,44 @@ a {
 
 .vision-media-preview img {
   width: 100%;
-  height: 140px;
+  height: 220px;
   object-fit: contain;
+}
+
+.vision-ai-result {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+}
+
+.vision-ai-result .vision-ai-original,
+.vision-ai-result .vision-ai-mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.vision-ai-result .vision-ai-mask {
+  opacity: 0.42;
+  filter: sepia(1) saturate(8) hue-rotate(130deg) brightness(1.12);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.vision-ai-result-label {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 6px;
+  border: 1px solid rgba(57, 214, 226, 0.34);
+  border-radius: 3px;
+  background: rgba(2, 18, 29, 0.74);
+  color: #a8dfe6;
+  font-size: 8px;
+  letter-spacing: 0.08em;
 }
 
 .vision-media-unavailable {
@@ -1582,7 +1684,7 @@ a {
 .vision-observation {
   padding: 8px;
   border-top: 1px solid rgba(82, 181, 204, 0.2);
-  background: rgba(6, 37, 52, 0.38);
+  background: rgba(6, 31, 45, 0.34);
 }
 
 .vision-observation-head {
@@ -1600,41 +1702,38 @@ a {
   font-weight: 600;
 }
 
-.vision-depth-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-top: 9px;
+.vision-tech-details {
+  margin-top: 7px;
+  border-top: 1px solid rgba(79, 157, 178, 0.13);
 }
 
-.vision-depth-grid span {
-  min-width: 0;
-  padding: 5px;
-  background: rgba(4, 25, 39, 0.56);
+.vision-tech-details summary {
+  padding: 7px 0 2px;
+  color: #8eb1bc;
+  font-size: 9px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.vision-depth-grid small,
-.vision-depth-grid b {
-  display: block;
+.vision-tech-details[open] summary {
+  color: #c9e9ed;
 }
-
-.vision-depth-grid small { color: #6e96a4; font-size: 8px; }
-.vision-depth-grid b { margin-top: 3px; color: #e0f3f4; font-size: 11px; font-weight: 500; overflow-wrap: anywhere; }
 
 .vision-observation-meta {
   display: grid;
   gap: 4px;
-  margin: 9px 0 0;
+  margin: 6px 0 0;
 }
 
 .vision-observation-meta div {
   display: grid;
-  grid-template-columns: 86px 1fr;
+  grid-template-columns: 108px 1fr;
   gap: 8px;
 }
 
 .vision-observation-meta dt { color: #6f96a3; font-size: 8px; }
 .vision-observation-meta dd { margin: 0; color: #c6dfe5; font-size: 8px; overflow-wrap: anywhere; }
+.vision-observation-meta code { color: #a9cad2; font: inherit; overflow-wrap: anywhere; }
 
 .gallery-vision-preview { position: relative; min-height: 110px; color: #8aaab5; font-size: 10px; }
 .gallery-vision-preview p { margin: 0 0 10px; }

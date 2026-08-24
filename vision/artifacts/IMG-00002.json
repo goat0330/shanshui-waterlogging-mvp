@@ -8,6 +8,7 @@
   "depth": {
     "level": 5,
     "estimatedDepthCm": null,
+    "approximateDepthCm": 50.0,
     "rangeCm": [
       50,
       null
@@ -50,7 +51,8 @@
   "qualityFlags": [
     "BASELINE_ONLY",
     "MODEL_WEIGHT_MISSING",
-    "NO_REFERENCE"
+    "NO_REFERENCE",
+    "ROUGH_VISUAL_ESTIMATE"
   ],
   "model": {
     "waterSegmentation": "opencv_baseline",

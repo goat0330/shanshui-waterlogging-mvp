@@ -7,7 +7,7 @@ immutable release tag：`rc2-evidence-demo` → `b0a41d1e2245e60ed55eef2777ea03d
 
 ## 本轮目标
 
-在不扩展算法、不引入真实未授权素材、不混淆 SENSOR / VISION / FORECAST 的前提下，收口 RC2 的跨模块连接：
+在不引入真实未授权素材、不混淆 SENSOR / VISION / FORECAST 的前提下，收口 RC2 的跨模块连接，并补齐可解释的粗略视觉水深展示：
 
 ```mermaid
 flowchart LR
@@ -29,6 +29,7 @@ flowchart LR
 | Dashboard video adapter | PASS | `1ca94bd` + `9a29528`; flat frame normalize、nearest timestamp、null-depth guard |
 | Browser video asset | PASS / CONDITIONAL | `e990129`; 2,419-byte H.264 baseline、3 frames、Chrome decode PASS |
 | Vision image mask resource seam | PASS / CONDITIONAL | `27d2917`; upload returns browser-readable mask API URL, backend artifact route returns PNG 200, drawer defaults to `水体识别`; UI hides confidence while API evidence remains intact |
+| Vision image rough estimate | PASS / CONDITIONAL | `approximateDepthCm` is a coarse range representative; `estimatedDepthCm` remains metric-only; no-reference flood displays `约50 cm · 粗略视觉估计` |
 | Frontend build | PASS | `npm run typecheck`、`npm run build`；仅 Cesium 大 chunk warning |
 | Backend / Vision / Media | PASS / CONDITIONAL | backend smoke、vision smoke、media synthetic check、adapter smoke 全通过 |
 | Docs / minimal CI | ADDED | `75856d4`；CI remote execution remains `NOT VERIFIED` |
@@ -42,12 +43,12 @@ flowchart LR
 - 页面同时显示 `SYNTHETIC_DEMO`、`estimatedDepthCm=null`、`CAMERA_UNCALIBRATED`。
 - Cesium mount：`data-sensor-mode=sensor-state`、`data-sensor-id=SSZJ-NODE-001`、`data-sensor-depth-cm=28.6`、entity count=1、forecast ready。
 - 浏览器 console errors：0；主页面没有横向/纵向 overflow（默认 viewport smoke）。
-- Vision image API：`flood_no_reference.jpg` → `floodDetected=true`、`waterMaskPath` 可读取 PNG 200、`rangeCm` 显示为 `≥50 cm`；无参考物时 `estimatedDepthCm=null` 仍保持不变。
+- Vision image API：`flood_no_reference.jpg` → `floodDetected=true`、`waterMaskPath` 可读取 PNG 200、`estimatedDepthCm=null`、`approximateDepthCm=50.0`；前端显示 `约50 cm · 粗略视觉估计`，不把它当传感器实测。
 
 ## 仍未完成 / 不作为本轮阻塞
 
 1. 真实 CCTV/LIVE 接入、真实来源授权、HLS/WebRTC：`NOT VERIFIED`。
-2. CameraProfile/几何标定和真实厘米值：`NOT VERIFIED`；视频 overlay 所有 `estimatedDepthCm` 仍为 `null`。
+2. CameraProfile/几何标定和真实厘米值：`NOT VERIFIED`；粗略视觉值只服务 MVP 展示，视频 overlay 的 metric `estimatedDepthCm` 仍为 `null`。
 3. 视频 mask 当前是 metadata-only，未逐像素绘制到视频；`rendered=false` 是有意边界。
 4. V-FloodNet 等模型升级、GT、IoU/F1/MAE：`MODEL_UPGRADE=NOT_VERIFIED`。
 5. PostGIS 真机迁移/重启持久化、硬件 ESP32/STM32、MQTT/4G/Wi-Fi：`NOT VERIFIED`。

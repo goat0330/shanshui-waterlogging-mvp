@@ -77,6 +77,11 @@ def validate_observation(observation: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("depth.level must be 0..5")
     if depth["estimatedDepthCm"] is not None and depth["estimatedDepthCm"] < 0:
         raise ValueError("estimatedDepthCm must be non-negative or null")
+    approximate = depth.get("approximateDepthCm")
+    if approximate is not None and approximate < 0:
+        raise ValueError("approximateDepthCm must be non-negative or null")
+    if depth["estimatedDepthCm"] is not None and approximate is not None:
+        raise ValueError("estimatedDepthCm and approximateDepthCm cannot both be set")
     if len(depth["rangeCm"]) != 2:
         raise ValueError("depth.rangeCm must contain two values")
     if not 0 <= float(depth["confidence"]) <= 1:

@@ -55,3 +55,9 @@ git diff --check                     PASS (exit 0; only LF/CRLF warnings)
 ```
 
 本轮 checkpoint 仅修改 `backend/app/vision_depth.py`、`backend/smoke.py` 与本文件；真实公网 URL、许可审批、生产模型和物理设备链路仍 `NOT VERIFIED`。
+
+## Main follow-up — coarse visual display value
+
+- The shared image pipeline now emits optional `depth.approximateDepthCm` when flood is detected but no metric reference is available.
+- This value is a deterministic representative of the existing visual range (for `[50, null]`, the MVP display value is `50.0`), and `qualityFlags` includes `ROUGH_VISUAL_ESTIMATE`.
+- `depth.estimatedDepthCm` remains `null` in the no-reference case; the new field must not be used as calibrated sensor data or as a final passability measurement.

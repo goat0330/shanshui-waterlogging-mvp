@@ -10,15 +10,26 @@ from .water_segmentation import WaterSegmentation
 
 
 def _visual_level(segmentation: WaterSegmentation) -> int:
-    if segmentation.score < 0.32:
-        return 1
+  if segmentation.score < 0.32:
+    return 1
     if segmentation.score < 0.46:
         return 2
     if segmentation.score < 0.62:
         return 3
     if segmentation.score < 0.80:
         return 4
-    return 5
+  return 5
+
+
+def _approximate_depth(level: int) -> float | None:
+    """Return a coarse display value for the visual range, never a metric estimate."""
+
+    minimum, maximum = range_for_level(level)
+    if minimum is None:
+        return None
+    if maximum is None:
+        return float(minimum)
+    return round((minimum + maximum) / 2.0, 1)
 
 
 def _reference_depth(reference: ReferenceEvidence, image_height: int) -> float | None:
@@ -68,6 +79,7 @@ def estimate_depth(
             "floodDetected": False,
             "level": 0,
             "estimatedDepthCm": None,
+            "approximateDepthCm": None,
             "rangeCm": range_for_level(0),
             "confidence": round(clamp(0.42 + (0.22 - segmentation.score) * 0.2, 0.25, 0.6), 3),
             "method": "VISUAL_RANGE",
@@ -83,6 +95,7 @@ def estimate_depth(
                 "floodDetected": True,
                 "level": level,
                 "estimatedDepthCm": round(estimated, 1),
+                "approximateDepthCm": None,
                 "rangeCm": range_for_level(level),
                 "confidence": round(confidence, 3),
                 "method": reference.type,
@@ -95,6 +108,7 @@ def estimate_depth(
         "floodDetected": True,
         "level": level,
         "estimatedDepthCm": None,
+        "approximateDepthCm": _approximate_depth(level),
         "rangeCm": range_for_level(level),
         "confidence": round(confidence, 3),
         "method": "NO_REFERENCE",

@@ -273,6 +273,7 @@ class VisionDepthEstimate(BaseModel):
 
     level: int = Field(ge=0, le=5)
     estimatedDepthCm: float | None = Field(default=None, ge=0)
+    approximateDepthCm: float | None = Field(default=None, ge=0)
     rangeCm: list[float | None] = Field(min_length=2, max_length=2)
     confidence: float = Field(ge=0, le=1)
 
