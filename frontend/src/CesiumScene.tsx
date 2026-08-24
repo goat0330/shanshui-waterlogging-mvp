@@ -26,6 +26,21 @@ const FORECAST_STROKE: Record<ForecastKey, Cesium.Color> = {
   PLUS_10: new Cesium.Color(0.48, 0.68, 1, 0.96),
   PLUS_30: new Cesium.Color(1, 0.67, 0.3, 0.98),
 }
+type SourceAttemptReason = 'none' | 'token_missing' | 'osm_init_failed'
+type SourceReason =
+  | 'none'
+  | 'token_missing'
+  | 'osm_init_failed'
+  | 'local_core_unavailable'
+  | 'token_missing+local_core_unavailable'
+  | 'osm_init_failed+local_core_unavailable'
+
+function getLocalFailureReason(attemptReason: SourceAttemptReason): SourceReason {
+  if (attemptReason === 'token_missing') return 'token_missing+local_core_unavailable'
+  if (attemptReason === 'osm_init_failed') return 'osm_init_failed+local_core_unavailable'
+  return 'local_core_unavailable'
+}
+
 interface CesiumSceneProps {
   event: FloodEvent | null
   points: FloodPoint[]
@@ -93,6 +108,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   const [viewerReady, setViewerReady] = useState(false)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [source, setSource] = useState<'osm' | 'local' | 'demo' | null>(null)
+  const [sourceReason, setSourceReason] = useState<SourceReason>('none')
   const [hydroStatus, setHydroStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [forecastStatus, setForecastStatus] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading')
   const [sensorEntityCount, setSensorEntityCount] = useState(0)
@@ -130,7 +146,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
 
     let disposed = false
 
-    const loadLocalCore = async () => {
+    const loadLocalCore = async (attemptReason: SourceAttemptReason) => {
       try {
         const tileset = await Cesium.Cesium3DTileset.fromUrl(CORE_TILES_URL, { maximumScreenSpaceError: 3 })
         if (disposed) {
@@ -141,6 +157,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         tileset.style = new Cesium.Cesium3DTileStyle({ color: "color('#6f8fa7', 0.96)" })
         cityLayer.add(tileset)
         setSource('local')
+        setSourceReason(attemptReason)
         setStatus('ready')
         viewer.camera.flyToBoundingSphere(tileset.boundingSphere, {
           offset: new Cesium.HeadingPitchRange(
@@ -152,6 +169,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         })
       } catch {
         if (disposed) return
+        setSourceReason(getLocalFailureReason(attemptReason))
         try {
           addDemoCityBlocks(cityLayer)
           setSource('demo')
@@ -165,7 +183,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
 
     const loadOsmBuildings = async () => {
       if (!CESIUM_ION_TOKEN) {
-        await loadLocalCore()
+        await loadLocalCore('token_missing')
         return
       }
 
@@ -182,6 +200,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         }
         cityLayer.add(tileset)
         setSource('osm')
+        setSourceReason('none')
         setStatus('ready')
         flyToTarget(viewer, target, 1)
 
@@ -195,7 +214,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           imageryLayer.saturation = 0.18
         }
       } catch {
-        if (!disposed) await loadLocalCore()
+        if (!disposed) await loadLocalCore('osm_init_failed')
       }
     }
 
@@ -407,12 +426,15 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     if (cityLayerRef.current) cityLayerRef.current.show = layers.base
   }, [layers.base])
 
+  const sourceReasonSuffix = sourceReason === 'none' ? '' : ` · reason=${sourceReason}`
+
   return (
     <div
       className="cesium-scene-mount"
       ref={containerRef}
       aria-label="上海 Cesium 三维城市底座"
       data-source={source ?? 'loading'}
+      data-source-reason={sourceReason}
       data-local-tileset={CORE_TILES_URL}
       data-coordinate-system="WGS84 lon/lat"
       data-hydro-source={HUANGPU_RIVER_GEOJSON_URL}
@@ -431,7 +453,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     >
       {status === 'loading' && <span className="cesium-scene-status">{CESIUM_ION_TOKEN ? 'OSM BUILDINGS LOADING' : 'LOCAL CITY LOADING'}</span>}
       {status === 'error' && <span className="cesium-scene-status cesium-scene-status--error">CITY DATA UNAVAILABLE</span>}
-      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · GLOBAL' : source === 'local' ? 'LOCAL HUANGPU · FALLBACK' : 'DEMO CITY BLOCKS · FALLBACK'}</span>}
+      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · GLOBAL' : source === 'local' ? `LOCAL HUANGPU · FALLBACK${sourceReasonSuffix}` : `DEMO CITY BLOCKS · FALLBACK${sourceReasonSuffix}`}</span>}
     </div>
   )
 }
