@@ -42,8 +42,39 @@ export interface VideoOverlayData {
 
 type RecordValue = Record<string, unknown>
 
+const VISION_METHODS: VisionDepthObservation['method'][] = [
+  'VISUAL_RANGE',
+  'NO_REFERENCE',
+  'PERSON_REFERENCE',
+  'VEHICLE_REFERENCE',
+  'TRAFFIC_SIGN_REFERENCE',
+  'FIXED_CAMERA_REFERENCE',
+]
+
+const VISION_QUALITIES: VisionDepthObservation['quality'][] = ['LOW', 'MEDIUM', 'HIGH', 'REJECT']
+
 function isRecord(value: unknown): value is RecordValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isNullableFiniteNumber(value: unknown): value is number | null {
+  return value === null || isFiniteNumber(value)
+}
+
+function isRangeCm(value: unknown): value is [number | null, number | null] {
+  return Array.isArray(value) && value.length === 2 && value.every(isNullableFiniteNumber)
+}
+
+function isVisionMethod(value: unknown): value is VisionDepthObservation['method'] {
+  return typeof value === 'string' && VISION_METHODS.includes(value as VisionDepthObservation['method'])
+}
+
+function isVisionQuality(value: unknown): value is VisionDepthObservation['quality'] {
+  return typeof value === 'string' && VISION_QUALITIES.includes(value as VisionDepthObservation['quality'])
 }
 
 function hasProvenance(value: unknown): value is VisionDepthProvenance {
@@ -60,50 +91,115 @@ function hasProvenance(value: unknown): value is VisionDepthProvenance {
 
 function hasObservation(value: unknown): value is VisionDepthObservation {
   if (!isRecord(value) || !isRecord(value.source) || !isRecord(value.depth)) return false
-  const rangeCm = value.depth.rangeCm
   return (
     typeof value.imageId === 'string' &&
+    value.imageId.length > 0 &&
     (value.source.type === 'local' || value.source.type === 'url') &&
     typeof value.source.value === 'string' &&
     hasProvenance(value.provenance) &&
     typeof value.floodDetected === 'boolean' &&
-    typeof value.depth.level === 'number' &&
-    (value.depth.estimatedDepthCm === null || typeof value.depth.estimatedDepthCm === 'number') &&
-    Array.isArray(rangeCm) &&
-    rangeCm.length === 2 &&
-    (rangeCm[0] === null || typeof rangeCm[0] === 'number') &&
-    (rangeCm[1] === null || typeof rangeCm[1] === 'number') &&
-    typeof value.depth.confidence === 'number' &&
-    typeof value.method === 'string' &&
+    isFiniteNumber(value.depth.level) &&
+    isNullableFiniteNumber(value.depth.estimatedDepthCm) &&
+    isRangeCm(value.depth.rangeCm) &&
+    isFiniteNumber(value.depth.confidence) &&
+    isVisionMethod(value.method) &&
     Array.isArray(value.referenceObjects) &&
+    value.referenceObjects.every(isRecord) &&
     typeof value.waterMaskPath === 'string' &&
-    typeof value.quality === 'string' &&
+    isVisionQuality(value.quality) &&
     Array.isArray(value.qualityFlags) &&
+    value.qualityFlags.every((flag) => typeof flag === 'string') &&
     isRecord(value.model) &&
     typeof value.synthetic === 'boolean'
   )
 }
 
-function normalizeFrame(value: unknown, index: number): VideoEvidenceFrame {
-  if (!isRecord(value) || !hasObservation(value.observation)) {
-    throw new Error(`Invalid video evidence frame at index ${index}`)
+function readSource(frame: RecordValue, bundle: RecordValue): { type: 'local' | 'url'; value: string } | null {
+  const candidate = isRecord(frame.source) ? frame.source : isRecord(bundle.source) ? bundle.source : null
+  if (!candidate || (candidate.type !== 'local' && candidate.type !== 'url') || typeof candidate.value !== 'string') return null
+  return { type: candidate.type, value: candidate.value }
+}
+
+function readProvenance(frame: RecordValue, bundle: RecordValue): VisionDepthProvenance | null {
+  if (hasProvenance(frame.provenance)) return frame.provenance
+  if (hasProvenance(bundle.provenance)) return bundle.provenance
+  return null
+}
+
+function normalizeFlatObservation(frame: RecordValue, bundle: RecordValue, index: number): VisionDepthObservation {
+  const source = readSource(frame, bundle)
+  const provenance = readProvenance(frame, bundle)
+  const rangeCm = frame.rangeCm
+  const qualityFlags = frame.qualityFlags
+  const referenceObjects = frame.referenceObjects
+  const model = isRecord(frame.model) ? frame.model : isRecord(bundle.model) ? bundle.model : {}
+  const synthetic = typeof frame.synthetic === 'boolean' ? frame.synthetic : bundle.synthetic
+  const videoId = typeof bundle.videoId === 'string' && bundle.videoId.length > 0 ? bundle.videoId : provenance?.sourceId
+  const frameIndex = isFiniteNumber(frame.frameIndex) ? frame.frameIndex : index
+  const suppliedFrameId = typeof frame.frameId === 'string' && frame.frameId.length > 0 ? frame.frameId : null
+  const imageId = suppliedFrameId ?? `${videoId ?? provenance?.sourceId ?? 'VIDEO'}-F${String(frameIndex).padStart(6, '0')}`
+
+  if (
+    !source ||
+    !provenance ||
+    typeof frame.floodDetected !== 'boolean' ||
+    !isFiniteNumber(frame.level) ||
+    !isNullableFiniteNumber(frame.estimatedDepthCm) ||
+    !isRangeCm(rangeCm) ||
+    !isFiniteNumber(frame.confidence) ||
+    !isVisionMethod(frame.method) ||
+    !isVisionQuality(frame.quality) ||
+    !Array.isArray(qualityFlags) ||
+    !qualityFlags.every((flag) => typeof flag === 'string') ||
+    !Array.isArray(referenceObjects) ||
+    !referenceObjects.every(isRecord) ||
+    typeof frame.waterMaskPath !== 'string' ||
+    typeof synthetic !== 'boolean'
+  ) {
+    throw new Error(`Invalid flat video evidence frame at index ${index}`)
   }
+
+  return {
+    imageId,
+    source,
+    provenance,
+    floodDetected: frame.floodDetected,
+    depth: {
+      level: frame.level,
+      estimatedDepthCm: frame.estimatedDepthCm,
+      rangeCm,
+      confidence: frame.confidence,
+    },
+    method: frame.method,
+    referenceObjects,
+    waterMaskPath: frame.waterMaskPath,
+    quality: frame.quality,
+    qualityFlags,
+    model,
+    synthetic,
+  }
+}
+
+function normalizeFrame(value: unknown, index: number, bundle: RecordValue): VideoEvidenceFrame {
+  if (!isRecord(value)) throw new Error(`Invalid video evidence frame at index ${index}`)
+  const observation = hasObservation(value.observation) ? value.observation : normalizeFlatObservation(value, bundle, index)
   const timestampMs = typeof value.timestampMs === 'number' ? value.timestampMs : Number(value.timestampMs)
   if (!Number.isFinite(timestampMs) || timestampMs < 0) {
     throw new Error(`Invalid video evidence timestamp at index ${index}`)
   }
-  const frameId = typeof value.frameId === 'string' && value.frameId.length > 0 ? value.frameId : value.observation.imageId
-  const overlay = isRecord(value.overlay)
-    ? { referenceBoxes: Array.isArray(value.overlay.referenceBoxes) ? value.overlay.referenceBoxes : undefined }
-    : undefined
-  return { frameId, timestampMs, observation: value.observation, overlay }
+  const frameId = typeof value.frameId === 'string' && value.frameId.length > 0 ? value.frameId : observation.imageId
+  const referenceBoxes = isRecord(value.overlay) && Array.isArray(value.overlay.referenceBoxes)
+    ? value.overlay.referenceBoxes
+    : Array.isArray(value.referenceBoxes) ? value.referenceBoxes : undefined
+  const overlay = referenceBoxes ? { referenceBoxes } : undefined
+  return { frameId, timestampMs, observation, overlay }
 }
 
 export function parseVideoEvidenceBundle(value: unknown): VideoEvidenceBundle {
   if (!isRecord(value) || !Array.isArray(value.frames) || value.frames.length === 0) {
     throw new Error('Video evidence bundle has no frames')
   }
-  const frames = value.frames.map(normalizeFrame).sort((left, right) => left.timestampMs - right.timestampMs)
+  const frames = value.frames.map((frame, index) => normalizeFrame(frame, index, value)).sort((left, right) => left.timestampMs - right.timestampMs)
   return {
     frames,
     synthetic: value.synthetic === true || frames.every((frame) => frame.observation.synthetic),

@@ -10,37 +10,40 @@ const output = typescript.transpileModule(source, {
 const module = { exports: {} }
 new Function('module', 'exports', output)(module, module.exports)
 
-const frame = (frameId, timestampMs) => ({
-  frameId,
+const frame = (frameIndex, timestampMs) => ({
+  frameIndex,
   timestampMs,
-  observation: {
-    imageId: frameId,
-    source: { type: 'local', value: 'SYNTHETIC_DEMO' },
-    provenance: {
-      sourceType: 'VISION_VIDEO',
-      sourceId: 'CAM-017',
-      observedAt: null,
-      licenseReview: 'not_required',
-      runtimePolicy: 'research_mvp',
-    },
-    floodDetected: true,
-    depth: { level: 2, estimatedDepthCm: null, rangeCm: [10, 30], confidence: 0.4 },
-    method: 'NO_REFERENCE',
-    referenceObjects: [],
-    waterMaskPath: 'SYNTHETIC_DEMO_MASK',
-    quality: 'LOW',
-    qualityFlags: ['SYNTHETIC_DEMO', 'CAMERA_UNCALIBRATED'],
-    model: {},
-    synthetic: true,
-  },
+  floodDetected: true,
+  level: 2,
+  rangeCm: [10, 30],
+  estimatedDepthCm: null,
+  confidence: 0.4,
+  method: 'NO_REFERENCE',
+  quality: 'LOW',
+  qualityFlags: ['SYNTHETIC_DEMO', 'CAMERA_UNCALIBRATED'],
+  waterMaskPath: 'SYNTHETIC_DEMO_MASK',
+  referenceObjects: [],
+  referenceBoxes: [],
+  overlay: { status: 'METADATA_ONLY', rendered: false, referenceBoxes: [] },
 })
 
 const bundle = module.exports.parseVideoEvidenceBundle({
+  videoId: 'CAM-017',
+  source: { type: 'local', value: '/demo/video/flood_cam_017.mp4', mediaType: 'video/mp4' },
+  provenance: {
+    sourceType: 'VISION_VIDEO',
+    sourceId: 'CAM-017',
+    observedAt: null,
+    licenseReview: 'not_required',
+    runtimePolicy: 'research_mvp',
+  },
   synthetic: true,
-  frames: [frame('FRAME-0000', 0), frame('FRAME-0500', 500)],
+  model: { framePipeline: 'synthetic-demo' },
+  frames: [frame(0, 0), frame(1, 500)],
 })
 const selected = module.exports.selectNearestVideoFrame(bundle, 0.42)
-if (selected?.frameId !== 'FRAME-0500') throw new Error('nearest timestamp selection failed')
+if (selected?.frameId !== 'CAM-017-F000001') throw new Error('flat nearest timestamp selection failed')
+if (selected?.observation.provenance.sourceType !== 'VISION_VIDEO') throw new Error('flat provenance normalization failed')
 
 const overlay = module.exports.toVideoOverlayData(selected)
 if (overlay.estimatedDepthCm !== null || Object.hasOwn(overlay, 'waterDepthCm')) {
