@@ -1,7 +1,7 @@
 # RC2.1 Closure — Main Independent Progress
 
 更新时间：2026-08-24  
-代码 checkpoint：`eb122f0`；public Main closure docs：`7bc178f`
+代码 checkpoint：`27d2917`；public Main closure docs：已随当前 main 更新
 immutable release tag：`rc2-evidence-demo` → `b0a41d1e2245e60ed55eef2777ea03d6b899d6c2`  
 状态：`CONDITIONAL / VISUAL_REVIEW`
 
@@ -28,6 +28,7 @@ flowchart LR
 | Cesium SensorState | PASS / CONDITIONAL | `47e575c` + `eb122f0`; `sensor-state`、`SSZJ-NODE-001`、28.6cm、WGS84、fallback=false |
 | Dashboard video adapter | PASS | `1ca94bd` + `9a29528`; flat frame normalize、nearest timestamp、null-depth guard |
 | Browser video asset | PASS / CONDITIONAL | `e990129`; 2,419-byte H.264 baseline、3 frames、Chrome decode PASS |
+| Vision image mask resource seam | PASS / CONDITIONAL | `27d2917`; upload returns browser-readable mask API URL, backend artifact route returns PNG 200, drawer defaults to `水体识别`; UI hides confidence while API evidence remains intact |
 | Frontend build | PASS | `npm run typecheck`、`npm run build`；仅 Cesium 大 chunk warning |
 | Backend / Vision / Media | PASS / CONDITIONAL | backend smoke、vision smoke、media synthetic check、adapter smoke 全通过 |
 | Docs / minimal CI | ADDED | `75856d4`；CI remote execution remains `NOT VERIFIED` |
@@ -41,6 +42,7 @@ flowchart LR
 - 页面同时显示 `SYNTHETIC_DEMO`、`estimatedDepthCm=null`、`CAMERA_UNCALIBRATED`。
 - Cesium mount：`data-sensor-mode=sensor-state`、`data-sensor-id=SSZJ-NODE-001`、`data-sensor-depth-cm=28.6`、entity count=1、forecast ready。
 - 浏览器 console errors：0；主页面没有横向/纵向 overflow（默认 viewport smoke）。
+- Vision image API：`flood_no_reference.jpg` → `floodDetected=true`、`waterMaskPath` 可读取 PNG 200、`rangeCm` 显示为 `≥50 cm`；无参考物时 `estimatedDepthCm=null` 仍保持不变。
 
 ## 仍未完成 / 不作为本轮阻塞
 

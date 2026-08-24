@@ -12,7 +12,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 ## P0 implementation
 
 - `SENSOR`: the dashboard reads `SSZJ-NODE-001` through the existing frozen sensor client shape and exposes `sensorId`, measured `depthCm`, `observedAt`, freshness/status, `source=SENSOR`, and device provenance (`DEMO_DEVICE` in fixture mode).
-- `VISION_IMAGE`: the existing same-page drawer keeps local upload/direct URL, loading/error/empty/ready states, original/mask view, and frozen Observation fields: flood, level, range, nullable `estimatedDepthCm`, confidence, method, quality, flags, and synthetic/source labels.
+- `VISION_IMAGE`: the existing same-page drawer keeps local upload/direct URL, loading/error/empty/ready states, original/water-mask view, and frozen Observation fields: flood, level, range, nullable `estimatedDepthCm`, method, quality, flags, and synthetic/source labels. The API/internal evidence confidence field remains contract-compatible but is not shown to decision-makers.
 - `VISION_VIDEO`: the CCTV seam is a real `<video>` element. Missing/unplayable fixture media is shown as `VISION_VIDEO · DEMO / PLACEHOLDER`; result overlays render only when explicit overlay data is provided. No fake `LIVE` claim is added.
 - `FORECAST`: `NOW` renders the sensor measured baseline; `+10 min` and `+30 min` render forecast frames. Forecast source is visible as `SYNTHETIC FIXTURE` or `ADAPTER · SYNTHETIC`; forecast values do not overwrite sensor evidence.
 - Existing scene cleanup remains intact from RC1.1: no React screen-space business marker/path/popup/network layer was reintroduced.
@@ -69,4 +69,10 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - `App` now passes the selected frame into the existing `CctvCard` only after the browser media seam is ready. Missing media or overlay fetch failure stays `DEMO / PLACEHOLDER` or `RESULT NOT ATTACHED`; no `LIVE` label is used.
 - Added `review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` for nearest-frame mapping, null-depth, and synthetic/uncalibrated provenance assertions.
 - Validation: `npm run typecheck` PASS; `npm run build` PASS with the existing Cesium large-chunk warning; `git diff --check` PASS; `node review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` PASS.
-- `NOT VERIFIED`: the Vision worker's browser-safe `frontend/public/demo/video` bundle is not present in this worktree, legal/real media playback, calibrated centimetres, API-mode browser integration, Cesium runtime, and the user's final visual review remain open.
+- `NOT VERIFIED`: the Vision worker's browser-safe `frontend/public/demo/video` bundle is not present in this worker worktree; legal/real media playback, calibrated centimetres, Cesium runtime, and the user's final visual review remain open. Main API-mode image upload and mask delivery are covered by the post-release repair below.
+
+## Main post-release VisionDepth resource repair
+
+- Main `27d2917` now serves generated image masks through `/api/v1/vision-depth/artifacts/{filename}` and resolves the backend base URL in the API-mode drawer.
+- After upload, the drawer defaults to `水体识别`; open-ended `[50, null]` ranges render as `≥50 cm` instead of `null`.
+- Main runtime smoke verified `flood_no_reference.jpg` as `floodDetected=true` with a PNG mask response `HTTP 200`; calibrated centimetres and generalization remain conditional.

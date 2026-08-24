@@ -10,7 +10,8 @@
 ```text
 Status: CONDITIONAL / RC2.1 + VISUAL_REVIEW
 Canonical branch: main
-Integrated code checkpoint before RC2.1 closure docs: eb122f0
+Current integrated code checkpoint: 27d2917
+Post-release Main repair: 27d2917 (VisionDepth image mask resource/UI wiring)
 Release tag: rc2-evidence-demo (points to the final release commit)
 Release tag target SHA: b0a41d1e2245e60ed55eef2777ea03d6b899d6c2
 Public repository: https://github.com/goat0330/shanshui-waterlogging-mvp
@@ -72,6 +73,7 @@ The public source manifest is `docs/RC2_SOURCE_MANIFEST.csv`. The actual six-row
 | 60-second core chain | PASS | `review/e2e/60-second-chain.json` |
 | Five-minute rehearsal | PASS / CONDITIONAL | `review/e2e/5-minute-rehearsal.json`; 309.3s; CCTV/AI placeholder-conditional |
 | Vision image | PASS / CONDITIONAL | 3-image OpenCV baseline and guarded upload/URL seam pass; generalization/production accuracy unverified |
+| Vision image mask delivery | PASS / CONDITIONAL | Backend serves generated PNG artifacts; API-mode drawer resolves the backend URL, defaults to `水体识别`, and renders open-ended ranges honestly; calibrated depth remains unverified |
 | MP4 → frame → evidence | PASS / CONDITIONAL | 4/6 videos pass `>=30` gate; 25 sampled frame JSON, masks, timestamps and overlay metadata; 2 source files have 11 frames |
 | RC2.1 synthetic browser video | PASS / CONDITIONAL | `frontend/public/demo/video/flood_cam_017.mp4` decodes in Chrome; flat frame overlay normalizes to nearest timestamp; all depth cm remain null |
 | RC2.1 SensorState → Cesium | PASS / CONDITIONAL | `SSZJ-NODE-001`, `28.6cm`, `WGS84 lon/lat`, `fallback=false` are passed to the geographic Cesium entity; official calibration remains unverified |
@@ -98,6 +100,7 @@ Verified commands on the integrated Main line:
 - `review/e2e/60-second-chain.json` — PASS for telemetry → event → Cesium → forecast → fallback → reconnect.
 - `review/e2e/5-minute-rehearsal.json` — PASS for 309.3-second rehearsal and stable return.
 - `review/e2e/vision-image-browser-smoke.json` — PASS for real API upload → VisionDepth observation → provenance rendering; event sensor depth remains `28.6cm`, page/console errors zero.
+- Main post-release repair smoke — PASS for `flood_no_reference.jpg` → `floodDetected=true` → browser-readable PNG mask (`HTTP 200`, `image/png`); user-facing confidence field is removed, while the backend contract retains internal evidence fields.
 - Clean controlled Cesium smoke — PASS on an isolated fixture server; the historical fixed-port RC0 harness is not treated as a product failure because it observed a stale Vite process.
 
 Known deviations:

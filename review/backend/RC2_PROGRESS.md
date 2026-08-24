@@ -16,6 +16,7 @@
 - `VisionDepthProvenance` 使用严格 Pydantic enums/model，且 `VisionDepthObservation.provenance` 为必填、禁止额外字段。
 - upload/url image adapter 组装 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`runtimePolicy=research_mvp`；local upload 的 `licenseReview=not_required`，remote URL 的 `licenseReview=pending`。
 - provenance 不写入 `model`，Vision evidence 不写 `SensorState`、`FloodPoint.currentDepthCm`、`FloodEvent` 或 telemetry projection。
+- Main post-release repair `27d2917` exposes generated water masks through a bounded PNG artifact route; upload responses now return a browser-readable `/api/v1/vision-depth/artifacts/{filename}` path.
 - 保留 `source.type=url|local` 兼容字段及既有 URL HTTP/HTTPS、timeout、逐跳 redirect、MIME/size、HTML/SVG、private-target/SSRF 防护。
 - `VISION_VIDEO` 仅为 Contract 预留；当前视频 evidence 仍是 Vision worker 的 local-only artifacts，本 worker 未复制或修改算法。
 
@@ -29,10 +30,9 @@ git diff --check                     PASS (exit 0; only LF/CRLF warnings)
 
 Smoke 实测包含：OpenAPI provenance required/enum/nullable shape、upload 200 JSON、direct controlled URL adapter provenance、upload 后 SensorState 未变化、旧 REST/telemetry/projection/WS/Forecast/Analysis 回归、private URL/redirect/HTML/SVG/size/error/concurrency 边界；所有断言通过。运行时仅有既有 requests dependency warning，不影响 exit 0。
 
-## Contract differences
+## Contract parity
 
-- backend runtime response 与 Main `d5e568b` 更新的 `contracts/openapi.yaml` 对齐；本 worker 未修改 `contracts/**`。
-- 合入后的 `contracts/schemas/vision-depth-observation.schema.json` 仍显示旧 required 集，未包含 provenance；这是 Contract-owned 文件的同步差异，本轮按边界未改，需 Main/Architect 后续确认其是否为独立 canonical schema。该差异不阻塞本轮 OpenAPI/runtime smoke，但不应宣称所有 Contract artifacts 已一致。
+- backend runtime response、OpenAPI 和 `contracts/schemas/vision-depth-observation.schema.json` 当前均包含 required `provenance`；Main smoke 保持 schema additional-properties guard。
 
 ## NOT VERIFIED / blockers
 
