@@ -712,6 +712,7 @@ export function LayerToolbar({ layers, onToggle }: LayerToolbarProps) {
 export interface DigitalTwinSceneProps {
   event: FloodEvent | null
   points: FloodPoint[]
+  sensor?: SensorState | null
   activeForecast: ForecastKey
   forecastFrame?: ForecastFrame | null
   selectedPointId: string
@@ -721,12 +722,13 @@ export interface DigitalTwinSceneProps {
   compact?: boolean
 }
 
-export function DigitalTwinScene({ event, points, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, compact = false }: DigitalTwinSceneProps) {
+export function DigitalTwinScene({ event, points, sensor = null, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, compact = false }: DigitalTwinSceneProps) {
   return (
     <section className={`digital-twin-scene ${compact ? 'digital-twin-scene--compact' : ''}`} aria-label="上海数字孪生场景">
       <CesiumScene
         event={event}
         points={points}
+        sensor={sensor}
         activeForecast={activeForecast}
         forecastFrame={forecastFrame}
         selectedPointId={selectedPointId}

@@ -235,6 +235,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       <DigitalTwinScene
         event={selectedEvent.event}
         points={data.points}
+        sensor={sensor}
         activeForecast={activeForecast}
         forecastFrame={forecastSurface.frame}
         selectedPointId={selectedPointId}
