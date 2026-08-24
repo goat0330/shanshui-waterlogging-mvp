@@ -7,6 +7,17 @@ import type { DashboardData, SensorState } from '../types'
 const client = DATA_SOURCE === 'api' ? apiClient : fixtureClient
 const defaultEventId = FORMAL_EVENT_BY_FLOOD_POINT[DEFAULT_FLOOD_POINT_ID]
 const defaultSensorId = SENSOR_FLOOD_POINT_MAPPINGS[0]?.sensorId ?? 'SSZJ-NODE-001'
+const localDemoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL?.trim()
+const localDemoOverlayUrl = import.meta.env.VITE_DEMO_VIDEO_OVERLAY_URL?.trim()
+
+function applyLocalDemoMedia(camera: DashboardData['camera']): DashboardData['camera'] {
+  if (!camera || (!localDemoVideoUrl && !localDemoOverlayUrl)) return camera
+  return {
+    ...camera,
+    ...(localDemoVideoUrl ? { mediaUrl: localDemoVideoUrl } : {}),
+    ...(localDemoOverlayUrl ? { overlayUrl: localDemoOverlayUrl } : {}),
+  }
+}
 
 async function loadDashboardData(): Promise<DashboardData> {
   const [overview, rainfall, rainfallRanking, points, event, forecast, analysis, cameras, timeline, sensor] = await Promise.all([
@@ -29,7 +40,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     points,
     event,
     forecast,
-    camera: event.cameraId ? cameras.find((camera) => camera.id === event.cameraId) ?? null : null,
+    camera: applyLocalDemoMedia(event.cameraId ? cameras.find((camera) => camera.id === event.cameraId) ?? null : null),
     analysis,
     timeline,
     sensor,

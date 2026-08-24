@@ -22,6 +22,7 @@ export interface VideoOverlayData {
   sourceType: VisionDepthProvenance['sourceType']
   sourceId: string
   runtimePolicy: VisionDepthProvenance['runtimePolicy']
+  licenseReview: VisionDepthProvenance['licenseReview']
   floodDetected: boolean
   level: number
   rangeCm: [number | null, number | null]
@@ -31,6 +32,7 @@ export interface VideoOverlayData {
   quality: VisionDepthObservation['quality']
   qualityFlags: string[]
   synthetic: boolean
+  waterMaskUrl?: string
   objects?: Array<{
     type: 'vehicle' | 'person'
     left: number
@@ -243,6 +245,10 @@ function normalizeReferenceBoxes(value: unknown[] | undefined): VideoOverlayData
   return objects.length > 0 ? objects : undefined
 }
 
+function browserAssetUrl(value: string): string | undefined {
+  return /^https?:\/\//.test(value) || value.startsWith('/') ? value : undefined
+}
+
 export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData {
   const observation = frame.observation
   return {
@@ -251,6 +257,7 @@ export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData 
     sourceType: observation.provenance.sourceType,
     sourceId: observation.provenance.sourceId,
     runtimePolicy: observation.provenance.runtimePolicy,
+    licenseReview: observation.provenance.licenseReview,
     floodDetected: observation.floodDetected,
     level: observation.depth.level,
     rangeCm: observation.depth.rangeCm,
@@ -260,6 +267,7 @@ export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData 
     quality: observation.quality,
     qualityFlags: observation.qualityFlags,
     synthetic: observation.synthetic,
+    waterMaskUrl: browserAssetUrl(observation.waterMaskPath),
     objects: normalizeReferenceBoxes(frame.overlay?.referenceBoxes),
   }
 }

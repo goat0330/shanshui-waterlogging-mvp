@@ -504,11 +504,17 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           ? `RESULT FRAME · ${overlayData.frameId}`
           : mediaState === 'ready' ? 'RESULT READY · NO FRAME' : 'RESULT READY · WAITING FOR MEDIA'
         : 'RESULT NOT ATTACHED'
+  const researchVideo = camera.mediaUrl?.startsWith('/runtime/vision-video/') === true ||
+    (overlayData?.runtimePolicy === 'research_mvp' && !overlayData.synthetic)
+  const displayName = researchVideo ? `研究视频 · ${overlayData?.sourceId ?? '本地研究证据'}` : camera.name
+  const mediaStatusLabel = researchVideo ? 'RESEARCH · NOT LIVE' : camera.status
+  const sourceLabel = researchVideo ? 'VISION_VIDEO · RESEARCH_MVP / NOT LIVE' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
+  const licenseLabel = overlayData?.licenseReview === 'pending' ? 'LICENSE_PENDING' : overlayData?.licenseReview === 'approved' ? 'LICENSE_APPROVED' : overlayData?.licenseReview === 'not_required' ? 'LICENSE_NOT_REQUIRED' : null
 
   return (
     <Panel className="cctv-panel" state={state}>
-      <PanelHeader title="视频监控" icon="▮" meta={<span>{camera.name}</span>} />
-      <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${camera.name} 视频证据 seam`}>
+      <PanelHeader title="视频监控" icon="▮" meta={<span>{displayName}</span>} />
+      <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${displayName} 视频证据 seam`}>
         <video
           ref={videoRef}
           className="cctv-video"
@@ -527,6 +533,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         <div className="cctv-road"><span className="road-lane road-lane--left" /><span className="road-lane road-lane--right" /></div>
         <div className="cctv-car cctv-car--one" /><div className="cctv-car cctv-car--two" /><div className="cctv-car cctv-car--three" />
         <div className="cctv-water-line" />
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData?.waterMaskUrl && <img className="cctv-water-mask" src={overlayData.waterMaskUrl} alt="" aria-hidden="true" />}
         {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData?.objects?.map((object, index) => (
           <span
             className={`cctv-box cctv-box--${object.type}`}
@@ -536,12 +543,12 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        <span className="cctv-source-tag">{mediaState === 'ready' ? `VISION_VIDEO · MEDIA / ${camera.mediaType}` : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
+        <span className="cctv-source-tag">{mediaState === 'ready' ? sourceLabel : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
         <span className="cctv-overlay-status">{overlayStatusLabel}</span>
         {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <span className="cctv-evidence-meta">
-          {overlayData.synthetic ? 'SYNTHETIC_DEMO' : overlayData.sourceType} · {overlayData.sourceId} · t={overlayData.timestampMs}ms · L{overlayData.level} · {formatRangeCm(overlayData.rangeCm)} · {overlayData.estimatedDepthCm === null ? 'estimatedDepthCm=null' : `estimatedDepthCm=${overlayData.estimatedDepthCm.toFixed(1)}cm`} · {overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'qualityFlags=none'}
+          {overlayData.synthetic ? 'SYNTHETIC_DEMO' : overlayData.sourceType} · {overlayData.sourceId} · {overlayData.runtimePolicy.toUpperCase()} · {licenseLabel ?? 'LICENSE_UNKNOWN'} · t={overlayData.timestampMs}ms · L{overlayData.level} · {formatRangeCm(overlayData.rangeCm)} · {overlayData.estimatedDepthCm === null ? 'estimatedDepthCm=null' : `estimatedDepthCm=${overlayData.estimatedDepthCm.toFixed(1)}cm`} · {overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'qualityFlags=none'}
         </span>}
-        <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? camera.status : mediaState === 'loading' ? 'MEDIA CHECKING' : `${camera.status} · PLACEHOLDER`}</span>
+        <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? mediaStatusLabel : mediaState === 'loading' ? 'MEDIA CHECKING' : `${mediaStatusLabel} · PLACEHOLDER`}</span>
         {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
       <div className="cctv-controls">
@@ -562,7 +569,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           }}
           aria-label={playing ? '暂停视频' : '播放视频'}
         >{playing ? 'Ⅱ' : '▶'}</button>
-        <span className="cctv-camera-name">{camera.name}</span>
+        <span className="cctv-camera-name">{displayName}</span>
         <div className="cctv-legend"><span><i className="legend-color legend-color--water" />积水区域</span><span><i className="legend-color legend-color--vehicle" />车辆</span><span><i className="legend-color legend-color--person" />行人</span></div>
       </div>
     </Panel>
