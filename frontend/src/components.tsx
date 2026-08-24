@@ -15,6 +15,7 @@ import type {
   SensorState,
   VisionDepthObservation,
 } from './types'
+import type { VideoEvidenceState, VideoOverlayData } from './adapters/videoEvidenceAdapter'
 import { CesiumScene } from './CesiumScene'
 
 const NAV_ITEMS = ['实时监测', '风险预警', '内涝分析', '预测预报', '资源调度', '系统管理']
@@ -132,6 +133,11 @@ function formatDuration(minutes = 0) {
   const hours = Math.floor(minutes / 60)
   const remainder = minutes % 60
   return `${hours} h ${remainder.toString().padStart(2, '0')} min`
+}
+
+function formatRangeCm(range: [number | null, number | null]) {
+  if (range[0] === null && range[1] === null) return 'null'
+  return `${range[0] ?? '—'}–${range[1] ?? '—'} cm`
 }
 
 interface PanelProps {
@@ -463,20 +469,14 @@ export interface CctvCardProps {
   state?: PanelState
   showOverlay?: boolean
   overlayData?: CctvOverlayData
+  videoEvidenceState?: VideoEvidenceState
+  onVideoReady?: (ready: boolean) => void
+  onVideoTimeUpdate?: (currentTimeSec: number) => void
 }
 
-export interface CctvOverlayData {
-  waterDepthCm?: number
-  objects?: Array<{
-    type: 'vehicle' | 'person'
-    left: number
-    top: number
-    width: number
-    height: number
-  }>
-}
+export type CctvOverlayData = VideoOverlayData
 
-export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData }: CctvCardProps) {
+export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -484,6 +484,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
   useEffect(() => {
     setMediaState(camera?.mediaUrl ? 'loading' : 'unavailable')
     setPlaying(false)
+    onVideoReady?.(false)
   }, [camera?.mediaUrl])
 
   if (!camera) {
@@ -493,6 +494,16 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
       </Panel>
     )
   }
+
+  const overlayStatusLabel = videoEvidenceState === 'loading'
+    ? 'RESULT LOADING'
+    : videoEvidenceState === 'error'
+      ? 'RESULT NOT ATTACHED · FETCH FAILED'
+      : videoEvidenceState === 'ready'
+        ? overlayData
+          ? `RESULT FRAME · ${overlayData.frameId}`
+          : mediaState === 'ready' ? 'RESULT READY · NO FRAME' : 'RESULT READY · WAITING FOR MEDIA'
+        : 'RESULT NOT ATTACHED'
 
   return (
     <Panel className="cctv-panel" state={state}>
@@ -506,9 +517,10 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           muted
           playsInline
           preload="metadata"
-          onCanPlay={() => setMediaState('ready')}
-          onLoadedData={() => setMediaState('ready')}
-          onError={() => setMediaState('unavailable')}
+          onCanPlay={() => { setMediaState('ready'); onVideoReady?.(true) }}
+          onLoadedData={() => { setMediaState('ready'); onVideoReady?.(true) }}
+          onTimeUpdate={(event) => onVideoTimeUpdate?.(event.currentTarget.currentTime)}
+          onError={() => { setMediaState('unavailable'); onVideoReady?.(false) }}
         />
         <div className="cctv-video-placeholder" />
         <div className="cctv-skyline" />
@@ -524,9 +536,11 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData?.waterDepthCm !== undefined && <span className="cctv-depth-tag">WATER {overlayData.waterDepthCm.toFixed(1)} cm</span>}
         <span className="cctv-source-tag">{mediaState === 'ready' ? `VISION_VIDEO · MEDIA / ${camera.mediaType}` : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
-        <span className="cctv-overlay-status">{camera.overlayUrl ? 'RESULT SOURCE DECLARED · NOT RENDERED' : 'RESULT NOT ATTACHED'}</span>
+        <span className="cctv-overlay-status">{overlayStatusLabel}</span>
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <span className="cctv-evidence-meta">
+          {overlayData.synthetic ? 'SYNTHETIC_DEMO' : overlayData.sourceType} · {overlayData.sourceId} · t={overlayData.timestampMs}ms · L{overlayData.level} · {formatRangeCm(overlayData.rangeCm)} · {overlayData.estimatedDepthCm === null ? 'estimatedDepthCm=null' : `estimatedDepthCm=${overlayData.estimatedDepthCm.toFixed(1)}cm`} · {overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'qualityFlags=none'}
+        </span>}
         <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? camera.status : mediaState === 'loading' ? 'MEDIA CHECKING' : `${camera.status} · PLACEHOLDER`}</span>
         {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
@@ -649,10 +663,10 @@ export function VisionDepthDrawer({
             <div><dt>imageId</dt><dd>{observation.imageId}</dd></div>
             <div><dt>contract source</dt><dd>VISION_IMAGE · {observation.source.type} · {observation.source.value}</dd></div>
             <div><dt>qualityFlags</dt><dd>{observation.qualityFlags.length ? observation.qualityFlags.join(' · ') : 'none'}</dd></div>
-            <div><dt>sourceType</dt><dd>{observation.provenance?.sourceType ?? 'NOT ATTACHED'}</dd></div>
-            <div><dt>sourceId</dt><dd>{observation.provenance?.sourceId ?? 'NOT ATTACHED'}</dd></div>
-            <div><dt>licenseReview</dt><dd>{observation.provenance?.licenseReview ?? 'NOT ATTACHED'}</dd></div>
-            <div><dt>runtimePolicy</dt><dd>{observation.provenance?.runtimePolicy ?? 'NOT ATTACHED'}</dd></div>
+            <div><dt>sourceType</dt><dd>{observation.provenance.sourceType}</dd></div>
+            <div><dt>sourceId</dt><dd>{observation.provenance.sourceId}</dd></div>
+            <div><dt>licenseReview</dt><dd>{observation.provenance.licenseReview}</dd></div>
+            <div><dt>runtimePolicy</dt><dd>{observation.provenance.runtimePolicy}</dd></div>
           </dl>
         </div>
       ) : <div className="vision-observation-empty">尚未产生 VisionDepthObservation。</div>}

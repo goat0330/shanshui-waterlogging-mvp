@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { getForecastSurfaceAdapter } from './adapters/forecastSurfaceAdapter'
 import {
+  loadVideoEvidence,
+  selectNearestVideoFrame,
+  toVideoOverlayData,
+  type VideoEvidenceBundle,
+  type VideoEvidenceState,
+} from './adapters/videoEvidenceAdapter'
+import {
   AIAnalysisPanel,
   AppShell,
   CctvCard,
@@ -73,6 +80,13 @@ function createDemoSensorEvidence(event: FloodEvent): SensorState {
 const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
   imageId: 'DEMO-VISION-DEPTH',
   source: { type: 'local', value: 'DEMO_FIXTURE' },
+  provenance: {
+    sourceType: 'VISION_IMAGE',
+    sourceId: 'DEMO-VISION-DEPTH',
+    observedAt: null,
+    licenseReview: 'not_required',
+    runtimePolicy: 'research_mvp',
+  },
   floodDetected: true,
   depth: {
     level: 0,
@@ -115,6 +129,10 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const [visionState, setVisionState] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
   const [visionError, setVisionError] = useState<string | null>(null)
   const [visionObservation, setVisionObservation] = useState<VisionDepthObservation | null>(null)
+  const [videoEvidence, setVideoEvidence] = useState<VideoEvidenceBundle | null>(null)
+  const [videoEvidenceState, setVideoEvidenceState] = useState<VideoEvidenceState>('missing')
+  const [videoReady, setVideoReady] = useState(false)
+  const [videoTimeSec, setVideoTimeSec] = useState(0)
   const selectedEvent = useSelectedEventCoordinator({
     selectedPointId,
     points: data.points,
@@ -126,6 +144,8 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
   const sensor = data.sensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event ? createDemoSensorEvidence(selectedEvent.event) : null)
   const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
+  const cameraId = selectedEvent.camera?.id ?? null
+  const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
 
   useEffect(() => {
     if (!visionFile) {
@@ -136,6 +156,33 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     setVisionPreviewUrl(nextUrl)
     return () => URL.revokeObjectURL(nextUrl)
   }, [visionFile])
+
+  useEffect(() => {
+    setVideoEvidence(null)
+    setVideoReady(false)
+    setVideoTimeSec(0)
+    if (!overlayUrl) {
+      setVideoEvidenceState('missing')
+      return
+    }
+
+    let cancelled = false
+    setVideoEvidenceState('loading')
+    loadVideoEvidence(overlayUrl)
+      .then((bundle) => {
+        if (cancelled) return
+        setVideoEvidence(bundle)
+        setVideoEvidenceState('ready')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setVideoEvidenceState('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [cameraId, overlayUrl])
 
   const toggleLayer = (layer: keyof LayerVisibility) => {
     setLayers((current) => ({ ...current, [layer]: !current[layer] }))
@@ -180,6 +227,9 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     }
   }
 
+  const selectedVideoFrame = videoReady && videoEvidence ? selectNearestVideoFrame(videoEvidence, videoTimeSec) : null
+  const videoOverlayData = selectedVideoFrame ? toVideoOverlayData(selectedVideoFrame) : undefined
+
   return (
     <div className={`dashboard-frame ${fixedPreview ? 'dashboard-frame--fixed-preview' : ''}`}>
       <DigitalTwinScene
@@ -201,7 +251,14 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       <div className="dashboard-side dashboard-side--right">
         <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
         <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
-        <CctvCard camera={selectedEvent.camera} showOverlay={layers.video} />
+        <CctvCard
+          camera={selectedEvent.camera}
+          showOverlay={layers.video}
+          overlayData={videoOverlayData}
+          videoEvidenceState={videoEvidenceState}
+          onVideoReady={setVideoReady}
+          onVideoTimeUpdate={setVideoTimeSec}
+        />
       </div>
       <TimelineBar timeline={data.timeline} activeKey={activeForecast} onForecastChange={setActiveForecast} />
       <div className="dashboard-demo-badge">{dataBadge}</div>

@@ -1268,10 +1268,10 @@ a {
   color: #a9d7ff;
 }
 
-.cctv-depth-tag,
 .cctv-source-tag,
 .cctv-media-status,
 .cctv-overlay-status,
+.cctv-evidence-meta,
 .cctv-empty-copy {
   position: absolute;
   z-index: 5;
@@ -1279,12 +1279,6 @@ a {
   border-radius: 3px;
   background: rgba(3, 17, 26, 0.72);
   font-size: 8px;
-}
-
-.cctv-depth-tag {
-  right: 8px;
-  bottom: 8px;
-  color: #58e5e6;
 }
 
 .cctv-source-tag {
@@ -1304,6 +1298,18 @@ a {
   overflow: hidden;
   color: #9ab7bf;
   font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cctv-evidence-meta {
+  right: 7px;
+  bottom: 40px;
+  left: 7px;
+  overflow: hidden;
+  color: #c6dfe5;
+  font-size: 7px;
+  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

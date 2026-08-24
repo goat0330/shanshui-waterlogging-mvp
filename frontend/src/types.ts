@@ -135,8 +135,7 @@ export interface VisionDepthObservation {
     type: 'url' | 'local'
     value: string
   }
-  /** Legacy fixture observations predate the required API provenance block. */
-  provenance?: VisionDepthProvenance
+  provenance: VisionDepthProvenance
   floodDetected: boolean
   depth: {
     level: number

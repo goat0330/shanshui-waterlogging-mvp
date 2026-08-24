@@ -4,7 +4,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Scope
 
-- Baseline: Main canonical `5954570`
+- Baseline: Main canonical `b0a41d1` (`rc2-evidence-demo`)
 - Branch: `worker/rc11-dashboard`
 - Worktree: `D:/研究生作业/上海城市内涝_智慧平台/worktrees/dashboard-rc11`
 - Ownership: frontend evidence presentation only; `CesiumScene.tsx`, backend, vision, media, and contracts were not modified.
@@ -58,5 +58,15 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 - Added strict `VisionDepthProvenance` unions for `sourceType`, `licenseReview`, and `runtimePolicy`, plus `sourceId` and nullable `observedAt`.
 - The existing VisionDepth observation block now shows `sourceType`, `sourceId`, `licenseReview`, and `runtimePolicy` without adding another panel.
-- Existing legacy fixture observations do not carry the new API provenance block, so the UI shows `NOT ATTACHED` rather than inferring approval, production policy, or a real source.
+- Observations missing the required API provenance block are rejected by the video adapter; the UI does not infer approval, production policy, or a real source.
 - SENSOR measured and FORECAST semantics were not changed.
+
+## RC2.1 video product wiring
+
+- Baseline: `b0a41d1` / `rc2-evidence-demo`; branch `worker/rc11-dashboard`; worktree remains isolated from Main.
+- `VisionDepthObservation.provenance` is now required in the frontend type, and the explicit `DEMO_VISION_OBSERVATION` carries `VISION_IMAGE`, `DEMO-VISION-DEPTH`, `observedAt=null`, `licenseReview=not_required`, and `runtimePolicy=research_mvp`.
+- Added `frontend/src/adapters/videoEvidenceAdapter.ts`: parses the existing `frames[].timestampMs` + observation/overlay shape, selects the nearest frame from `video.currentTime`, and maps evidence metadata without introducing `waterDepthCm`.
+- `App` now passes the selected frame into the existing `CctvCard` only after the browser media seam is ready. Missing media or overlay fetch failure stays `DEMO / PLACEHOLDER` or `RESULT NOT ATTACHED`; no `LIVE` label is used.
+- Added `review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` for nearest-frame mapping, null-depth, and synthetic/uncalibrated provenance assertions.
+- Validation: `npm run typecheck` PASS; `npm run build` PASS with the existing Cesium large-chunk warning; `git diff --check` PASS; `node review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` PASS.
+- `NOT VERIFIED`: the Vision worker's browser-safe `frontend/public/demo/video` bundle is not present in this worktree, legal/real media playback, calibrated centimetres, API-mode browser integration, Cesium runtime, and the user's final visual review remain open.
