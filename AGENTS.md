@@ -1,7 +1,9 @@
 # AGENTS.md
 
 ## Project
-山水智鉴｜城市内涝智能防控中心 MVP V0.1
+山水智鉴｜城市内涝智能防控中心 RC2.1 Closure
+
+当前基线：public Main `b0a41d1`，tag `rc2-evidence-demo`。当前状态为 `CONDITIONAL / VISUAL_REVIEW`；不得把 demo、synthetic、research MVP 或未标定结果表述为生产能力。
 
 ## Read First
 所有 Worker 开始任何实现前，按顺序阅读：
@@ -54,6 +56,10 @@ Frontend / Backend Worker 不得自行修改 Contract。
 
 ## Worker Ownership
 
+### Main / Integration
+
+负责 canonical Main、跨模块 wiring、`docs/**`、`review/**`、`.github/workflows/**`、release manifest 和最终独立验收。Main 不重新实现 Frontend / Backend / Vision 算法。
+
 ### Frontend Worker
 
 可修改：
@@ -79,6 +85,18 @@ contracts/**
 docs/00_MASTER_BLUEPRINT.md
 docs/03_ARCHITECTURE_OSS.md
 ```
+
+### Dashboard Worker
+
+负责 `frontend/src/App.tsx`、`frontend/src/components.tsx`、Dashboard hooks/services/types 和 `review/frontend/**`。视频 Overlay 只能消费已有 timestamped evidence contract；不得伪造 LIVE、标定厘米或修改 Cesium scene ownership。
+
+### Cesium Worker
+
+负责 `frontend/src/CesiumScene.tsx`、`frontend/src/scene/**` 中的 geographic scene layer 和 `review/cesium/**`。业务点必须使用 WGS84 geographic coordinates；真实 SensorState 缺失时才允许显式 FloodPoint fallback。
+
+### Vision / Video Worker
+
+负责 `media/**`、`backend/visiondepth_v2/**`、`review/media/**` 和明确授权的 synthetic browser evidence asset。复用 `media/video_pipeline.py`；V-FloodNet pending-license MP4、模型权重和 runtime outputs 不进入 public Git。
 
 ### Backend Worker
 

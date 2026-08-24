@@ -12,6 +12,7 @@ Status: CONDITIONAL / RC2 + VISUAL_REVIEW
 Canonical branch: main
 Integrated code checkpoint before release docs: 5faa0bd
 Release tag: rc2-evidence-demo (points to the final release commit)
+Release tag target SHA: b0a41d1e2245e60ed55eef2777ea03d6b899d6c2
 Public repository: https://github.com/goat0330/shanshui-waterlogging-mvp
 Audit date: 2026-08-23
 Viewport target: 1920x1080
