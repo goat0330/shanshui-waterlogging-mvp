@@ -492,7 +492,7 @@ def main() -> None:
             "sourceType": "VISION_IMAGE",
             "sourceId": "IMG-RC11-UPLOAD",
             "observedAt": None,
-            "licenseReview": "pending",
+            "licenseReview": "not_required",
             "runtimePolicy": "research_mvp",
         }
         assert "provenance" not in upload_observation["model"]

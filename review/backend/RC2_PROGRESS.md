@@ -14,7 +14,7 @@
 ## Implemented
 
 - `VisionDepthProvenance` 使用严格 Pydantic enums/model，且 `VisionDepthObservation.provenance` 为必填、禁止额外字段。
-- upload/url image adapter 组装 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=pending`、`runtimePolicy=research_mvp`。
+- upload/url image adapter 组装 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`runtimePolicy=research_mvp`；local upload 的 `licenseReview=not_required`，remote URL 的 `licenseReview=pending`。
 - provenance 不写入 `model`，Vision evidence 不写 `SensorState`、`FloodPoint.currentDepthCm`、`FloodEvent` 或 telemetry projection。
 - 保留 `source.type=url|local` 兼容字段及既有 URL HTTP/HTTPS、timeout、逐跳 redirect、MIME/size、HTML/SVG、private-target/SSRF 防护。
 - `VISION_VIDEO` 仅为 Contract 预留；当前视频 evidence 仍是 Vision worker 的 local-only artifacts，本 worker 未复制或修改算法。
@@ -39,3 +39,19 @@ Smoke 实测包含：OpenAPI provenance required/enum/nullable shape、upload 20
 - 公网/global URL 的 endpoint 200 未在本机验证；loopback 仅通过受控 patch 验证 adapter media path，真实 endpoint 仍按 SSRF policy 拒绝 private target。
 - PostgreSQL/PostGIS migration、seed、POST→restart→GET、WGS84 round-trip、`ST_DWithin`、forecast geometry 查询。
 - 真实 ESP32/STM32、4G/Wi-Fi 物理链路、MQTT、鉴权、官方 API、真实 AI/预测模型、生产部署、高并发可靠性、视频 backend public endpoint。
+
+## RC2.1 Closure — provenance semantic repair
+
+- local multipart upload：`licenseReview=not_required`，仅表示 API 收到用户提供的本地文件，不断言第三方许可已获批准。
+- remote URL：`licenseReview=pending`；没有新增 source registry，也不把未知 URL 标记为 approved。
+- `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`runtimePolicy=research_mvp`、SSRF/MIME/size/redirect guards 和 Sensor/Flood ownership 均保持不变。
+
+实际命令：
+
+```text
+python -m compileall -q app tools    PASS (exit 0)
+python -B smoke.py                   PASS (exit 0)
+git diff --check                     PASS (exit 0; only LF/CRLF warnings)
+```
+
+本轮 checkpoint 仅修改 `backend/app/vision_depth.py`、`backend/smoke.py` 与本文件；真实公网 URL、许可审批、生产模型和物理设备链路仍 `NOT VERIFIED`。

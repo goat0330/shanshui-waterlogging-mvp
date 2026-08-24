@@ -191,11 +191,12 @@ class VisionDepthAdapter:
 
         observation["imageId"] = image_id
         observation["source"] = {"type": source_type, "value": source_value}
+        license_review = "not_required" if source_type == "local" else "pending"
         observation["provenance"] = {
             "sourceType": "VISION_IMAGE",
             "sourceId": image_id,
             "observedAt": None,
-            "licenseReview": "pending",
+            "licenseReview": license_review,
             "runtimePolicy": "research_mvp",
         }
         try:
