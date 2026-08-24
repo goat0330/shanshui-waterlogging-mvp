@@ -1,7 +1,7 @@
 # RC2.1 Closure — Main Independent Progress
 
 更新时间：2026-08-24  
-代码 checkpoint：`eb122f0`（docs/manifest closure commit follows）  
+代码 checkpoint：`eb122f0`；public Main closure docs：`7bc178f`  
 immutable release tag：`rc2-evidence-demo` → `b0a41d1e2245e60ed55eef2777ea03d6b899d6c2`  
 状态：`CONDITIONAL / VISUAL_REVIEW`
 
