@@ -17,7 +17,8 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Vision image decision content now reads only the optional `observation.decision` projection: detection conclusion, decision depth, traffic status, and action recommendation. The demo fixture carries `decisionDepthCm=50`, `禁止通行`, and `积水较深，建议立即封控并组织排水` while retaining `estimatedDepthCm=null` for the uncalibrated evidence path.
 - Backend enum traffic statuses are mapped to Chinese product copy in the main result cards; raw range/level/provenance stays in technical details.
 - Sensor main copy is now `传感器状态` with `在线/延迟/离线/未上报`, `当前实测水深`, and `最后上报`; source/provenance wording is not used as product copy.
-- CCTV receives the selected frame's optional decision projection and renders the same four decision fields in a compact video overlay. Its technical frame/provenance fields are under `技术详情`; the existing non-LIVE media/source labels remain truthful.
+- CCTV receives the selected frame's optional decision projection and renders the same four decision fields in a compact video overlay. Flat `frame.decision` and `frame.overlay.decision` are validated and preserved; a valid nested observation decision takes precedence. No depth is inferred from level/range.
+- Research/local video uses the concise visible state `非实时视频`; raw runtime policy, source type, license, and frame metadata remain under `技术详情`.
 - The Vision result tab remains the default and shows original image plus a semi-transparent mask when the mask asset is available. `原图` and `水体Mask` remain available as separate tabs.
 - Gallery/fullscreen review labels now distinguish the fixture fallback from the API-backed summary and decision surfaces.
 
@@ -33,6 +34,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - `git diff --check`: PASS
 - Stale product-copy scan over `frontend/src`: PASS; no `SENSOR EVIDENCE`, old sensor disclaimer, `summary pending`, or `没有 decision projection` matches.
 - Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
+- Adapter decision repro: PASS for flat `frame.decision` and `frame.overlay.decision`; existing nearest-frame/null-depth smoke remains PASS.
 - Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
@@ -42,4 +44,4 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Checkpoint
 
-- Commit SHA: recorded in the worker handoff after commit.
+- Commit SHA: `51472c66a2001e55769f896c6dabd86c1ef5f234`
