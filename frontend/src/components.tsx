@@ -128,6 +128,10 @@ function formatClock(value: string) {
   }).format(new Date(value))
 }
 
+function formatSceneEventName(value: string) {
+  return value.replace(/\s*[×xX]\s*/g, ' · ')
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -424,6 +428,13 @@ export interface SensorEvidenceProps {
 
 type SensorFreshnessStatus = 'ONLINE' | 'STALE' | 'OFFLINE' | 'NO_EVIDENCE'
 
+const SENSOR_STATUS_LABEL: Record<SensorFreshnessStatus, string> = {
+  ONLINE: '在线',
+  STALE: '延迟',
+  OFFLINE: '离线',
+  NO_EVIDENCE: '未上报',
+}
+
 function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
   if (!sensor) return 'NO_EVIDENCE'
   const receivedAt = new Date(sensor.receivedAt).getTime()
@@ -436,17 +447,11 @@ function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
 
 export function SensorEvidence({ sensor }: SensorEvidenceProps) {
   const status = getSensorFreshness(sensor)
-  const statusLabel: Record<SensorFreshnessStatus, string> = {
-    ONLINE: '在线',
-    STALE: '延迟',
-    OFFLINE: '离线',
-    NO_EVIDENCE: '未上报',
-  }
 
   if (!sensor) {
     return (
       <div className="sensor-evidence sensor-evidence--empty" role="status">
-        <div className="sensor-evidence-head"><span>传感器状态</span><strong>{statusLabel[status]}</strong></div>
+        <div className="sensor-evidence-head"><span>传感器状态</span><strong>{SENSOR_STATUS_LABEL[status]}</strong></div>
         <p>当前暂无实测数据</p>
       </div>
     )
@@ -454,13 +459,68 @@ export function SensorEvidence({ sensor }: SensorEvidenceProps) {
 
   return (
     <div className={`sensor-evidence sensor-evidence--${status.toLowerCase()}`}>
-      <div className="sensor-evidence-head"><span>传感器状态</span><strong>{statusLabel[status]}</strong></div>
+      <div className="sensor-evidence-head"><span>传感器状态</span><strong>{SENSOR_STATUS_LABEL[status]}</strong></div>
       <div className="sensor-evidence-grid">
         <span><small>sensorId</small><b>{sensor.sensorId}</b></span>
         <span><small>当前实测水深</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
         <span><small>最后上报</small><b>{formatClock(sensor.receivedAt)}</b></span>
       </div>
     </div>
+  )
+}
+
+export interface SceneEventCardProps {
+  event: FloodEvent | null
+  analysis: AIAnalysis | null
+  sensor?: SensorState | null
+}
+
+export function SceneEventCard({ event, analysis, sensor = null }: SceneEventCardProps) {
+  if (!event) return null
+
+  const sensorStatus = getSensorFreshness(sensor)
+  const actions = analysis?.actions.slice().sort((left, right) => left.priority - right.priority).slice(0, 3) ?? []
+  const currentDepthCm = sensor?.depthCm ?? event.currentDepthCm
+
+  return (
+    <article className={`scene-event-card scene-event-card--${event.riskLevel.toLowerCase()}`} aria-label="选中积水事件详情">
+      <header className="scene-event-card-header">
+        <div>
+          <span className="scene-event-card-kicker">内涝事件</span>
+          <h3>{formatSceneEventName(event.name)}</h3>
+        </div>
+        <span className={`scene-event-card-risk scene-event-card-risk--${event.riskLevel.toLowerCase()}`}>{RISK_LABEL[event.riskLevel]}</span>
+      </header>
+
+      <section className="scene-event-card-section scene-event-card-section--facts">
+        <div className="scene-event-card-row"><span>位置</span><strong>{event.district} · {event.eventType}</strong></div>
+        <div className="scene-event-card-row"><span>当前水深</span><strong className="scene-event-card-value--warning">{currentDepthCm.toFixed(1)} cm</strong></div>
+        <div className="scene-event-card-row"><span>上涨速度</span><strong className="scene-event-card-value--warning">{event.riseRateCmMin.toFixed(1)} cm/min</strong></div>
+      </section>
+
+      <section className="scene-event-card-section">
+        <h4>对应传感器</h4>
+        <div className="scene-event-card-sensor-head">
+          <strong>{sensor?.sensorId ?? '未关联传感器'}</strong>
+          <span className={`scene-event-card-sensor-status scene-event-card-sensor-status--${sensorStatus.toLowerCase()}`}>{SENSOR_STATUS_LABEL[sensorStatus]}</span>
+        </div>
+        {sensor ? (
+          <div className="scene-event-card-sensor-grid">
+            <div><span>当前实测水深</span><strong>{sensor.depthCm.toFixed(1)} cm</strong></div>
+            <div><span>最后上报</span><strong>{formatClock(sensor.receivedAt)}</strong></div>
+          </div>
+        ) : <p className="scene-event-card-empty">当前暂无实测数据</p>}
+      </section>
+
+      <section className="scene-event-card-section scene-event-card-section--actions">
+        <h4>处置建议</h4>
+        <div className="scene-event-card-actions">
+          {actions.length > 0 ? actions.map((action, index) => (
+            <span className={`scene-event-card-action scene-event-card-action--${index + 1}`} key={`${action.priority}-${action.title}`}>{action.title}</span>
+          )) : <span className="scene-event-card-empty">暂无处置建议</span>}
+        </div>
+      </section>
+    </article>
   )
 }
 
