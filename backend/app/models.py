@@ -402,8 +402,11 @@ class HistoricalFloodCase(BaseModel):
     evidenceLevel: Literal["OFFICIAL_EXACT", "OFFICIAL_AREA_ONLY", "MEDIA_CORROBORATED", "INSUFFICIENT"]
     sourceType: Literal["PUBLIC_REPORT"]
     dataStatus: Literal["HISTORICAL_PUBLIC_REPORT"]
+    countedInRealtime: Literal[False] = False
     floodPointId: str | None = None
-    sensorId: str | None = None
+    sensorId: Literal[None] = None
+    forecast: Literal[None] = None
+    liveCamera: Literal[None] = None
     coordinates: Coordinates | None = None
 
 

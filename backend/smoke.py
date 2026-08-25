@@ -752,6 +752,15 @@ def main() -> None:
         assert all(case["dataStatus"] == "HISTORICAL_PUBLIC_REPORT" for case in historical_cases)
         assert all(case["coordinates"] and set(case["coordinates"]) == {"lon", "lat"} for case in historical_cases)
         assert all(case["sensorId"] is None for case in historical_cases)
+        assert all(case["countedInRealtime"] is False for case in historical_cases)
+        assert all(case["forecast"] is None for case in historical_cases)
+        assert all(case["liveCamera"] is None for case in historical_cases)
+        assert all(
+            case["depthCm"] is None
+            or (case["depthEvidenceText"] and case["evidenceLevel"] == "OFFICIAL_EXACT")
+            for case in historical_cases
+        )
+        assert len(historical_cases) + 1 == 9
         print("PASS 200 GET /api/v1/historical-cases (8 mapped historical public cases)")
         first_projection = next(point for point in points if point["id"] == "FP-001")
         assert first_projection["depthCm"] == 28.6
