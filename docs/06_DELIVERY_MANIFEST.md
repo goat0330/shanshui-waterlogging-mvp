@@ -10,7 +10,7 @@
 ```text
 Status: CONDITIONAL / RC2.2 CANONICAL CLOSEOUT + VISUAL_REVIEW
 Canonical branch: main
-Current integrated functional checkpoint: d9f0661b0d24d535b4d28ad72441d17d28723ec2
+Current integrated functional checkpoint: 16b2ad6780ce310408473d6a9bcf44fa35fc74a0
 RC2.2 Main repairs: 0349a6a (Cesium building emphasis) + 49d5673 (backend decision projection) + e2c9375 (Vision decision projection) + b6ea92a (dashboard decision surface) + 94735ac (waterlogging summary wiring) + 38df8df (video decision adapter)
 Release tag: rc2-evidence-demo (immutable RC2 baseline; not moved)
 Release tag target SHA: b0a41d1e2245e60ed55eef2777ea03d6b899d6c2
