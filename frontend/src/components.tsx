@@ -543,9 +543,9 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         : 'RESULT NOT ATTACHED'
   const researchVideo = camera.mediaUrl?.startsWith('/runtime/vision-video/') === true ||
     (overlayData?.runtimePolicy === 'research_mvp' && !overlayData.synthetic)
-  const displayName = researchVideo ? '研究视频 · 非实时' : camera.name
-  const mediaStatusLabel = researchVideo ? 'RESEARCH · NOT LIVE' : camera.status
-  const sourceLabel = researchVideo ? 'VISION_VIDEO · RESEARCH_MVP / NOT LIVE' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
+  const displayName = researchVideo ? '非实时视频' : camera.name
+  const mediaStatusLabel = researchVideo ? '非实时视频' : camera.status
+  const sourceLabel = researchVideo ? '视频证据 · 非实时' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
   const decisionDisplay = overlayData ? getDecisionDisplay(overlayData.floodDetected, decision) : null
 
   return (
