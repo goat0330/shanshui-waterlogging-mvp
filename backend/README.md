@@ -71,7 +71,7 @@ GET /api/v1/context/meteorology (provisional, hidden from formal OpenAPI)
 
 `GET /api/v1/flood-points` 当前在 backend response 中追加可选 `eventId`、`sensorId`：`FP-001` 映射到 `FP202506010024` 与 `SSZJ-NODE-001`，`FP-002`～`FP-005` 明确返回 `null`。这是基于现有 mapping fixture 的只读投影；尚未同步到正式 `contracts/openapi.yaml`，Main/Architect 需要补充这两个可选字段后再视为正式 Contract。没有因此生成新的事件，也不改变无 telemetry 时 sensor GET 的 404 语义。
 
-`GET /api/v1/historical-cases` 读取 `data/historical-cases.json` 中的 8 条官方公开历史案例，仅用于历史案例层。案例带有供地图展示的 WGS84 经/纬度锚点，但不绑定 `FP-001`～`FP-005`，不提供实时传感器、测量水深或 CCTV LIVE 语义；该 provisional seam 不进入正式 OpenAPI。
+`GET /api/v1/historical-cases` 读取 `data/historical-cases.json` 中的 8 条官方公开历史案例，仅用于历史案例层。响应固定标记 `dataStatus=HISTORICAL_PUBLIC_REPORT`、`countedInRealtime=false`，并返回 `sensorId=null`、`forecast=null`、`liveCamera=null`；没有官方明确公制深度时 `depthCm` 保持 `null`（例如来源只写“超过17cm”时保留 `depthEvidenceText`，不生成数值）。案例带有供地图展示的 WGS84 经/纬度锚点，但不绑定 `FP-001`～`FP-005`，不提供实时传感器或 CCTV LIVE 语义；该 provisional seam 不进入正式 OpenAPI。当前事件 fixture 只有 1 条实时事件，连同这 8 条历史报告构成 9 张事件卡；`FP-002`～`FP-005` 仍是地图上下文点，不计入事件卡。研究/训练视频或通用开放媒体不在此接口中冒充上海案件媒体，正式媒体授权仍待用户决定。
 
 ### 上海公开水务源（provisional）
 
