@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import type { FloodEvent, FloodPoint, ForecastFrame, ForecastKey, SensorState } from './types'
+import { CITY_LABEL_SOURCE_LABEL, loadCityLabelLayer } from './scene/cityLabelLayer'
 import { addDemoCityBlocks } from './scene/demoCityLayer'
 import { HUANGPU_RIVER_GEOJSON_URL, HUANGPU_RIVER_SOURCE_LABEL, loadHuangpuHydroSystemLayer } from './scene/hydroSystemLayer'
+import { loadMajorRoadLayer, MAJOR_ROADS_GEOJSON_URL, MAJOR_ROADS_SOURCE_LABEL } from './scene/majorRoadLayer'
 import { addGeographicSensorEntity } from './scene/sensorEntity'
 
 const CORE_TILES_URL = '/data/runtime/shanghai-core/tileset.json'
@@ -15,16 +17,16 @@ const BIMANGLE_ORIGIN = { lon: 116.46, lat: 39.92 }
 const HUANGPU_SHP_CENTER = { lon: 121.47797014, lat: 31.21940076 }
 const HUANGPU_MODEL_CENTER_LOCAL = { x: 80.3409, y: -53.0326, z: 90 }
 const DEFAULT_EVENT = { lon: 121.4874, lat: 31.2297 }
-const OSM_BUILDING_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#86a8b9', 0.94)" })
+const OSM_BUILDING_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#c8c2b8', 0.94)" })
 const FORECAST_FILL: Record<ForecastKey, Cesium.Color> = {
-  NOW: new Cesium.Color(0.14, 0.84, 0.91, 0.36),
-  PLUS_10: new Cesium.Color(0.15, 0.48, 1, 0.38),
-  PLUS_30: new Cesium.Color(1, 0.48, 0.18, 0.42),
+  NOW: new Cesium.Color(0.08, 0.68, 0.76, 0.28),
+  PLUS_10: new Cesium.Color(0.14, 0.38, 0.78, 0.3),
+  PLUS_30: new Cesium.Color(0.92, 0.42, 0.12, 0.34),
 }
 const FORECAST_STROKE: Record<ForecastKey, Cesium.Color> = {
-  NOW: new Cesium.Color(0.34, 0.91, 0.95, 0.96),
-  PLUS_10: new Cesium.Color(0.48, 0.68, 1, 0.96),
-  PLUS_30: new Cesium.Color(1, 0.67, 0.3, 0.98),
+  NOW: new Cesium.Color(0.25, 0.83, 0.86, 0.88),
+  PLUS_10: new Cesium.Color(0.38, 0.61, 0.95, 0.9),
+  PLUS_30: new Cesium.Color(1, 0.64, 0.24, 0.94),
 }
 type SourceAttemptReason = 'none' | 'token_missing' | 'osm_init_failed'
 type SourceReason =
@@ -103,6 +105,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const cityLayerRef = useRef<Cesium.PrimitiveCollection | null>(null)
   const hydroDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
+  const roadDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
+  const labelDataSourceRef = useRef<Cesium.CustomDataSource | null>(null)
   const forecastDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const layersDepthRef = useRef(layers.depth)
   const [viewerReady, setViewerReady] = useState(false)
@@ -110,6 +114,11 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   const [source, setSource] = useState<'osm' | 'local' | 'demo' | null>(null)
   const [sourceReason, setSourceReason] = useState<SourceReason>('none')
   const [hydroStatus, setHydroStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [roadStatus, setRoadStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [labelStatus, setLabelStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [roadSourceUrl, setRoadSourceUrl] = useState(MAJOR_ROADS_GEOJSON_URL)
+  const [roadAttribution, setRoadAttribution] = useState(MAJOR_ROADS_SOURCE_LABEL)
+  const [roadFallback, setRoadFallback] = useState(false)
   const [forecastStatus, setForecastStatus] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading')
   const [sensorEntityCount, setSensorEntityCount] = useState(0)
   const selectedPoint = points.find((point) => point.id === selectedPointId) ?? null
@@ -134,8 +143,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     const cityLayer = new Cesium.PrimitiveCollection()
     viewer.scene.primitives.add(cityLayer)
     cityLayerRef.current = cityLayer
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#071421')
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0a2232')
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a1118')
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0d1921')
     viewer.scene.globe.enableLighting = false
     viewer.scene.globe.showGroundAtmosphere = false
     viewer.scene.fog.enabled = true
@@ -154,7 +163,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           return
         }
         placeHuangpuByRange(tileset)
-        tileset.style = new Cesium.Cesium3DTileStyle({ color: "color('#6f8fa7', 0.96)" })
+        tileset.style = new Cesium.Cesium3DTileStyle({ color: "color('#beb9b0', 0.96)" })
         cityLayer.add(tileset)
         setSource('local')
         setSourceReason(attemptReason)
@@ -204,15 +213,6 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         setStatus('ready')
         flyToTarget(viewer, target, 1)
 
-        if (!disposed) {
-          const imageryLayer = viewer.imageryLayers.addImageryProvider(
-            new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
-          )
-          imageryLayer.alpha = 0.28
-          imageryLayer.brightness = 0.68
-          imageryLayer.contrast = 1.08
-          imageryLayer.saturation = 0.18
-        }
       } catch {
         if (!disposed) await loadLocalCore('osm_init_failed')
       }
@@ -265,6 +265,57 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   }, [viewerReady])
 
   useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !viewerReady) return
+
+    let cancelled = false
+    setRoadStatus('loading')
+    setLabelStatus('loading')
+    void loadMajorRoadLayer(viewer).then(async (result) => {
+      if (cancelled || viewerRef.current !== viewer || viewer.isDestroyed()) {
+        if (!viewer.isDestroyed()) viewer.dataSources.remove(result.dataSource, true)
+        return
+      }
+      result.dataSource.show = layers.base
+      roadDataSourceRef.current = result.dataSource
+      setRoadSourceUrl(result.sourceUrl)
+      setRoadAttribution(result.sourceLabel)
+      setRoadFallback(result.fallback)
+      setRoadStatus('ready')
+
+      try {
+        const labelDataSource = await loadCityLabelLayer(viewer, result.dataSource, result.sourceLabel)
+        if (cancelled || viewerRef.current !== viewer || viewer.isDestroyed()) {
+          if (!viewer.isDestroyed()) viewer.dataSources.remove(labelDataSource, true)
+          return
+        }
+        labelDataSource.show = layers.base
+        labelDataSourceRef.current = labelDataSource
+        setLabelStatus('ready')
+      } catch {
+        if (!cancelled) setLabelStatus('error')
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setRoadStatus('error')
+        setLabelStatus('error')
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (roadDataSourceRef.current && viewerRef.current === viewer && !viewer.isDestroyed()) {
+        viewer.dataSources.remove(roadDataSourceRef.current, true)
+        roadDataSourceRef.current = null
+      }
+      if (labelDataSourceRef.current && viewerRef.current === viewer && !viewer.isDestroyed()) {
+        viewer.dataSources.remove(labelDataSourceRef.current, true)
+        labelDataSourceRef.current = null
+      }
+    }
+  }, [viewerReady])
+
+  useEffect(() => {
     layersDepthRef.current = layers.depth
     if (forecastDataSourceRef.current) forecastDataSourceRef.current.show = layers.depth
   }, [layers.depth])
@@ -289,8 +340,9 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       depthCm: number
       riskLevel: FloodPoint['riskLevel']
       fallback: boolean
-    }> = sensor
-      ? [{
+      historical: boolean
+    }> = [
+      ...(sensor ? [{
         id: sensor.sensorId,
         selectId: selectedPointId || 'FP-001',
         sensorId: sensor.sensorId,
@@ -302,9 +354,11 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         depthCm: sensor.depthCm,
         riskLevel: event?.riskLevel ?? selectedPoint?.riskLevel ?? 'NORMAL',
         fallback: false,
-      }]
-      : points.length > 0
-        ? points.map((point) => ({
+        historical: false,
+      }] : []),
+      ...points
+        .filter((point) => !sensor || point.id !== selectedPointId)
+        .map((point) => ({
           id: `floodpoint-fallback-${point.id}`,
           selectId: point.id,
           sensorId: `floodpoint-fallback-${point.id}`,
@@ -315,21 +369,22 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           depthCm: point.depthCm,
           riskLevel: point.riskLevel,
           fallback: true,
-        }))
-        : event
-          ? [{
-            id: `event-fallback-${event.id}`,
-            selectId: selectedPointId || 'FP-001',
-            sensorId: `event-fallback-${event.id}`,
-            eventId: event.id,
-            name: event.name,
-            source: EVENT_FALLBACK_SOURCE,
-            coordinates: event.coordinates,
-            depthCm: event.currentDepthCm,
-            riskLevel: event.riskLevel,
-            fallback: true,
-          }]
-          : []
+          historical: Boolean(point.historicalCaseId),
+        })),
+      ...(sensor || points.length > 0 || !event ? [] : [{
+        id: `event-fallback-${event.id}`,
+        selectId: selectedPointId || 'FP-001',
+        sensorId: `event-fallback-${event.id}`,
+        eventId: event.id,
+        name: event.name,
+        source: EVENT_FALLBACK_SOURCE,
+        coordinates: event.coordinates,
+        depthCm: event.currentDepthCm,
+        riskLevel: event.riskLevel,
+        fallback: true,
+        historical: false,
+      }]),
+    ]
 
     const entities = markerData.map((marker) => addGeographicSensorEntity(viewer, {
       entityId: marker.id,
@@ -339,7 +394,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       coordinates: marker.coordinates,
       depthCm: marker.depthCm,
       riskLevel: marker.riskLevel,
-      selected: marker.selectId === selectedPointId,
+      selected: marker.selectId === selectedPointId && !marker.historical,
       source: marker.source,
       eventId: marker.eventId,
       siteId: marker.siteId,
@@ -424,6 +479,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
 
   useEffect(() => {
     if (cityLayerRef.current) cityLayerRef.current.show = layers.base
+    if (roadDataSourceRef.current) roadDataSourceRef.current.show = layers.base
+    if (labelDataSourceRef.current) labelDataSourceRef.current.show = layers.base
   }, [layers.base])
 
   const sourceReasonSuffix = sourceReason === 'none' ? '' : ` · reason=${sourceReason}`
@@ -437,9 +494,16 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       data-source-reason={sourceReason}
       data-local-tileset={CORE_TILES_URL}
       data-coordinate-system="WGS84 lon/lat"
+      data-ground-source="dark-globe-no-label"
       data-hydro-source={HUANGPU_RIVER_GEOJSON_URL}
       data-hydro-attribution={HUANGPU_RIVER_SOURCE_LABEL}
       data-hydro-status={hydroStatus}
+      data-road-source={roadSourceUrl}
+      data-road-attribution={roadAttribution}
+      data-road-fallback={roadFallback}
+      data-road-status={roadStatus}
+      data-label-attribution={CITY_LABEL_SOURCE_LABEL}
+      data-label-status={labelStatus}
       data-sensor-entity-count={sensorEntityCount}
       data-sensor-mode={sensor ? 'sensor-state' : 'floodpoint-fallback'}
       data-sensor-id={sensor?.sensorId ?? 'none'}
@@ -453,7 +517,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     >
       {status === 'loading' && <span className="cesium-scene-status">{CESIUM_ION_TOKEN ? 'OSM BUILDINGS LOADING' : 'LOCAL CITY LOADING'}</span>}
       {status === 'error' && <span className="cesium-scene-status cesium-scene-status--error">CITY DATA UNAVAILABLE</span>}
-      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · GLOBAL' : source === 'local' ? `LOCAL HUANGPU · FALLBACK${sourceReasonSuffix}` : `DEMO CITY BLOCKS · FALLBACK${sourceReasonSuffix}`}</span>}
+      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · DARK NO-LABEL GROUND' : source === 'local' ? `LOCAL HUANGPU · DARK GROUND${sourceReasonSuffix}` : `DEMO CITY BLOCKS · DARK GROUND${sourceReasonSuffix}`}</span>}
     </div>
   )
 }

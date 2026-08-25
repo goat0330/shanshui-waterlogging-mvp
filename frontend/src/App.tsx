@@ -16,6 +16,7 @@ import {
   ForecastPreview,
   RankingPanel,
   RainfallPanel,
+  SceneEventCard,
   SensorEvidence,
   StatusPanel,
   TimelineBar,
@@ -24,6 +25,7 @@ import {
   type LayerVisibility,
 } from './components'
 import { homeFixtures } from './data/homeFixtures'
+import { getFloodPointEventId } from './data/mappings'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
@@ -91,7 +93,6 @@ const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
   depth: {
     level: 5,
     estimatedDepthCm: null,
-    approximateDepthCm: 50,
     rangeCm: [50, null],
     confidence: 0,
   },
@@ -99,9 +100,14 @@ const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
   referenceObjects: [],
   waterMaskPath: 'DEMO_FIXTURE_MASK_NOT_ATTACHED',
   quality: 'REJECT',
-  qualityFlags: ['DEMO_FIXTURE', 'NO_REFERENCE', 'ROUGH_VISUAL_ESTIMATE'],
+  qualityFlags: ['DEMO_FIXTURE', 'NO_REFERENCE', 'CAMERA_UNCALIBRATED'],
   model: { waterSegmentation: 'fixture-only' },
   synthetic: true,
+  decision: {
+    decisionDepthCm: 50,
+    trafficStatus: '禁止通行',
+    recommendation: '积水较深，建议立即封控并组织排水',
+  },
 }
 
 export default function App() {
@@ -121,6 +127,8 @@ interface DashboardFrameProps {
 function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'default', eventOverride, fixedPreview = false, dataBadge = 'DEMO SCENARIO DATA · FIXTURE' }: DashboardFrameProps) {
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
+  const [eventCardOpen, setEventCardOpen] = useState(false)
+  const [selectedHistoricalCaseId, setSelectedHistoricalCaseId] = useState<string | null>(null)
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
   const [visionOpen, setVisionOpen] = useState(false)
   const [visionMode, setVisionMode] = useState<'local' | 'url'>('local')
@@ -141,9 +149,17 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     forecast: data.forecast,
     analysis: data.analysis,
     camera: data.camera,
+    eventsById: data.eventsById,
+    forecastsByEventId: data.forecastsByEventId,
+    analysesByEventId: data.analysesByEventId,
+    camerasById: data.camerasById,
   })
+  const selectedHistoricalCase = data.historicalCases.find((item) => item.candidateId === selectedHistoricalCaseId) ?? null
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
-  const sensor = data.sensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event ? createDemoSensorEvidence(selectedEvent.event) : null)
+  const selectedSensor = selectedEvent.sensorId
+    ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
+    : null
+  const sensor = selectedSensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
   const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
   const cameraId = selectedEvent.camera?.id ?? null
   const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
@@ -231,6 +247,20 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const selectedVideoFrame = videoReady && videoEvidence ? selectNearestVideoFrame(videoEvidence, videoTimeSec) : null
   const videoOverlayData = selectedVideoFrame ? toVideoOverlayData(selectedVideoFrame) : undefined
 
+  const handlePointSelect = (pointId: string) => {
+    const point = data.points.find((item) => item.id === pointId) ?? null
+    if (point?.historicalCaseId) {
+      setSelectedHistoricalCaseId(point.historicalCaseId)
+      setEventCardOpen(false)
+      setSelectedPointId(pointId)
+      return
+    }
+    const hasEvent = getFloodPointEventId(point) !== null
+    setSelectedHistoricalCaseId(null)
+    setEventCardOpen((open) => hasEvent && (selectedPointId === pointId ? !open : true))
+    setSelectedPointId(pointId)
+  }
+
   return (
     <div className={`dashboard-frame ${fixedPreview ? 'dashboard-frame--fixed-preview' : ''}`}>
       <DigitalTwinScene
@@ -241,22 +271,34 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         forecastFrame={forecastSurface.frame}
         selectedPointId={selectedPointId}
         layers={layers}
-        onPointSelect={setSelectedPointId}
+        onPointSelect={handlePointSelect}
         onLayerToggle={toggleLayer}
       />
+      {eventCardOpen && <SceneEventCard event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} />}
       <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
         <RainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} />
-        <RankingPanel ranking={data.rainfallRanking} />
+        <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
       <div className="dashboard-side dashboard-side--right">
-        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
-        <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+        <EventPanel
+          event={selectedHistoricalCase ? null : selectedEvent.event}
+          analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
+          sensor={selectedHistoricalCase ? null : sensor}
+          sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
+          historicalCases={data.historicalCases}
+          selectedHistoricalCase={selectedHistoricalCase}
+          onSelectHistoricalCase={setSelectedHistoricalCaseId}
+          onClearHistoricalCase={() => setSelectedHistoricalCaseId(null)}
+          onOpenVision={() => setVisionOpen(true)}
+        />
+        <ForecastPreview forecast={selectedHistoricalCase ? null : selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={selectedHistoricalCase ? null : sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
         <CctvCard
-          camera={selectedEvent.camera}
+          camera={selectedHistoricalCase ? null : selectedEvent.camera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
+          decision={selectedVideoFrame?.decision ?? null}
           videoEvidenceState={videoEvidenceState}
           onVideoReady={setVideoReady}
           onVideoTimeUpdate={setVideoTimeSec}
@@ -305,7 +347,7 @@ function DashboardPage() {
   })
   const data = dashboard.data ?? homeFixtures
   const dataBadge = dashboard.source === 'api'
-    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : `API DATA · WS ${realtime.status.toUpperCase()}`
+    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : data.shanghaiWater ? `API DATA · SHANGHAI WATER LIVE · WS ${realtime.status.toUpperCase()}` : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 
   return (
@@ -338,10 +380,10 @@ function GalleryPage() {
         <section className="gallery-section">
           <GallerySectionTitle title="Layout / Core Panels" note="页面骨架与核心业务面板" />
           <div className="gallery-grid gallery-grid--panels">
-            <GalleryCard title="StatusPanel" stateName="default">
+            <GalleryCard title="StatusPanel" stateName="fixture fallback · empty">
               <StatusPanel overview={homeFixtures.overview} />
             </GalleryCard>
-            <GalleryCard title="StatusPanel" stateName="high-risk">
+            <GalleryCard title="StatusPanel" stateName="high-risk · fixture fallback">
               <StatusPanel overview={homeFixtures.overview} variant="high-risk" />
             </GalleryCard>
             <GalleryCard title="StatusPanel" stateName="empty">
@@ -383,6 +425,9 @@ function GalleryPage() {
             <GalleryCard title="EventPanel" stateName="empty">
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} state="empty" />
             </GalleryCard>
+            <GalleryCard title="EventPanel" stateName="historical public cases">
+              <HistoricalCaseGalleryPreview />
+            </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="NOW active">
               <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" measuredDepthCm={createDemoSensorEvidence(homeFixtures.event).depthCm} onChange={() => undefined} />
             </GalleryCard>
@@ -410,7 +455,7 @@ function GalleryPage() {
             <GalleryCard title="SensorEvidence" stateName="DEMO_DEVICE / stale fixture">
               <SensorEvidence sensor={createDemoSensorEvidence(homeFixtures.event)} />
             </GalleryCard>
-            <GalleryCard title="VisionDepthDrawer" stateName="local upload / contract empty">
+            <GalleryCard title="VisionDepthDrawer" stateName="fixture decision · empty / ready controls">
               <VisionDepthGalleryPreview />
             </GalleryCard>
           </div>
@@ -421,6 +466,11 @@ function GalleryPage() {
           <div className="gallery-grid gallery-grid--wide-components">
             <GalleryCard title="DigitalTwinScene" stateName="NOW / selected event" className="gallery-card--scene">
               <div className="gallery-scene-preview gallery-scene-only"><SceneOnlyPreview /></div>
+            </GalleryCard>
+            <GalleryCard title="SceneEventCard" stateName="selected / high-risk" className="gallery-card--event-card">
+              <div className="scene-event-card-gallery-preview">
+                <SceneEventCard event={homeFixtures.event} analysis={homeFixtures.analysis} sensor={createDemoSensorEvidence(homeFixtures.event)} />
+              </div>
             </GalleryCard>
             <GalleryCard title="TimelineBar" stateName="realtime">
               <TimelineBar timeline={homeFixtures.timeline} activeKey="NOW" onForecastChange={() => undefined} />
@@ -445,9 +495,9 @@ function GalleryPage() {
             <a href="/?state=plus30">打开 Forecast +30 全屏 ↗</a>
           </div>
           <div className="full-dashboard-gallery">
-            <DashboardStateCard label="A · Default" note="城市态势 default · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
-            <DashboardStateCard label="B · High Risk" note="风险色增强但不铺满页面 · selected event" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
-            <DashboardStateCard label="C · Forecast +30" note="中央场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
+            <DashboardStateCard label="A · Default" note="fixture fallback · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
+            <DashboardStateCard label="B · High Risk" note="fixture fallback · 风险色增强但不铺满页面" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
+            <DashboardStateCard label="C · Forecast +30" note="fixture fallback · 场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
           </div>
         </section>
 
@@ -475,7 +525,7 @@ function VisionDepthGalleryPreview() {
 
   return (
     <div className="gallery-vision-preview">
-      <p>同页入口：local upload / direct URL；状态由真实 Drawer 展示。</p>
+      <p>同页入口：local upload / direct URL；fixture ready 展示最终决策卡。</p>
       <div className="gallery-vision-actions">
         <button type="button" onClick={() => showState('idle')}>empty</button>
         <button type="button" onClick={() => showState('loading')}>loading</button>
@@ -501,6 +551,20 @@ function VisionDepthGalleryPreview() {
       />
     </div>
   )
+}
+
+function HistoricalCaseGalleryPreview() {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedCase = homeFixtures.historicalCases.find((item) => item.candidateId === selectedId) ?? null
+
+  return <EventPanel
+    event={null}
+    analysis={null}
+    historicalCases={homeFixtures.historicalCases}
+    selectedHistoricalCase={selectedCase}
+    onSelectHistoricalCase={setSelectedId}
+    onClearHistoricalCase={() => setSelectedId(null)}
+  />
 }
 
 function SceneOnlyPreview() {

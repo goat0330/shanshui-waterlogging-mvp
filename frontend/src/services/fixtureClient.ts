@@ -5,6 +5,7 @@ import type {
   FloodEvent,
   FloodForecast,
   FloodPoint,
+  HistoricalFloodCase,
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
@@ -37,6 +38,7 @@ export const fixtureClient: DashboardDataClient = {
   getRainfall: async (): Promise<RainfallSnapshot> => homeFixtures.rainfall,
   getRainfallStationRanking: async (): Promise<RainfallStationRankingItem[]> => homeFixtures.rainfallRanking,
   listFloodPoints: async (): Promise<FloodPoint[]> => homeFixtures.points,
+  listHistoricalCases: async (): Promise<HistoricalFloodCase[]> => homeFixtures.historicalCases,
   getFloodEvent: async (eventId: string): Promise<FloodEvent> => {
     if (fixtureEvent.id !== eventId) throw notFound('event', eventId)
     return fixtureEvent
@@ -62,4 +64,5 @@ export const fixtureClient: DashboardDataClient = {
     if (homeFixtures.timeline.scenarioId !== scenarioId) throw notFound('timeline', scenarioId)
     return homeFixtures.timeline
   },
+  getShanghaiWater: async () => null,
 }

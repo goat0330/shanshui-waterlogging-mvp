@@ -24,6 +24,7 @@ const frame = (frameIndex, timestampMs) => ({
   waterMaskPath: 'SYNTHETIC_DEMO_MASK',
   referenceObjects: [],
   referenceBoxes: [],
+  decision: { decisionDepthCm: 50, trafficStatus: 'PROHIBITED', recommendation: 'NO_PASSAGE' },
   overlay: { status: 'METADATA_ONLY', rendered: false, referenceBoxes: [] },
 })
 
@@ -44,6 +45,9 @@ const bundle = module.exports.parseVideoEvidenceBundle({
 const selected = module.exports.selectNearestVideoFrame(bundle, 0.42)
 if (selected?.frameId !== 'CAM-017-F000001') throw new Error('flat nearest timestamp selection failed')
 if (selected?.observation.provenance.sourceType !== 'VISION_VIDEO') throw new Error('flat provenance normalization failed')
+if (selected?.decision?.decisionDepthCm !== 50 || selected?.observation.decision?.trafficStatus !== 'PROHIBITED') {
+  throw new Error('frame decision pass-through failed')
+}
 
 const overlay = module.exports.toVideoOverlayData(selected)
 if (overlay.estimatedDepthCm !== null || Object.hasOwn(overlay, 'waterDepthCm')) {
@@ -52,5 +56,6 @@ if (overlay.estimatedDepthCm !== null || Object.hasOwn(overlay, 'waterDepthCm'))
 if (!overlay.synthetic || !overlay.qualityFlags.includes('CAMERA_UNCALIBRATED')) {
   throw new Error('video provenance labels were lost')
 }
+if (overlay.decision?.decisionDepthCm !== 50) throw new Error('overlay decision projection was lost')
 
 console.log('PASS — timestamp nearest-frame mapping and null-depth provenance')

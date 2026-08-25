@@ -9,6 +9,27 @@ export interface Coordinates {
   lon: number
 }
 
+export interface WaterloggingSituation {
+  totalEvents: number
+  changeVsHour: number
+  disposition: {
+    pending: number
+    handling: number
+    relieved: number
+  }
+  topDistricts: Array<{
+    district: string
+    eventCount: number
+  }>
+  metrics: {
+    maxDepthCm: number
+    avgDepthCm: number
+    avgResponseMinutes: number
+    newToday: number
+  }
+  source: string
+}
+
 export interface DashboardOverview {
   updatedAt: string
   city: string
@@ -22,6 +43,7 @@ export interface DashboardOverview {
     normal: number
   }
   activeFloodPoints: number
+  waterloggingSituation?: WaterloggingSituation | null
 }
 
 export interface RainfallSnapshot {
@@ -41,6 +63,60 @@ export interface RainfallStationRankingItem {
   intensityMmH: number
 }
 
+export interface ShanghaiWaterRainfallStation {
+  stationId: string
+  stationName: string
+  district?: string | null
+  township?: string | null
+  coordinates: Coordinates
+  rainfallValue: number
+  observedAt: string
+  dataSource?: string | null
+  isRaining?: boolean | null
+}
+
+export interface ShanghaiWaterPondingSite {
+  siteId: string
+  siteName: string
+  district?: string | null
+  coordinates: Coordinates
+  depthCm: number
+  observedAt: string
+  stage?: string | null
+  state?: string | null
+  dataSource?: string | null
+}
+
+export interface ShanghaiWaterLevelStation {
+  stationId: string
+  stationName: string
+  district?: string | null
+  river?: string | null
+  coordinates: Coordinates
+  outWaterM: number
+  observedAt: string
+  dataSource?: string | null
+}
+
+export interface ShanghaiWaterLevelForecast {
+  stationId: string
+  stationName: string
+  coordinates: Coordinates
+  forecastWaterLevelM: number
+  forecastAt: string
+}
+
+export interface ShanghaiWaterSnapshot {
+  source: string
+  fetchedAt: string
+  coordinateReference: string
+  sourceUrls: string[]
+  rainfall: ShanghaiWaterRainfallStation[]
+  ponding: ShanghaiWaterPondingSite[]
+  waterLevels: ShanghaiWaterLevelStation[]
+  waterLevelForecast: ShanghaiWaterLevelForecast[]
+}
+
 export interface FloodPoint {
   id: string
   name: string
@@ -49,6 +125,31 @@ export interface FloodPoint {
   depthCm: number
   riskLevel: RiskLevel
   trend: 'UP' | 'STABLE' | 'DOWN'
+  eventId?: string | null
+  sensorId?: string | null
+  historicalCaseId?: string
+}
+
+export interface HistoricalFloodCase {
+  candidateId: string
+  incidentDate: string
+  reportDate: string
+  district: string
+  locationText: string
+  sourceAgency: string
+  sourceTitle: string
+  sourceUrl: string
+  confirmedFacts: string
+  depthCm: number | null
+  depthEvidenceText: string | null
+  trafficImpact: string | null
+  officialActions: string[]
+  evidenceLevel: 'OFFICIAL_EXACT' | 'OFFICIAL_AREA_ONLY' | 'MEDIA_CORROBORATED' | 'INSUFFICIENT'
+  sourceType: 'PUBLIC_REPORT'
+  dataStatus: 'HISTORICAL_PUBLIC_REPORT'
+  floodPointId: string | null
+  sensorId: string | null
+  coordinates: Coordinates | null
 }
 
 export interface FloodEvent {
@@ -129,6 +230,12 @@ export interface VisionDepthProvenance {
   runtimePolicy: 'research_mvp' | 'production'
 }
 
+export interface DecisionProjection {
+  decisionDepthCm: number | null
+  trafficStatus: string
+  recommendation: string
+}
+
 export interface VisionDepthObservation {
   imageId: string
   source: {
@@ -151,6 +258,7 @@ export interface VisionDepthObservation {
   qualityFlags: string[]
   model: Record<string, unknown>
   synthetic: boolean
+  decision?: DecisionProjection | null
 }
 
 export interface SensorFloodPointMapping {
@@ -165,12 +273,19 @@ export interface DashboardData {
   rainfall: RainfallSnapshot
   rainfallRanking: RainfallStationRankingItem[]
   points: FloodPoint[]
+  historicalCases: HistoricalFloodCase[]
   event: FloodEvent | null
   forecast: FloodForecast | null
   camera: Camera | null
   analysis: AIAnalysis | null
   timeline: ScenarioTimeline
   sensor?: SensorState | null
+  shanghaiWater?: ShanghaiWaterSnapshot | null
+  eventsById?: Record<string, FloodEvent>
+  forecastsByEventId?: Record<string, FloodForecast>
+  analysesByEventId?: Record<string, AIAnalysis>
+  camerasById?: Record<string, Camera>
+  sensorsById?: Record<string, SensorState>
 }
 
 export interface DashboardDataClient {
@@ -178,6 +293,7 @@ export interface DashboardDataClient {
   getRainfall(): Promise<RainfallSnapshot>
   getRainfallStationRanking(): Promise<RainfallStationRankingItem[]>
   listFloodPoints(): Promise<FloodPoint[]>
+  listHistoricalCases(): Promise<HistoricalFloodCase[]>
   getFloodEvent(eventId: string): Promise<FloodEvent>
   getFloodForecast(eventId: string): Promise<FloodForecast>
   getFloodAnalysis(eventId: string): Promise<AIAnalysis>
@@ -185,6 +301,7 @@ export interface DashboardDataClient {
   getCamera(cameraId: string): Promise<Camera>
   getSensorState(sensorId: string): Promise<SensorState>
   getTimeline(scenarioId: string): Promise<ScenarioTimeline>
+  getShanghaiWater(): Promise<ShanghaiWaterSnapshot | null>
 }
 
 export interface HomeFixtures {
@@ -192,9 +309,11 @@ export interface HomeFixtures {
   rainfall: RainfallSnapshot
   rainfallRanking: RainfallStationRankingItem[]
   points: FloodPoint[]
+  historicalCases: HistoricalFloodCase[]
   event: FloodEvent
   forecast: FloodForecast
   camera: Camera
   analysis: AIAnalysis
   timeline: ScenarioTimeline
+  shanghaiWater?: ShanghaiWaterSnapshot | null
 }

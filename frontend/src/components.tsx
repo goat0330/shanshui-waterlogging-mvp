@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type {
   AIAnalysis,
   Camera,
   DashboardOverview,
+  DecisionProjection,
   FloodEvent,
   FloodForecast,
   FloodPoint,
   ForecastFrame,
   ForecastKey,
+  HistoricalFloodCase,
   PanelState,
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterRainfallStation,
+  ShanghaiWaterSnapshot,
   SensorState,
   VisionDepthObservation,
 } from './types'
@@ -125,6 +129,10 @@ function formatClock(value: string) {
   }).format(new Date(value))
 }
 
+function formatSceneEventName(value: string) {
+  return value.replace(/\s*[×xX]\s*/g, ' · ')
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -184,40 +192,88 @@ export interface StatusPanelProps {
 }
 
 export function StatusPanel({ overview, state = 'ready', variant = 'default' }: StatusPanelProps) {
-  const { critical, warning, normal } = overview.urbanStatus
-  const total = Math.max(critical + warning + normal, 1)
-  const criticalEnd = (critical / total) * 100
-  const warningEnd = ((critical + warning) / total) * 100
-  const ringStyle = {
-    background: `conic-gradient(var(--critical) 0 ${criticalEnd}%, var(--warning) ${criticalEnd}% ${warningEnd}%, var(--cyan) ${warningEnd}% 100%)`,
-  } as CSSProperties
+  const situation = overview.waterloggingSituation ?? null
 
   return (
     <Panel className={`status-panel ${variant === 'high-risk' ? 'status-panel--high-risk' : ''}`} state={state}>
-      <PanelHeader title="城市态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
-      <div className="status-content">
-        <div className="status-ring" style={ringStyle} aria-label={`严重 ${critical}，警戒 ${warning}，正常 ${normal}`}>
-          <div className="status-ring-hole">
-            <strong className="status-ring-value">{overview.activeFloodPoints}</strong>
-            <span className="status-ring-label">活跃点位</span>
-          </div>
+      <PanelHeader title="当前积水态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
+      {situation ? <StatusSummary situation={situation} /> : (
+        <div className="status-summary-empty">
+          <span className="status-summary-kicker">城市积水汇总</span>
+          <strong>—</strong>
+          <span>等待城市积水汇总</span>
+          <small>当前模式未提供城市积水汇总</small>
         </div>
-        <div className="status-list">
-          <StatusRow label="严重" count={critical} detail="涉及区域" tone="critical" />
-          <StatusRow label="警戒" count={warning} detail="涉及区域" tone="warning" />
-          <StatusRow label="正常" count={normal} detail="涉及区域" tone="normal" />
-        </div>
-      </div>
+      )}
     </Panel>
   )
 }
 
-function StatusRow({ label, count, detail, tone }: { label: string; count: number; detail: string; tone: string }) {
+function StatusSummary({ situation }: { situation: NonNullable<DashboardOverview['waterloggingSituation']> }) {
+  const deltaMagnitude = Math.abs(situation.changeVsHour).toFixed(1)
+  const deltaPrefix = situation.changeVsHour > 0 ? '+' : situation.changeVsHour < 0 ? '−' : ''
+  const deltaArrow = situation.changeVsHour > 0 ? '↑' : situation.changeVsHour < 0 ? '↓' : '→'
+  const deltaTone = situation.changeVsHour > 0 ? 'up' : situation.changeVsHour < 0 ? 'down' : 'flat'
+  const maxAreaEvents = Math.max(...situation.topDistricts.map((area) => area.eventCount), 1)
+
   return (
-    <div className={`status-row status-row--${tone}`}>
-      <span className="status-row-icon">{tone === 'critical' ? '◆' : tone === 'warning' ? '◆' : '◉'}</span>
-      <span className="status-row-copy"><strong>{label}</strong><small>{detail} {count}</small></span>
-      <strong className="status-row-value">{String(count).padStart(2, '0')}</strong>
+    <div className="status-summary">
+      <div className="status-summary-main">
+        <div className="status-summary-ring" role="img" aria-label={`积水事件 ${situation.totalEvents} 起，较1小时前${deltaPrefix}${deltaMagnitude}`}>
+          <div className="status-summary-ring-core">
+            <strong>{situation.totalEvents}</strong>
+            <span>积水事件</span>
+            <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
+              <b>{deltaArrow}</b>{deltaPrefix}{deltaMagnitude}<small>较1h前</small>
+            </span>
+          </div>
+        </div>
+        <div className="status-workflow" aria-label="事件处置状态">
+          <StatusSummaryItem label="待处置" detail="新发现事件" value={situation.disposition.pending} tone="pending" />
+          <StatusSummaryItem label="处理中" detail="正在排水 / 管控" value={situation.disposition.handling} tone="processing" />
+          <StatusSummaryItem label="已缓解" detail="水位持续下降" value={situation.disposition.relieved} tone="mitigated" />
+        </div>
+      </div>
+      <div className="status-summary-lower">
+        <div className="status-top-areas">
+          <div className="status-section-label"><span>高发区域</span><small>TOP 3</small></div>
+          {situation.topDistricts.slice(0, 3).map((area, index) => (
+            <div className="status-area-row" key={`${area.district}-${index}`}>
+              <span className="status-area-rank">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{area.district}</strong>
+              <span className="status-area-bar"><i style={{ width: `${(area.eventCount / maxAreaEvents) * 100}%` }} /></span>
+              <small>{String(area.eventCount).padStart(2, '0')}</small>
+            </div>
+          ))}
+          {situation.topDistricts.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
+        </div>
+        <div className="status-summary-metrics">
+          <StatusSummaryMetric icon="depth" label="最大水深" value={`${situation.metrics.maxDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="average" label="平均水深" value={`${situation.metrics.avgDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="response" label="平均响应时间" value={`${situation.metrics.avgResponseMinutes.toFixed(0)} min`} />
+          <StatusSummaryMetric icon="today" label="今日新增" value={`${situation.metrics.newToday > 0 ? '+' : ''}${situation.metrics.newToday} 起`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatusSummaryItem({ label, detail, value, tone }: { label: string; detail: string; value: number; tone: string }) {
+  return (
+    <div className={`status-workflow-item status-workflow-item--${tone}`}>
+      <span className="status-workflow-icon" aria-hidden="true" />
+      <div className="status-workflow-copy"><span>{label}</span><small>{detail}</small></div>
+      <strong>{String(value).padStart(2, '0')}</strong>
+    </div>
+  )
+}
+
+function StatusSummaryMetric({ icon, label, value }: { icon: 'depth' | 'average' | 'response' | 'today'; label: string; value: string }) {
+  return (
+    <div className="status-summary-metric">
+      <span className={`status-summary-metric-icon status-summary-metric-icon--${icon}`} aria-hidden="true" />
+      <span className="status-summary-metric-label">{label}</span>
+      <strong>{value}</strong>
     </div>
   )
 }
@@ -299,28 +355,37 @@ function MetricValue({ value, unit, label, tone, compact = false }: { value: str
 
 export interface RankingPanelProps {
   ranking: RainfallStationRankingItem[]
+  realRainfall?: ShanghaiWaterRainfallStation[] | null
+  realSource?: ShanghaiWaterSnapshot | null
   state?: PanelState
 }
 
-export function RankingPanel({ ranking, state = 'ready' }: RankingPanelProps) {
-  const rankedStations = [...ranking].sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5)
-  const maxValue = Math.max(...rankedStations.map((station) => station.intensityMmH), 1)
+export function RankingPanel({ ranking, realRainfall = null, realSource = null, state = 'ready' }: RankingPanelProps) {
+  const hasRealRainfall = Boolean(realRainfall?.length)
+  const rankedStations = hasRealRainfall
+    ? realRainfall!.slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.rainfallValue }))
+    : ranking.slice().sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.intensityMmH }))
+  const maxValue = Math.max(...rankedStations.map((station) => station.value), 1)
 
   return (
     <Panel className="ranking-panel" state={state}>
-      <PanelHeader title="重点区域雨强排行" icon="⌘" meta={<span>单位：mm/h</span>} />
-      <div className="ranking-caption"><span>排名 / 站点</span><small>雨强</small></div>
+      <PanelHeader title={hasRealRainfall ? '上海水务实时雨量' : '重点区域雨强排行'} icon="⌘" meta={<span>{hasRealRainfall ? '源站雨量值' : '单位：mm/h'}</span>} />
+      <div className="ranking-caption"><span>排名 / 站点</span><small>{hasRealRainfall ? '雨量值' : '雨强'}</small></div>
       <div className="ranking-list">
         {rankedStations.map((station, index) => (
           <div className="ranking-row" key={station.stationId}>
             <span className={`rank-badge rank-badge--${index + 1}`}>{index + 1}</span>
             <span className="ranking-name" title={station.stationName}>{station.stationName.replace(/站$/, '')}</span>
-            <span className="ranking-bar"><i style={{ width: `${(station.intensityMmH / maxValue) * 100}%` }} /></span>
-            <strong className="ranking-value ranking-value--high">{station.intensityMmH.toFixed(1)}</strong>
+            <span className="ranking-bar"><i style={{ width: `${(station.value / maxValue) * 100}%` }} /></span>
+            <strong className="ranking-value ranking-value--high">{station.value.toFixed(1)}</strong>
           </div>
         ))}
       </div>
-      <p className="panel-footnote">数据来源：Rainfall station ranking · 以雨强排序</p>
+      <p className="panel-footnote">
+        {hasRealRainfall
+          ? `数据来源：上海市水务局公开接口 · RAINVALUE；积水检测 ${realSource?.ponding.length ?? 0} 点，水位 ${realSource?.waterLevels.length ?? 0} 站`
+          : '数据来源：Rainfall station ranking · 以雨强排序'}
+      </p>
     </Panel>
   )
 }
@@ -329,16 +394,28 @@ export interface EventPanelProps {
   event: FloodEvent | null
   analysis: AIAnalysis | null
   sensor?: SensorState | null
+  sensorId?: string | null
+  historicalCases?: HistoricalFloodCase[]
+  selectedHistoricalCase?: HistoricalFloodCase | null
+  onSelectHistoricalCase?: (candidateId: string) => void
+  onClearHistoricalCase?: () => void
   onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, sensor = null, onOpenVision, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   if (!event) {
+    const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
     return (
-      <Panel className="event-panel" state={state === 'ready' ? 'empty' : state}>
+      <Panel className="event-panel" state={emptyState}>
         <PanelHeader title="内涝事件" icon="▮" meta={<span>未关联正式事件</span>} />
+        <HistoricalCasePanel
+          cases={historicalCases}
+          selectedCase={selectedHistoricalCase}
+          onSelect={onSelectHistoricalCase}
+          onClear={onClearHistoricalCase}
+        />
       </Panel>
     )
   }
@@ -366,9 +443,61 @@ export function EventPanel({ event, analysis, sensor = null, onOpenVision, state
         <span>事件类型 <strong>{event.eventType}</strong></span>
         <span>持续时长 <strong>00:{String(durationMinutes).padStart(2, '0')}:41</strong></span>
       </div>
-      <SensorEvidence sensor={sensor} />
+      <SensorEvidence sensor={sensor} sensorId={sensorId} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
+  )
+}
+
+export interface HistoricalCasePanelProps {
+  cases: HistoricalFloodCase[]
+  selectedCase?: HistoricalFloodCase | null
+  onSelect?: (candidateId: string) => void
+  onClear?: () => void
+}
+
+export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onClear }: HistoricalCasePanelProps) {
+  if (selectedCase) {
+    return (
+      <div className="historical-case-detail">
+        <button type="button" className="historical-case-back" onClick={onClear}>← 历史案例列表</button>
+        <div className="historical-case-kicker">历史公开案例 · {selectedCase.incidentDate}</div>
+        <h3>{selectedCase.locationText}</h3>
+        <div className="historical-case-facts">
+          <div><span>区域</span><strong>{selectedCase.district}</strong></div>
+          <div><span>报道水深</span><strong>{selectedCase.depthCm == null ? selectedCase.depthEvidenceText ?? '来源未提供' : `${selectedCase.depthCm.toFixed(1)} cm`}</strong></div>
+          <div><span>传感器</span><strong>公开资料未提供</strong></div>
+          <div><span>报道日期</span><strong>{selectedCase.reportDate}</strong></div>
+        </div>
+        <section className="historical-case-section">
+          <h4>事件记录</h4>
+          <p>{selectedCase.confirmedFacts}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>交通影响</h4>
+          <p>{selectedCase.trafficImpact ?? '来源未说明'}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>官方处置</h4>
+          {selectedCase.officialActions.length > 0 ? <div className="historical-case-actions">{selectedCase.officialActions.map((action) => <span key={action}>{action}</span>)}</div> : <p>来源未逐项说明</p>}
+        </section>
+        <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="historical-case-browser">
+      <p className="historical-case-intro">当前点位未关联正式实时事件。地图中的历史点位可点选，以下为已核验的公开案例，不代表当前告警。</p>
+      <div className="historical-case-list" aria-label="历史公开案例列表">
+        {cases.map((item) => (
+          <button type="button" className="historical-case-item" key={item.candidateId} onClick={() => onSelect?.(item.candidateId)}>
+            <span className="historical-case-item-main"><strong>{item.district} · {item.locationText}</strong><small>{item.incidentDate}</small></span>
+            <span className="historical-case-item-note">{item.trafficImpact ?? '官方积水记录'} <i>›</i></span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -378,9 +507,17 @@ function EventMetric({ label, value, unit }: { label: string; value: string; uni
 
 export interface SensorEvidenceProps {
   sensor: SensorState | null
+  sensorId?: string | null
 }
 
 type SensorFreshnessStatus = 'ONLINE' | 'STALE' | 'OFFLINE' | 'NO_EVIDENCE'
+
+const SENSOR_STATUS_LABEL: Record<SensorFreshnessStatus, string> = {
+  ONLINE: '在线',
+  STALE: '延迟',
+  OFFLINE: '离线',
+  NO_EVIDENCE: '未上报',
+}
 
 function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
   if (!sensor) return 'NO_EVIDENCE'
@@ -392,29 +529,84 @@ function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
   return 'ONLINE'
 }
 
-export function SensorEvidence({ sensor }: SensorEvidenceProps) {
+export function SensorEvidence({ sensor, sensorId = null }: SensorEvidenceProps) {
   const status = getSensorFreshness(sensor)
+
   if (!sensor) {
     return (
       <div className="sensor-evidence sensor-evidence--empty" role="status">
-        <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · source=SENSOR</span><strong>NO EVIDENCE</strong></div>
-        <p>当前没有可验证的传感器状态；事件水深不等同于实测水深。</p>
+        <div className="sensor-evidence-head"><span>传感器状态</span><strong>{SENSOR_STATUS_LABEL[status]}</strong></div>
+        {sensorId && <div className="sensor-evidence-grid"><span><small>对应传感器</small><b>{sensorId}</b></span></div>}
+        <p>当前暂无实测数据</p>
       </div>
     )
   }
 
   return (
     <div className={`sensor-evidence sensor-evidence--${status.toLowerCase()}`}>
-      <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · source=SENSOR</span><strong>{status}</strong></div>
+      <div className="sensor-evidence-head"><span>传感器状态</span><strong>{SENSOR_STATUS_LABEL[status]}</strong></div>
       <div className="sensor-evidence-grid">
         <span><small>sensorId</small><b>{sensor.sensorId}</b></span>
-        <span><small>current depth</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
-        <span><small>observedAt</small><b>{formatClock(sensor.observedAt)}</b></span>
-        <span><small>freshness</small><b>{status}</b></span>
-        <span><small>source</small><b>SENSOR</b></span>
-        <span><small>device</small><b>{sensor.source ?? 'UNKNOWN'}</b></span>
+        <span><small>当前实测水深</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
+        <span><small>最后上报</small><b>{formatClock(sensor.receivedAt)}</b></span>
       </div>
     </div>
+  )
+}
+
+export interface SceneEventCardProps {
+  event: FloodEvent | null
+  analysis: AIAnalysis | null
+  sensor?: SensorState | null
+  sensorId?: string | null
+}
+
+export function SceneEventCard({ event, analysis, sensor = null, sensorId = null }: SceneEventCardProps) {
+  if (!event) return null
+
+  const sensorStatus = getSensorFreshness(sensor)
+  const actions = analysis?.actions.slice().sort((left, right) => left.priority - right.priority).slice(0, 3) ?? []
+  const currentDepthCm = sensor?.depthCm ?? event.currentDepthCm
+
+  return (
+    <article className={`scene-event-card scene-event-card--${event.riskLevel.toLowerCase()}`} aria-label="选中积水事件详情">
+      <header className="scene-event-card-header">
+        <div>
+          <span className="scene-event-card-kicker">内涝事件</span>
+          <h3>{formatSceneEventName(event.name)}</h3>
+        </div>
+        <span className={`scene-event-card-risk scene-event-card-risk--${event.riskLevel.toLowerCase()}`}>{RISK_LABEL[event.riskLevel]}</span>
+      </header>
+
+      <section className="scene-event-card-section scene-event-card-section--facts">
+        <div className="scene-event-card-row"><span>位置</span><strong>{event.district} · {event.eventType}</strong></div>
+        <div className="scene-event-card-row"><span>当前水深</span><strong className="scene-event-card-value--warning">{currentDepthCm.toFixed(1)} cm</strong></div>
+        <div className="scene-event-card-row"><span>上涨速度</span><strong className="scene-event-card-value--warning">{event.riseRateCmMin.toFixed(1)} cm/min</strong></div>
+      </section>
+
+      <section className="scene-event-card-section">
+        <h4>对应传感器</h4>
+        <div className="scene-event-card-sensor-head">
+          <strong>{sensor?.sensorId ?? sensorId ?? '未关联传感器'}</strong>
+          <span className={`scene-event-card-sensor-status scene-event-card-sensor-status--${sensorStatus.toLowerCase()}`}>{SENSOR_STATUS_LABEL[sensorStatus]}</span>
+        </div>
+        {sensor ? (
+          <div className="scene-event-card-sensor-grid">
+            <div><span>当前实测水深</span><strong>{sensor.depthCm.toFixed(1)} cm</strong></div>
+            <div><span>最后上报</span><strong>{formatClock(sensor.receivedAt)}</strong></div>
+          </div>
+        ) : <p className="scene-event-card-empty">当前暂无实测数据</p>}
+      </section>
+
+      <section className="scene-event-card-section scene-event-card-section--actions">
+        <h4>处置建议</h4>
+        <div className="scene-event-card-actions">
+          {actions.length > 0 ? actions.map((action, index) => (
+            <span className={`scene-event-card-action scene-event-card-action--${index + 1}`} key={`${action.priority}-${action.title}`}>{action.title}</span>
+          )) : <span className="scene-event-card-empty">暂无处置建议</span>}
+        </div>
+      </section>
+    </article>
   )
 }
 
@@ -470,6 +662,7 @@ export interface CctvCardProps {
   state?: PanelState
   showOverlay?: boolean
   overlayData?: CctvOverlayData
+  decision?: DecisionProjection | null
   videoEvidenceState?: VideoEvidenceState
   onVideoReady?: (ready: boolean) => void
   onVideoTimeUpdate?: (currentTimeSec: number) => void
@@ -477,7 +670,7 @@ export interface CctvCardProps {
 
 export type CctvOverlayData = VideoOverlayData
 
-export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
+export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -507,10 +700,10 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         : 'RESULT NOT ATTACHED'
   const researchVideo = camera.mediaUrl?.startsWith('/runtime/vision-video/') === true ||
     (overlayData?.runtimePolicy === 'research_mvp' && !overlayData.synthetic)
-  const displayName = researchVideo ? `研究视频 · ${overlayData?.sourceId ?? '本地研究证据'}` : camera.name
-  const mediaStatusLabel = researchVideo ? 'RESEARCH · NOT LIVE' : camera.status
-  const sourceLabel = researchVideo ? 'VISION_VIDEO · RESEARCH_MVP / NOT LIVE' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
-  const licenseLabel = overlayData?.licenseReview === 'pending' ? 'LICENSE_PENDING' : overlayData?.licenseReview === 'approved' ? 'LICENSE_APPROVED' : overlayData?.licenseReview === 'not_required' ? 'LICENSE_NOT_REQUIRED' : null
+  const displayName = researchVideo ? '非实时视频' : camera.name
+  const mediaStatusLabel = researchVideo ? '非实时视频' : camera.status
+  const sourceLabel = researchVideo ? '视频证据 · 非实时' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
+  const decisionDisplay = overlayData ? getDecisionDisplay(overlayData.floodDetected, decision) : null
 
   return (
     <Panel className="cctv-panel" state={state}>
@@ -546,9 +739,25 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         ))}
         <span className="cctv-source-tag">{mediaState === 'ready' ? sourceLabel : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
         <span className="cctv-overlay-status">{overlayStatusLabel}</span>
-        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <span className="cctv-evidence-meta">
-          {overlayData.synthetic ? 'SYNTHETIC_DEMO' : overlayData.sourceType} · {overlayData.sourceId} · {overlayData.runtimePolicy.toUpperCase()} · {licenseLabel ?? 'LICENSE_UNKNOWN'} · t={overlayData.timestampMs}ms · L{overlayData.level} · {formatRangeCm(overlayData.rangeCm)} · {overlayData.estimatedDepthCm === null ? 'estimatedDepthCm=null' : `estimatedDepthCm=${overlayData.estimatedDepthCm.toFixed(1)}cm`} · {overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'qualityFlags=none'}
-        </span>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && decisionDisplay && <div className="cctv-decision-strip" aria-label="视频决策结论">
+          <div><small>检测结论</small><b>{decisionDisplay.conclusion}</b></div>
+          <div><small>估计水深</small><b>{decisionDisplay.depth}</b></div>
+          <div><small>通行状态</small><b>{decisionDisplay.trafficStatus}</b></div>
+          <p>行动建议：{decisionDisplay.recommendation}</p>
+        </div>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <details className="cctv-tech-details">
+          <summary>技术详情</summary>
+          <dl>
+            <div><dt>sourceType</dt><dd>{overlayData.sourceType}</dd></div>
+            <div><dt>sourceId</dt><dd>{overlayData.sourceId}</dd></div>
+            <div><dt>runtimePolicy</dt><dd>{overlayData.runtimePolicy}</dd></div>
+            <div><dt>licenseReview</dt><dd>{overlayData.licenseReview}</dd></div>
+            <div><dt>frame</dt><dd>{overlayData.frameId} · t={overlayData.timestampMs}ms</dd></div>
+            <div><dt>rangeCm</dt><dd>{formatRangeCm(overlayData.rangeCm)}</dd></div>
+            <div><dt>estimatedDepthCm</dt><dd>{overlayData.estimatedDepthCm === null ? 'null' : `${overlayData.estimatedDepthCm.toFixed(1)} cm`}</dd></div>
+            <div><dt>quality</dt><dd>{overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'none'}</dd></div>
+          </dl>
+        </details>}
         <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? mediaStatusLabel : mediaState === 'loading' ? 'MEDIA CHECKING' : `${mediaStatusLabel} · PLACEHOLDER`}</span>
         {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
@@ -617,60 +826,64 @@ function formatVisionRange(range: VisionDepthObservation['depth']['rangeCm']): s
   return `${minimum}–${maximum} cm`
 }
 
-function getVisionBusinessResult(observation: VisionDepthObservation) {
-  if (!observation.floodDetected) {
-    return {
-      status: '未检测到积水',
-      depth: '未发现积水',
-      note: '当前图像未检测到明确积水区域。',
-    }
-  }
-
-  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
-    return {
-      status: '检测到积水',
-      depth: `约 ${observation.depth.approximateDepthCm.toFixed(0)} cm`,
-      note: '粗略视觉估计：依据当前积水范围代表值，不等同于传感器实测水深。',
-    }
-  }
-
-  if (observation.depth.estimatedDepthCm === null) {
-    return {
-      status: '检测到积水',
-      depth: '水深暂不可量化',
-      note: '当前证据不足以形成可复核厘米值；不会用 level 或 range 代替精确水深。',
-    }
-  }
-
-  return {
-    status: '检测到积水',
-    depth: `约 ${observation.depth.estimatedDepthCm.toFixed(1)} cm`,
-    note: '视觉估计值仅作为独立证据，不覆盖传感器当前实测水深。',
-  }
+interface DecisionDisplay {
+  conclusion: string
+  depth: string
+  trafficStatus: string
+  recommendation: string
 }
 
-function getVisionPassability(observation: VisionDepthObservation) {
-  if (!observation.floodDetected) {
-    return {
-      label: '未发现积水阻断证据',
-      note: '仅代表当前图像证据，不代表道路整体通行条件。',
-    }
-  }
-  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
-    return {
-      label: '粗略参考 · 待水深标定',
-      note: '当前数值用于演示和初筛，正式通行判断仍需标定水深。',
-    }
-  }
-  if (observation.depth.estimatedDepthCm === null) {
-    return {
-      label: '待水深标定',
-      note: '没有可复核厘米值，不进行通行能力推断。',
-    }
-  }
+const TRAFFIC_STATUS_LABELS: Record<string, string> = {
+  NORMAL: '正常通行',
+  NORMAL_PASSAGE: '正常通行',
+  CAUTION: '谨慎通行',
+  CAUTION_PASSAGE: '谨慎通行',
+  NOT_RECOMMENDED: '不建议通行',
+  DO_NOT_PASS: '不建议通行',
+  PROHIBITED: '禁止通行',
+  NO_PASSAGE: '禁止通行',
+  正常通行: '正常通行',
+  谨慎通行: '谨慎通行',
+  不建议通行: '不建议通行',
+  禁止通行: '禁止通行',
+}
+
+const RECOMMENDATION_BY_TRAFFIC_STATUS: Record<string, string> = {
+  正常通行: '可维持通行，继续关注现场变化',
+  谨慎通行: '建议减速观察，必要时临时管控',
+  不建议通行: '建议限制通行并加强现场处置',
+  禁止通行: '积水较深，建议立即封控并组织排水',
+}
+
+function normalizeTrafficStatus(value: string | undefined): string {
+  const candidate = value?.trim() ?? ''
+  if (!candidate) return '待判定'
+  return TRAFFIC_STATUS_LABELS[candidate] ?? TRAFFIC_STATUS_LABELS[candidate.toUpperCase()] ?? '待判定'
+}
+
+function isUsableRecommendation(value: string | undefined): value is string {
+  const candidate = value?.trim() ?? ''
+  return Boolean(candidate)
+    && /[\u4e00-\u9fff]/.test(candidate)
+    && !/(粗略|视觉估计|当前证据不足|待水深标定|仅供初筛|不等同|传感器实测|等待行动建议|待判定|暂无)/.test(candidate)
+    && !/(confidence|quality|source|rough|visual estimate)/i.test(candidate)
+}
+
+function getDecisionDisplay(floodDetected: boolean, decision?: DecisionProjection | null): DecisionDisplay {
+  const decisionDepth = decision?.decisionDepthCm
+  const depth = typeof decisionDepth === 'number' && Number.isFinite(decisionDepth)
+    ? `约 ${decisionDepth.toFixed(0)} cm`
+    : '待形成'
+  const trafficStatus = normalizeTrafficStatus(decision?.trafficStatus)
+  const recommendation = isUsableRecommendation(decision?.recommendation)
+    ? decision.recommendation.trim()
+    : RECOMMENDATION_BY_TRAFFIC_STATUS[trafficStatus] ?? (floodDetected ? '请结合现场情况处置' : '保持常规巡检')
+
   return {
-    label: '待通行阈值判定',
-    note: '当前 Contract 未提供车型/道路通行阈值，避免由单一水深值直接推断可通行性。',
+    conclusion: floodDetected ? '检测到积水' : '未检测到积水',
+    depth,
+    trafficStatus,
+    recommendation,
   }
 }
 
@@ -693,8 +906,7 @@ export function VisionDepthDrawer({
   const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
   const maskUrl = resolveVisionMediaUrl(observation?.waterMaskPath)
   const range = observation?.depth.rangeCm ?? [null, null]
-  const businessResult = observation ? getVisionBusinessResult(observation) : null
-  const passability = observation ? getVisionPassability(observation) : null
+  const decisionDisplay = observation ? getDecisionDisplay(observation.floodDetected, observation.decision) : null
   const calibrationLabel = observation?.qualityFlags.includes('CAMERA_UNCALIBRATED')
     ? '未标定（CAMERA_UNCALIBRATED）'
     : '当前 Contract 未显式提供 CameraProfile 标定状态'
@@ -727,15 +939,14 @@ export function VisionDepthDrawer({
       {state === 'error' && <p className="vision-state vision-state--error" role="alert">{errorMessage ?? 'VisionDepth 读取失败'}</p>}
       {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
 
-      {observation && businessResult && passability && (
+      {observation && decisionDisplay && (
         <section className={`vision-business-card ${observation.floodDetected ? 'is-flood' : 'is-clear'}`} aria-label="图像积水业务结论">
-          <div className="vision-business-status"><i />{businessResult.status}</div>
-          <strong className="vision-business-depth">{businessResult.depth}</strong>
-          <p className="vision-business-note">{businessResult.note}</p>
+          <div className="vision-business-status"><i />{decisionDisplay.conclusion}</div>
+          <div className="vision-business-depth"><span>估计水深</span><strong>{decisionDisplay.depth}</strong></div>
           <div className="vision-passability">
             <span>通行状态</span>
-            <b>{passability.label}</b>
-            <small>{passability.note}</small>
+            <b>{decisionDisplay.trafficStatus}</b>
+            <small>行动建议：{decisionDisplay.recommendation}</small>
           </div>
         </section>
       )}

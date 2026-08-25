@@ -68,6 +68,17 @@
     "quality": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "REJECT"]},
     "qualityFlags": {"type": "array", "items": {"type": "string"}},
     "model": {"type": "object"},
-    "synthetic": {"type": "boolean"}
+    "synthetic": {"type": "boolean"},
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["floodDetected", "decisionDepthCm", "trafficStatus", "recommendation"],
+      "properties": {
+        "floodDetected": {"type": "boolean"},
+        "decisionDepthCm": {"type": ["number", "null"], "minimum": 0},
+        "trafficStatus": {"type": "string", "enum": ["NORMAL", "CAUTION", "NOT_RECOMMENDED", "PROHIBITED"]},
+        "recommendation": {"type": "string", "minLength": 1}
+      }
+    }
   }
 }

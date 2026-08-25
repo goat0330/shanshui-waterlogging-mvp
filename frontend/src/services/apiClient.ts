@@ -6,9 +6,11 @@ import type {
   FloodEvent,
   FloodForecast,
   FloodPoint,
+  HistoricalFloodCase,
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterSnapshot,
   SensorState,
 } from '../types'
 
@@ -30,6 +32,7 @@ export const apiClient: DashboardDataClient = {
   getRainfall: () => requestJson<RainfallSnapshot>('/api/v1/rainfall/current'),
   getRainfallStationRanking: () => requestJson<RainfallStationRankingItem[]>('/api/v1/rainfall/stations/ranking'),
   listFloodPoints: () => requestJson<FloodPoint[]>('/api/v1/flood-points'),
+  listHistoricalCases: () => requestJson<HistoricalFloodCase[]>('/api/v1/historical-cases'),
   getFloodEvent: (eventId: string) => requestJson<FloodEvent>(`/api/v1/flood-events/${encodeURIComponent(eventId)}`),
   getFloodForecast: (eventId: string) => requestJson<FloodForecast>(`/api/v1/flood-events/${encodeURIComponent(eventId)}/forecast`),
   getFloodAnalysis: (eventId: string) => requestJson<AIAnalysis>(`/api/v1/flood-events/${encodeURIComponent(eventId)}/analysis`),
@@ -37,6 +40,7 @@ export const apiClient: DashboardDataClient = {
   getCamera: (cameraId: string) => requestJson<Camera>(`/api/v1/cameras/${encodeURIComponent(cameraId)}`),
   getSensorState: (sensorId: string) => requestJson<SensorState>(`/api/v1/sensors/${encodeURIComponent(sensorId)}`),
   getTimeline: (scenarioId: string) => requestJson<ScenarioTimeline>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/timeline`),
+  getShanghaiWater: () => requestJson<ShanghaiWaterSnapshot>('/api/v1/external/shanghai-water').catch(() => null),
 }
 
 export function getRealtimeUrl(baseUrl = API_BASE_URL): string {

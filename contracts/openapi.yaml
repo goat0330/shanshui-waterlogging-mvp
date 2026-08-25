@@ -397,6 +397,75 @@ components:
           $ref: "#/components/schemas/UrbanStatus"
         activeFloodPoints:
           type: integer
+        waterloggingSituation:
+          $ref: "#/components/schemas/WaterloggingSituation"
+
+    WaterloggingSituation:
+      type: object
+      required: [totalEvents, changeVsHour, disposition, topDistricts, metrics, source]
+      additionalProperties: false
+      properties:
+        totalEvents:
+          type: integer
+          minimum: 0
+        changeVsHour:
+          type: number
+        disposition:
+          $ref: "#/components/schemas/WaterloggingDisposition"
+        topDistricts:
+          type: array
+          items:
+            $ref: "#/components/schemas/WaterloggingDistrict"
+        metrics:
+          $ref: "#/components/schemas/WaterloggingMetrics"
+        source:
+          type: string
+          minLength: 1
+
+    WaterloggingDisposition:
+      type: object
+      required: [pending, handling, relieved]
+      additionalProperties: false
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+        handling:
+          type: integer
+          minimum: 0
+        relieved:
+          type: integer
+          minimum: 0
+
+    WaterloggingDistrict:
+      type: object
+      required: [district, eventCount]
+      additionalProperties: false
+      properties:
+        district:
+          type: string
+          minLength: 1
+        eventCount:
+          type: integer
+          minimum: 0
+
+    WaterloggingMetrics:
+      type: object
+      required: [maxDepthCm, avgDepthCm, avgResponseMinutes, newToday]
+      additionalProperties: false
+      properties:
+        maxDepthCm:
+          type: number
+          minimum: 0
+        avgDepthCm:
+          type: number
+          minimum: 0
+        avgResponseMinutes:
+          type: number
+          minimum: 0
+        newToday:
+          type: integer
+          minimum: 0
 
     RainfallSnapshot:
       type: object
@@ -627,6 +696,8 @@ components:
               type: string
         provenance:
           $ref: "#/components/schemas/VisionDepthProvenance"
+        decision:
+          $ref: "#/components/schemas/VisionDecisionProjection"
         floodDetected:
           type: boolean
         depth:
@@ -702,3 +773,24 @@ components:
         runtimePolicy:
           type: string
           enum: [research_mvp, production]
+
+    VisionDecisionProjection:
+      type: object
+      required: [floodDetected, decisionDepthCm, trafficStatus, recommendation]
+      additionalProperties: false
+      properties:
+        floodDetected:
+          type: boolean
+        decisionDepthCm:
+          type: number
+          minimum: 0
+          nullable: true
+        trafficStatus:
+          $ref: "#/components/schemas/VisionDecisionTrafficStatus"
+        recommendation:
+          type: string
+          minLength: 1
+
+    VisionDecisionTrafficStatus:
+      type: string
+      enum: [NORMAL, CAUTION, NOT_RECOMMENDED, PROHIBITED]

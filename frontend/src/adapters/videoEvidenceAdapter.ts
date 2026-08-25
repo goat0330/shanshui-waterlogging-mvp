@@ -1,4 +1,4 @@
-import type { VisionDepthObservation, VisionDepthProvenance } from '../types'
+import type { DecisionProjection, VisionDepthObservation, VisionDepthProvenance } from '../types'
 
 export type VideoEvidenceState = 'loading' | 'ready' | 'missing' | 'error'
 
@@ -6,6 +6,7 @@ export interface VideoEvidenceFrame {
   frameId: string
   timestampMs: number
   observation: VisionDepthObservation
+  decision?: DecisionProjection
   overlay?: {
     referenceBoxes?: unknown[]
   }
@@ -32,6 +33,7 @@ export interface VideoOverlayData {
   quality: VisionDepthObservation['quality']
   qualityFlags: string[]
   synthetic: boolean
+  decision?: DecisionProjection
   waterMaskUrl?: string
   objects?: Array<{
     type: 'vehicle' | 'person'
@@ -77,6 +79,30 @@ function isVisionMethod(value: unknown): value is VisionDepthObservation['method
 
 function isVisionQuality(value: unknown): value is VisionDepthObservation['quality'] {
   return typeof value === 'string' && VISION_QUALITIES.includes(value as VisionDepthObservation['quality'])
+}
+
+function isDecisionProjection(value: unknown): value is DecisionProjection {
+  if (!isRecord(value)) return false
+  return (
+    isNullableFiniteNumber(value.decisionDepthCm) &&
+    typeof value.trafficStatus === 'string' &&
+    typeof value.recommendation === 'string'
+  )
+}
+
+function readDecision(value: unknown): DecisionProjection | null {
+  if (!isDecisionProjection(value)) return null
+  return {
+    decisionDepthCm: value.decisionDepthCm,
+    trafficStatus: value.trafficStatus,
+    recommendation: value.recommendation,
+  }
+}
+
+function readFrameDecision(frame: RecordValue): DecisionProjection | null {
+  const directDecision = readDecision(frame.decision)
+  if (directDecision) return directDecision
+  return isRecord(frame.overlay) ? readDecision(frame.overlay.decision) : null
 }
 
 function hasProvenance(value: unknown): value is VisionDepthProvenance {
@@ -136,6 +162,7 @@ function normalizeFlatObservation(frame: RecordValue, bundle: RecordValue, index
   const referenceObjects = frame.referenceObjects
   const model = isRecord(frame.model) ? frame.model : isRecord(bundle.model) ? bundle.model : {}
   const synthetic = typeof frame.synthetic === 'boolean' ? frame.synthetic : bundle.synthetic
+  const decision = readFrameDecision(frame)
   const videoId = typeof bundle.videoId === 'string' && bundle.videoId.length > 0 ? bundle.videoId : provenance?.sourceId
   const frameIndex = isFiniteNumber(frame.frameIndex) ? frame.frameIndex : index
   const suppliedFrameId = typeof frame.frameId === 'string' && frame.frameId.length > 0 ? frame.frameId : null
@@ -179,12 +206,26 @@ function normalizeFlatObservation(frame: RecordValue, bundle: RecordValue, index
     qualityFlags,
     model,
     synthetic,
+    ...(decision ? { decision } : {}),
   }
+}
+
+function normalizeNestedObservation(observation: VisionDepthObservation, frameDecision: DecisionProjection | null): VisionDepthObservation {
+  const nestedDecision = readDecision(observation.decision)
+  if (nestedDecision) return { ...observation, decision: nestedDecision }
+  if (frameDecision) return { ...observation, decision: frameDecision }
+  if (observation.decision === undefined || observation.decision === null) return observation
+  const { decision: _invalidDecision, ...withoutDecision } = observation
+  return withoutDecision
 }
 
 function normalizeFrame(value: unknown, index: number, bundle: RecordValue): VideoEvidenceFrame {
   if (!isRecord(value)) throw new Error(`Invalid video evidence frame at index ${index}`)
-  const observation = hasObservation(value.observation) ? value.observation : normalizeFlatObservation(value, bundle, index)
+  const nestedObservation = hasObservation(value.observation) ? value.observation : null
+  const frameDecision = readFrameDecision(value) ?? nestedObservation?.decision ?? null
+  const observation = nestedObservation
+    ? normalizeNestedObservation(nestedObservation, frameDecision)
+    : normalizeFlatObservation(value, bundle, index)
   const timestampMs = typeof value.timestampMs === 'number' ? value.timestampMs : Number(value.timestampMs)
   if (!Number.isFinite(timestampMs) || timestampMs < 0) {
     throw new Error(`Invalid video evidence timestamp at index ${index}`)
@@ -194,7 +235,7 @@ function normalizeFrame(value: unknown, index: number, bundle: RecordValue): Vid
     ? value.overlay.referenceBoxes
     : Array.isArray(value.referenceBoxes) ? value.referenceBoxes : undefined
   const overlay = referenceBoxes ? { referenceBoxes } : undefined
-  return { frameId, timestampMs, observation, overlay }
+  return { frameId, timestampMs, observation, ...(frameDecision ? { decision: frameDecision } : {}), overlay }
 }
 
 export function parseVideoEvidenceBundle(value: unknown): VideoEvidenceBundle {
@@ -251,6 +292,7 @@ function browserAssetUrl(value: string): string | undefined {
 
 export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData {
   const observation = frame.observation
+  const decision = frame.decision ?? observation.decision
   return {
     frameId: frame.frameId,
     timestampMs: frame.timestampMs,
@@ -267,6 +309,7 @@ export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData 
     quality: observation.quality,
     qualityFlags: observation.qualityFlags,
     synthetic: observation.synthetic,
+    ...(decision ? { decision } : {}),
     waterMaskUrl: browserAssetUrl(observation.waterMaskPath),
     objects: normalizeReferenceBoxes(frame.overlay?.referenceBoxes),
   }

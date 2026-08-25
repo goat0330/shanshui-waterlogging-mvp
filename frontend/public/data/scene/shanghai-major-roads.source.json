@@ -1,0 +1,14 @@
+{
+  "source": "OpenStreetMap contributors via Geofabrik",
+  "sourceArchive": "shanghai-260824-free.shp.zip",
+  "sourceLayer": "gis_osm_roads_free_1",
+  "snapshot": "2026-08-24T20:20:50Z",
+  "license": "Open Database License 1.0 (ODbL)",
+  "attribution": "© OpenStreetMap contributors",
+  "coordinateSystem": "WGS84 lon/lat",
+  "geometry": "LineString",
+  "filter": ["motorway", "trunk", "primary"],
+  "featureCount": 21598,
+  "coverage": "Shanghai extract; main road classes for Cesium MVP",
+  "notes": "Secondary and tertiary roads remain available in the source archive but are deferred from the initial runtime payload."
+}
