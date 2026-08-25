@@ -39,6 +39,16 @@ An object box alone never produces a metric depth estimate. When no reliable ref
 
 The V-FloodNet project was used only as an architecture reference (water segmentation -> reference object -> waterline/submersion -> coarse depth). Its source was not copied; the repository planning document records its license metadata as undeclared, so it is not a runtime dependency.
 
+## Optional RC2.3 learned candidate
+
+`vision.train_water_segmenter` is an opt-in research command. It trains a small pixel-level Logistic Regression mask adapter on the locally acquired Urban Flood Image Dataset and evaluates it on a source-level WebCOOS holdout. The default V1/V2 pipeline remains OpenCV; no checkpoint is downloaded automatically or committed to Git.
+
+```text
+python -m vision.train_water_segmenter --data-root <local Urban-Flood-Image-Dataset> --model-out <local checkpoint.joblib> --metrics-out vision/artifacts/urban-flood-segmentation-metrics.json --examples-dir <local examples>
+```
+
+This candidate only predicts a water mask. It does not produce `estimatedDepthCm`, does not use a level-to-centimetres lookup, and does not replace the shared image/video pipeline until a separate provenance, domain and product gate accepts its checkpoint.
+
 ## Runtime dependencies
 
 The verified environment already contains Python 3.11, OpenCV 4.13, Pillow 11.3, NumPy 1.26 and requests 2.32. No new package was installed for V1. `torch`, `transformers` and `ultralytics` may exist in the environment but are intentionally not used without verified weights and a separate license decision.
