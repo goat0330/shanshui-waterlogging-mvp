@@ -59,6 +59,8 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 ## Checkpoint
 
 - Local-main checkpoint: `a9d369a` (frontend StatusPanel refinement cherry-picked onto the Cesium-updated local `main`).
+- Point relation integration checkpoint: worker `8028482`; local Main cherry-pick `2fbdfda`.
+- Commit SHA: `d0f210d706604b91d19f0b79135905ee107cc0f0`
 - SceneEventCard is the bounded image-to-code addition for the selected event point; status remains `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW` pending user visual review.
 - The card consumes the existing selected event, sensor, and analysis data path in API/fixture modes. The running local sensor endpoint was not verified as available; no backend contract or fallback truthfulness was changed.
 - StatusPanel target source: `C:\Users\WangChi\AppData\Local\Temp\codex-clipboard-94f3bfbf-5f6b-4292-9aa2-a91ed80e0342.png`; previous implementation comparison: `C:\Users\WangChi\AppData\Local\Temp\codex-clipboard-001137d8-10af-476f-b9ae-380ff3219e8f.png`.
