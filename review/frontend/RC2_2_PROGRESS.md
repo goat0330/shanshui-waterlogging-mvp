@@ -46,6 +46,15 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 - Real CCTV/media, calibrated centimeter accuracy, production model/runtime, Cesium runtime, and final visual match against the target/Golden remain unverified.
 
+## Bounded point-to-event integration repair (2026-08-25)
+
+- Frontend now consumes optional `FloodPoint.eventId` and `FloodPoint.sensorId` when present; an explicit backend `null` is respected and does not fall back to a guessed event.
+- The data hook loads related event/forecast/analysis/camera/sensor records by the selected point relation and keeps the existing fixture fallback for older responses.
+- The selected event card and right-side sensor block show the associated sensor ID even when the backend correctly returns `404` because no latest telemetry exists; they show `未上报 / 当前暂无实测数据` rather than claiming an online sensor.
+- Backend checkpoint `f7493c5` exposes the relation in memory and Postgres projections and verifies FP-001 plus null relations for FP-002 through FP-005. The local backend process used for browser verification was started on port `8001`; the older process on port `8000` still serves the pre-relation response until restarted.
+- Formal `contracts/openapi.yaml` still needs the two optional nullable `eventId` and `sensorId` properties; this frontend/backend repair does not claim that contract update is complete.
+- Browser/API smoke on `http://127.0.0.1:5175/` against backend `8001`: FP-001 click opened the card with `人民路 · 滨江大道`, `28.6 cm`, `SSZJ-NODE-001`, `未上报`, and three actions; console errors: `0`.
+
 ## Checkpoint
 
 - Commit SHA: `d0f210d706604b91d19f0b79135905ee107cc0f0`

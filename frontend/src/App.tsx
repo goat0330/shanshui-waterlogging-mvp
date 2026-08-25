@@ -25,6 +25,7 @@ import {
   type LayerVisibility,
 } from './components'
 import { homeFixtures } from './data/homeFixtures'
+import { getFloodPointEventId } from './data/mappings'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
@@ -147,9 +148,16 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     forecast: data.forecast,
     analysis: data.analysis,
     camera: data.camera,
+    eventsById: data.eventsById,
+    forecastsByEventId: data.forecastsByEventId,
+    analysesByEventId: data.analysesByEventId,
+    camerasById: data.camerasById,
   })
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
-  const sensor = data.sensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event ? createDemoSensorEvidence(selectedEvent.event) : null)
+  const selectedSensor = selectedEvent.sensorId
+    ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
+    : null
+  const sensor = selectedSensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
   const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
   const cameraId = selectedEvent.camera?.id ?? null
   const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
@@ -238,7 +246,9 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const videoOverlayData = selectedVideoFrame ? toVideoOverlayData(selectedVideoFrame) : undefined
 
   const handlePointSelect = (pointId: string) => {
-    setEventCardOpen((open) => selectedPointId === pointId ? !open : true)
+    const point = data.points.find((item) => item.id === pointId) ?? null
+    const hasEvent = getFloodPointEventId(point) !== null
+    setEventCardOpen((open) => hasEvent && (selectedPointId === pointId ? !open : true))
     setSelectedPointId(pointId)
   }
 
@@ -255,7 +265,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         onPointSelect={handlePointSelect}
         onLayerToggle={toggleLayer}
       />
-      {eventCardOpen && <SceneEventCard event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} />}
+      {eventCardOpen && <SceneEventCard event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} />}
       <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
@@ -263,7 +273,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         <RankingPanel ranking={data.rainfallRanking} />
       </div>
       <div className="dashboard-side dashboard-side--right">
-        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
+        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} onOpenVision={() => setVisionOpen(true)} />
         <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
         <CctvCard
           camera={selectedEvent.camera}

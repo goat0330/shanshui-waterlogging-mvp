@@ -90,6 +90,8 @@ export interface FloodPoint {
   depthCm: number
   riskLevel: RiskLevel
   trend: 'UP' | 'STABLE' | 'DOWN'
+  eventId?: string | null
+  sensorId?: string | null
 }
 
 export interface FloodEvent {
@@ -219,6 +221,11 @@ export interface DashboardData {
   analysis: AIAnalysis | null
   timeline: ScenarioTimeline
   sensor?: SensorState | null
+  eventsById?: Record<string, FloodEvent>
+  forecastsByEventId?: Record<string, FloodForecast>
+  analysesByEventId?: Record<string, AIAnalysis>
+  camerasById?: Record<string, Camera>
+  sensorsById?: Record<string, SensorState>
 }
 
 export interface DashboardDataClient {
