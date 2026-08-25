@@ -393,11 +393,12 @@ export interface EventPanelProps {
   event: FloodEvent | null
   analysis: AIAnalysis | null
   sensor?: SensorState | null
+  sensorId?: string | null
   onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, sensor = null, onOpenVision, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   if (!event) {
     return (
@@ -430,7 +431,7 @@ export function EventPanel({ event, analysis, sensor = null, onOpenVision, state
         <span>事件类型 <strong>{event.eventType}</strong></span>
         <span>持续时长 <strong>00:{String(durationMinutes).padStart(2, '0')}:41</strong></span>
       </div>
-      <SensorEvidence sensor={sensor} />
+      <SensorEvidence sensor={sensor} sensorId={sensorId} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
   )
@@ -442,6 +443,7 @@ function EventMetric({ label, value, unit }: { label: string; value: string; uni
 
 export interface SensorEvidenceProps {
   sensor: SensorState | null
+  sensorId?: string | null
 }
 
 type SensorFreshnessStatus = 'ONLINE' | 'STALE' | 'OFFLINE' | 'NO_EVIDENCE'
@@ -463,13 +465,14 @@ function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
   return 'ONLINE'
 }
 
-export function SensorEvidence({ sensor }: SensorEvidenceProps) {
+export function SensorEvidence({ sensor, sensorId = null }: SensorEvidenceProps) {
   const status = getSensorFreshness(sensor)
 
   if (!sensor) {
     return (
       <div className="sensor-evidence sensor-evidence--empty" role="status">
         <div className="sensor-evidence-head"><span>传感器状态</span><strong>{SENSOR_STATUS_LABEL[status]}</strong></div>
+        {sensorId && <div className="sensor-evidence-grid"><span><small>对应传感器</small><b>{sensorId}</b></span></div>}
         <p>当前暂无实测数据</p>
       </div>
     )
@@ -491,9 +494,10 @@ export interface SceneEventCardProps {
   event: FloodEvent | null
   analysis: AIAnalysis | null
   sensor?: SensorState | null
+  sensorId?: string | null
 }
 
-export function SceneEventCard({ event, analysis, sensor = null }: SceneEventCardProps) {
+export function SceneEventCard({ event, analysis, sensor = null, sensorId = null }: SceneEventCardProps) {
   if (!event) return null
 
   const sensorStatus = getSensorFreshness(sensor)
@@ -519,7 +523,7 @@ export function SceneEventCard({ event, analysis, sensor = null }: SceneEventCar
       <section className="scene-event-card-section">
         <h4>对应传感器</h4>
         <div className="scene-event-card-sensor-head">
-          <strong>{sensor?.sensorId ?? '未关联传感器'}</strong>
+          <strong>{sensor?.sensorId ?? sensorId ?? '未关联传感器'}</strong>
           <span className={`scene-event-card-sensor-status scene-event-card-sensor-status--${sensorStatus.toLowerCase()}`}>{SENSOR_STATUS_LABEL[sensorStatus]}</span>
         </div>
         {sensor ? (
