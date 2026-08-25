@@ -19,6 +19,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Sensor main copy is now `传感器状态` with `在线/延迟/离线/未上报`, `当前实测水深`, and `最后上报`; source/provenance wording is not used as product copy.
 - CCTV receives the selected frame's optional decision projection and renders the same four decision fields in a compact video overlay. Flat `frame.decision` and `frame.overlay.decision` are validated and preserved; a valid nested observation decision takes precedence. No depth is inferred from level/range.
 - Research/local video uses the concise visible state `非实时视频`; raw runtime policy, source type, license, and frame metadata remain under `技术详情`.
+- Added image-to-code `SceneEventCard`: click a selected scene point to open a compact event overlay with location, risk label, current depth, sensor identity/freshness, last report, and existing analysis actions. It consumes the existing frontend API/fixture data path and does not modify Cesium or backend contracts.
 - The Vision result tab remains the default and shows original image plus a semi-transparent mask when the mask asset is available. `原图` and `水体Mask` remain available as separate tabs.
 - Gallery/fullscreen review labels now distinguish the fixture fallback from the API-backed summary and decision surfaces.
 
@@ -35,6 +36,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Stale product-copy scan over `frontend/src`: PASS; no `SENSOR EVIDENCE`, old sensor disclaimer, `summary pending`, or `没有 decision projection` matches.
 - Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
 - Adapter decision repro: PASS for flat `frame.decision` and `frame.overlay.decision`; existing nearest-frame/null-depth smoke remains PASS.
+- SceneEventCard browser smoke: PASS; `/` point click opens the card and repeating the same point click closes it; `/gallery` exposes the selected/high-risk component state.
 - Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
@@ -44,4 +46,6 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Checkpoint
 
-- Commit SHA: `51472c66a2001e55769f896c6dabd86c1ef5f234`
+- Commit SHA: `0d42783c543da060d449e4e7617898f42bd42df9`
+- SceneEventCard is the bounded image-to-code addition for the selected event point; status remains `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW` pending user visual review.
+- The card consumes the existing selected event, sensor, and analysis data path in API/fixture modes. The running local sensor endpoint was not verified as available; no backend contract or fallback truthfulness was changed.

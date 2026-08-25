@@ -1056,6 +1056,214 @@ a {
   background: rgba(7, 30, 47, 0.98);
 }
 
+/* Selected event scene card */
+
+.scene-event-card {
+  position: absolute;
+  z-index: 8;
+  left: clamp(340px, 45.5vw, 860px);
+  bottom: 145px;
+  width: 238px;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid rgba(86, 194, 225, 0.62);
+  background: linear-gradient(180deg, rgba(7, 34, 52, 0.96), rgba(4, 23, 37, 0.92));
+  box-shadow: 0 10px 28px rgba(0, 8, 16, 0.34), 0 0 18px rgba(32, 148, 188, 0.08);
+  clip-path: polygon(0 9px, 9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px));
+  filter: drop-shadow(0 8px 18px rgba(0, 8, 16, 0.22));
+  pointer-events: none;
+}
+
+.scene-event-card::after {
+  position: absolute;
+  bottom: -8px;
+  left: 18px;
+  width: 15px;
+  height: 15px;
+  border-right: 1px solid rgba(86, 194, 225, 0.62);
+  border-bottom: 1px solid rgba(86, 194, 225, 0.62);
+  background: rgba(5, 25, 40, 0.94);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.scene-event-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 12px 9px;
+  border-bottom: 1px solid rgba(72, 170, 207, 0.27);
+}
+
+.scene-event-card-kicker,
+.scene-event-card-section h4 {
+  color: #5ed9eb;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.scene-event-card-kicker {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.scene-event-card-header h3 {
+  max-width: 166px;
+  margin: 0;
+  color: #edf8fb;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.scene-event-card-risk {
+  flex: 0 0 auto;
+  margin-top: 17px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 91, 77, 0.5);
+  border-radius: 4px;
+  background: rgba(131, 39, 34, 0.56);
+  color: #ff9f8d;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.scene-event-card-section {
+  padding: 8px 12px 9px;
+  border-bottom: 1px solid rgba(72, 170, 207, 0.24);
+}
+
+.scene-event-card-section--facts {
+  padding-top: 7px;
+  padding-bottom: 6px;
+}
+
+.scene-event-card-row,
+.scene-event-card-sensor-grid > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 25px;
+}
+
+.scene-event-card-row span,
+.scene-event-card-sensor-grid span {
+  color: #8baeba;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.scene-event-card-row strong,
+.scene-event-card-sensor-grid strong {
+  overflow: hidden;
+  color: #e2f0f3;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-event-card-value--warning {
+  color: var(--warning) !important;
+  font-size: 12px !important;
+}
+
+.scene-event-card-section h4 {
+  margin: 0 0 7px;
+}
+
+.scene-event-card-sensor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.scene-event-card-sensor-head > strong {
+  overflow: hidden;
+  color: #eaf6fa;
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-event-card-sensor-status {
+  flex: 0 0 auto;
+  color: #ff8e7f;
+  font-size: 10px;
+}
+
+.scene-event-card-sensor-status--online { color: #5de0cf; }
+.scene-event-card-sensor-status--stale { color: var(--warning); }
+.scene-event-card-sensor-status--offline,
+.scene-event-card-sensor-status--no_evidence { color: #ff8e7f; }
+
+.scene-event-card-sensor-grid {
+  margin-top: 4px;
+}
+
+.scene-event-card-empty {
+  margin: 4px 0 0;
+  color: #7898a5;
+  font-size: 10px;
+}
+
+.scene-event-card-section--actions {
+  border-bottom: 0;
+}
+
+.scene-event-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.scene-event-card-action {
+  padding: 5px 7px;
+  border: 1px solid rgba(68, 183, 224, 0.54);
+  border-radius: 4px;
+  background: rgba(10, 75, 105, 0.46);
+  color: #a8e8f1;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.scene-event-card-action--2 {
+  border-color: rgba(239, 151, 56, 0.66);
+  background: rgba(103, 61, 22, 0.52);
+  color: #ffca86;
+}
+
+.scene-event-card-action--3 {
+  border-color: rgba(62, 180, 149, 0.54);
+  background: rgba(17, 75, 67, 0.5);
+  color: #9fe0c9;
+}
+
+.scene-event-card-gallery-preview {
+  position: relative;
+  min-height: 430px;
+  padding: 8px 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(7, 26, 39, 0.1), rgba(2, 13, 22, 0.42)), url('/mock/shanghai-scene-placeholder.webp') center / cover;
+}
+
+.scene-event-card-gallery-preview .scene-event-card {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  margin: 0 auto;
+}
+
 /* Forecast */
 
 .help-dot {

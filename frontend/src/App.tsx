@@ -16,6 +16,7 @@ import {
   ForecastPreview,
   RankingPanel,
   RainfallPanel,
+  SceneEventCard,
   SensorEvidence,
   StatusPanel,
   TimelineBar,
@@ -125,6 +126,7 @@ interface DashboardFrameProps {
 function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'default', eventOverride, fixedPreview = false, dataBadge = 'DEMO SCENARIO DATA · FIXTURE' }: DashboardFrameProps) {
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
+  const [eventCardOpen, setEventCardOpen] = useState(false)
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
   const [visionOpen, setVisionOpen] = useState(false)
   const [visionMode, setVisionMode] = useState<'local' | 'url'>('local')
@@ -235,6 +237,11 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const selectedVideoFrame = videoReady && videoEvidence ? selectNearestVideoFrame(videoEvidence, videoTimeSec) : null
   const videoOverlayData = selectedVideoFrame ? toVideoOverlayData(selectedVideoFrame) : undefined
 
+  const handlePointSelect = (pointId: string) => {
+    setEventCardOpen((open) => selectedPointId === pointId ? !open : true)
+    setSelectedPointId(pointId)
+  }
+
   return (
     <div className={`dashboard-frame ${fixedPreview ? 'dashboard-frame--fixed-preview' : ''}`}>
       <DigitalTwinScene
@@ -245,9 +252,10 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         forecastFrame={forecastSurface.frame}
         selectedPointId={selectedPointId}
         layers={layers}
-        onPointSelect={setSelectedPointId}
+        onPointSelect={handlePointSelect}
         onLayerToggle={toggleLayer}
       />
+      {eventCardOpen && <SceneEventCard event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} />}
       <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
@@ -426,6 +434,11 @@ function GalleryPage() {
           <div className="gallery-grid gallery-grid--wide-components">
             <GalleryCard title="DigitalTwinScene" stateName="NOW / selected event" className="gallery-card--scene">
               <div className="gallery-scene-preview gallery-scene-only"><SceneOnlyPreview /></div>
+            </GalleryCard>
+            <GalleryCard title="SceneEventCard" stateName="selected / high-risk" className="gallery-card--event-card">
+              <div className="scene-event-card-gallery-preview">
+                <SceneEventCard event={homeFixtures.event} analysis={homeFixtures.analysis} sensor={createDemoSensorEvidence(homeFixtures.event)} />
+              </div>
             </GalleryCard>
             <GalleryCard title="TimelineBar" stateName="realtime">
               <TimelineBar timeline={homeFixtures.timeline} activeKey="NOW" onForecastChange={() => undefined} />
