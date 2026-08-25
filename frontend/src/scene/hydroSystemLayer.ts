@@ -3,8 +3,8 @@ import * as Cesium from 'cesium'
 export const HUANGPU_RIVER_GEOJSON_URL = '/demo/hydro/huangpu-river.geojson'
 export const HUANGPU_RIVER_SOURCE_LABEL = 'SYNTHETIC DEMO · WGS84 lon/lat'
 
-const RIVER_FILL = Cesium.Color.fromCssColorString('#17495e').withAlpha(0.38)
-const RIVER_STROKE = Cesium.Color.fromCssColorString('#2c7285').withAlpha(0.72)
+const RIVER_FILL = Cesium.Color.fromCssColorString('#123746').withAlpha(0.5)
+const RIVER_STROKE = Cesium.Color.fromCssColorString('#3a6874').withAlpha(0.74)
 
 export async function loadHuangpuHydroSystemLayer(viewer: Cesium.Viewer) {
   const dataSource = await Cesium.GeoJsonDataSource.load(HUANGPU_RIVER_GEOJSON_URL, {

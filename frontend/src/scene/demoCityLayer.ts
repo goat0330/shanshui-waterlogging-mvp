@@ -12,10 +12,17 @@ const DEMO_BLOCKS = [
   { id: 'demo-block-09', lon: 121.5018, lat: 31.2078, width: 150, depth: 190, height: 144 },
 ] as const
 
-const BUILDING_COLOR = Cesium.Color.fromCssColorString('#6f8fa7').withAlpha(0.78)
+const BUILDING_COLORS = [
+  '#c8c2b8',
+  '#d0cbc2',
+  '#b9b6b0',
+  '#c4bdb2',
+  '#d3cdc2',
+  '#b5b3ae',
+] as const
 
 export function addDemoCityBlocks(collection: Cesium.PrimitiveCollection) {
-  const geometryInstances = DEMO_BLOCKS.map((block) => new Cesium.GeometryInstance({
+  const geometryInstances = DEMO_BLOCKS.map((block, index) => new Cesium.GeometryInstance({
     id: block.id,
     geometry: Cesium.BoxGeometry.fromDimensions({
       dimensions: new Cesium.Cartesian3(block.width, block.depth, block.height),
@@ -25,16 +32,19 @@ export function addDemoCityBlocks(collection: Cesium.PrimitiveCollection) {
       Cesium.Cartesian3.fromDegrees(block.lon, block.lat, block.height / 2),
     ),
     attributes: {
-      color: Cesium.ColorGeometryInstanceAttribute.fromColor(BUILDING_COLOR),
+      color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+        Cesium.Color.fromCssColorString(BUILDING_COLORS[index % BUILDING_COLORS.length]),
+      ),
     },
   }))
 
   return collection.add(new Cesium.Primitive({
     geometryInstances,
     appearance: new Cesium.PerInstanceColorAppearance({
-      flat: true,
-      translucent: true,
+      flat: false,
+      translucent: false,
       closed: true,
+      faceForward: true,
     }),
     asynchronous: false,
   }))

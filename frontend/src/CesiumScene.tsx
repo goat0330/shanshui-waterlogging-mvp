@@ -15,16 +15,16 @@ const BIMANGLE_ORIGIN = { lon: 116.46, lat: 39.92 }
 const HUANGPU_SHP_CENTER = { lon: 121.47797014, lat: 31.21940076 }
 const HUANGPU_MODEL_CENTER_LOCAL = { x: 80.3409, y: -53.0326, z: 90 }
 const DEFAULT_EVENT = { lon: 121.4874, lat: 31.2297 }
-const OSM_BUILDING_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#86a8b9', 0.94)" })
+const OSM_BUILDING_STYLE = new Cesium.Cesium3DTileStyle({ color: "color('#c8c2b8', 0.94)" })
 const FORECAST_FILL: Record<ForecastKey, Cesium.Color> = {
-  NOW: new Cesium.Color(0.14, 0.84, 0.91, 0.36),
-  PLUS_10: new Cesium.Color(0.15, 0.48, 1, 0.38),
-  PLUS_30: new Cesium.Color(1, 0.48, 0.18, 0.42),
+  NOW: new Cesium.Color(0.08, 0.68, 0.76, 0.28),
+  PLUS_10: new Cesium.Color(0.14, 0.38, 0.78, 0.3),
+  PLUS_30: new Cesium.Color(0.92, 0.42, 0.12, 0.34),
 }
 const FORECAST_STROKE: Record<ForecastKey, Cesium.Color> = {
-  NOW: new Cesium.Color(0.34, 0.91, 0.95, 0.96),
-  PLUS_10: new Cesium.Color(0.48, 0.68, 1, 0.96),
-  PLUS_30: new Cesium.Color(1, 0.67, 0.3, 0.98),
+  NOW: new Cesium.Color(0.25, 0.83, 0.86, 0.88),
+  PLUS_10: new Cesium.Color(0.38, 0.61, 0.95, 0.9),
+  PLUS_30: new Cesium.Color(1, 0.64, 0.24, 0.94),
 }
 type SourceAttemptReason = 'none' | 'token_missing' | 'osm_init_failed'
 type SourceReason =
@@ -134,8 +134,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     const cityLayer = new Cesium.PrimitiveCollection()
     viewer.scene.primitives.add(cityLayer)
     cityLayerRef.current = cityLayer
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#071421')
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0a2232')
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a1118')
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0d1921')
     viewer.scene.globe.enableLighting = false
     viewer.scene.globe.showGroundAtmosphere = false
     viewer.scene.fog.enabled = true
@@ -154,7 +154,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           return
         }
         placeHuangpuByRange(tileset)
-        tileset.style = new Cesium.Cesium3DTileStyle({ color: "color('#6f8fa7', 0.96)" })
+        tileset.style = new Cesium.Cesium3DTileStyle({ color: "color('#beb9b0', 0.96)" })
         cityLayer.add(tileset)
         setSource('local')
         setSourceReason(attemptReason)
@@ -208,10 +208,10 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           const imageryLayer = viewer.imageryLayers.addImageryProvider(
             new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
           )
-          imageryLayer.alpha = 0.28
-          imageryLayer.brightness = 0.68
-          imageryLayer.contrast = 1.08
-          imageryLayer.saturation = 0.18
+          imageryLayer.alpha = 0.2
+          imageryLayer.brightness = 0.46
+          imageryLayer.contrast = 0.96
+          imageryLayer.saturation = 0.06
         }
       } catch {
         if (!disposed) await loadLocalCore('osm_init_failed')
