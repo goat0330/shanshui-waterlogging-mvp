@@ -201,6 +201,13 @@ def main() -> None:
     assert set(ranking_schema["required"]) == {"stationId", "stationName", "intensityMmH"}
     assert ranking_schema["additionalProperties"] is False
     assert spec["paths"]["/api/v1/rainfall/stations/ranking"]["get"]["operationId"] == "listRainfallStationRanking"
+    flood_point_schema = spec["components"]["schemas"]["FloodPoint"]
+    assert "eventId" in flood_point_schema["properties"]
+    assert "sensorId" in flood_point_schema["properties"]
+    assert "eventId" not in flood_point_schema["required"]
+    assert "sensorId" not in flood_point_schema["required"]
+    assert {"type": "null"} in flood_point_schema["properties"]["eventId"]["anyOf"]
+    assert {"type": "null"} in flood_point_schema["properties"]["sensorId"]["anyOf"]
     overview_schema = spec["components"]["schemas"]["DashboardOverview"]
     assert "waterloggingSituation" not in overview_schema["required"]
     assert overview_schema["properties"]["waterloggingSituation"]["anyOf"][-1] == {"type": "null"}
@@ -650,6 +657,14 @@ def main() -> None:
 
         status, points = request("/api/v1/flood-points")
         assert status == 200
+        assert len(points) == 5
+        points_by_id = {point["id"]: point for point in points}
+        assert set(points_by_id) == {"FP-001", "FP-002", "FP-003", "FP-004", "FP-005"}
+        assert points_by_id["FP-001"]["eventId"] == "FP202506010024"
+        assert points_by_id["FP-001"]["sensorId"] == "SSZJ-NODE-001"
+        for flood_point_id in ["FP-002", "FP-003", "FP-004", "FP-005"]:
+            assert points_by_id[flood_point_id]["eventId"] is None
+            assert points_by_id[flood_point_id]["sensorId"] is None
         first_projection = next(point for point in points if point["id"] == "FP-001")
         assert first_projection["depthCm"] == 28.6
         assert first_projection["riskLevel"] == "HIGH"

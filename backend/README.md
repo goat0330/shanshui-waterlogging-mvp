@@ -67,6 +67,8 @@ GET /api/v1/external/shanghai-water (provisional, hidden from formal OpenAPI)
 
 `GET /api/v1/rainfall/stations/ranking` 返回按 `intensityMmH` 降序排列的雨量站强度排行，字段为 `stationId`、`stationName`、`intensityMmH`。当前由 `rainfall-stations-ranking.json` demo fixture 提供，Postgres path 复用同一 fixture fallback；它表达雨量站强度，不使用 `FloodPoint.depthCm`，也不代表上海官方实时数据。
 
+`GET /api/v1/flood-points` 当前在 backend response 中追加可选 `eventId`、`sensorId`：`FP-001` 映射到 `FP202506010024` 与 `SSZJ-NODE-001`，`FP-002`～`FP-005` 明确返回 `null`。这是基于现有 mapping fixture 的只读投影；尚未同步到正式 `contracts/openapi.yaml`，Main/Architect 需要补充这两个可选字段后再视为正式 Contract。没有因此生成新的事件，也不改变无 telemetry 时 sensor GET 的 404 语义。
+
 ### 上海公开水务源（provisional）
 
 `DATA_MODE=hybrid` 或 `DATA_MODE=real` 时，`GET /api/v1/external/shanghai-water` 通过标准库适配器读取上海市水务局公开页面使用的 JSON 接口：实时雨量（`SSYLMore`）、积水检测（`JSJCMore`）、实时水位（`SSSW`）和水位预报（`YJSW`）。接口返回 `source=SHANGHAI_WATER_BUREAU_PUBLIC`、源站 `observedAt`、请求 `receivedAt`、源站 URL、源站坐标字段标记和分组数据；每个分组还返回 `sourceHealth`。该 provisional 路径不会进入正式运行时 OpenAPI，避免与冻结 `contracts/` 静默漂移。

@@ -274,6 +274,8 @@ class FloodPoint(BaseModel):
     depthCm: float
     riskLevel: RiskLevel
     trend: Trend
+    eventId: str | None = None
+    sensorId: str | None = None
 
 
 class FloodEvent(BaseModel):

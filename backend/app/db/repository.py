@@ -58,6 +58,11 @@ class PostgresRepository:
         return self.fixture_repository.analysis_adapter
 
     def list_flood_points(self) -> list[dict[str, Any]]:
+        mapping_by_point = select(
+            sensor_flood_mappings_table.c.flood_point_id,
+            func.min(sensor_flood_mappings_table.c.event_id).label("event_id"),
+            func.min(sensor_flood_mappings_table.c.sensor_id).label("sensor_id"),
+        ).group_by(sensor_flood_mappings_table.c.flood_point_id).subquery()
         statement = select(
             flood_points_table.c.point_id.label("id"),
             flood_points_table.c.name,
@@ -67,6 +72,11 @@ class PostgresRepository:
             flood_points_table.c.depth_cm,
             flood_points_table.c.risk_level,
             flood_points_table.c.trend,
+            mapping_by_point.c.event_id,
+            mapping_by_point.c.sensor_id,
+        ).outerjoin(
+            mapping_by_point,
+            mapping_by_point.c.flood_point_id == flood_points_table.c.point_id,
         ).order_by(flood_points_table.c.point_id)
         with self.session_factory() as session:
             rows = session.execute(statement).mappings().all()
@@ -79,6 +89,8 @@ class PostgresRepository:
                 "depthCm": row["depth_cm"],
                 "riskLevel": row["risk_level"],
                 "trend": row["trend"],
+                "eventId": row["event_id"],
+                "sensorId": row["sensor_id"],
             }
             for row in rows
         ]
