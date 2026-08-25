@@ -340,8 +340,9 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       depthCm: number
       riskLevel: FloodPoint['riskLevel']
       fallback: boolean
-    }> = sensor
-      ? [{
+      historical: boolean
+    }> = [
+      ...(sensor ? [{
         id: sensor.sensorId,
         selectId: selectedPointId || 'FP-001',
         sensorId: sensor.sensorId,
@@ -353,9 +354,11 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
         depthCm: sensor.depthCm,
         riskLevel: event?.riskLevel ?? selectedPoint?.riskLevel ?? 'NORMAL',
         fallback: false,
-      }]
-      : points.length > 0
-        ? points.map((point) => ({
+        historical: false,
+      }] : []),
+      ...points
+        .filter((point) => !sensor || point.id !== selectedPointId)
+        .map((point) => ({
           id: `floodpoint-fallback-${point.id}`,
           selectId: point.id,
           sensorId: `floodpoint-fallback-${point.id}`,
@@ -366,21 +369,22 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
           depthCm: point.depthCm,
           riskLevel: point.riskLevel,
           fallback: true,
-        }))
-        : event
-          ? [{
-            id: `event-fallback-${event.id}`,
-            selectId: selectedPointId || 'FP-001',
-            sensorId: `event-fallback-${event.id}`,
-            eventId: event.id,
-            name: event.name,
-            source: EVENT_FALLBACK_SOURCE,
-            coordinates: event.coordinates,
-            depthCm: event.currentDepthCm,
-            riskLevel: event.riskLevel,
-            fallback: true,
-          }]
-          : []
+          historical: Boolean(point.historicalCaseId),
+        })),
+      ...(sensor || points.length > 0 || !event ? [] : [{
+        id: `event-fallback-${event.id}`,
+        selectId: selectedPointId || 'FP-001',
+        sensorId: `event-fallback-${event.id}`,
+        eventId: event.id,
+        name: event.name,
+        source: EVENT_FALLBACK_SOURCE,
+        coordinates: event.coordinates,
+        depthCm: event.currentDepthCm,
+        riskLevel: event.riskLevel,
+        fallback: true,
+        historical: false,
+      }]),
+    ]
 
     const entities = markerData.map((marker) => addGeographicSensorEntity(viewer, {
       entityId: marker.id,
@@ -390,7 +394,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       coordinates: marker.coordinates,
       depthCm: marker.depthCm,
       riskLevel: marker.riskLevel,
-      selected: marker.selectId === selectedPointId,
+      selected: marker.selectId === selectedPointId && !marker.historical,
       source: marker.source,
       eventId: marker.eventId,
       siteId: marker.siteId,

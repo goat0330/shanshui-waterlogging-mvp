@@ -21,7 +21,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.455079, "lat": 31.255075 }
     },
     {
       "candidateId": "SH-FLOOD-2023-0722-HK-01",
@@ -42,7 +42,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.492196, "lat": 31.263970 }
     },
     {
       "candidateId": "SH-FLOOD-2023-0822-CM-01",
@@ -63,7 +63,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.803602, "lat": 31.490958 }
     },
     {
       "candidateId": "SH-FLOOD-2024-0910-CN-01",
@@ -84,7 +84,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.371893, "lat": 31.216958 }
     },
     {
       "candidateId": "SH-FLOOD-2024-0920-PD-01",
@@ -105,7 +105,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.736738, "lat": 31.037081 }
     },
     {
       "candidateId": "SH-FLOOD-2025-0730-HK-01",
@@ -126,7 +126,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.502244, "lat": 31.254497 }
     },
     {
       "candidateId": "SH-FLOOD-2025-0730-JD-01",
@@ -147,7 +147,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.270469, "lat": 31.416457 }
     },
     {
       "candidateId": "SH-FLOOD-2025-0730-PT-01",
@@ -168,7 +168,7 @@
       "dataStatus": "HISTORICAL_PUBLIC_REPORT",
       "floodPointId": null,
       "sensorId": null,
-      "coordinates": null
+      "coordinates": { "lon": 121.347178, "lat": 31.294251 }
     }
   ]
 }

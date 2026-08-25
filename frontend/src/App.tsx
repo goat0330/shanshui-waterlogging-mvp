@@ -249,6 +249,12 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
 
   const handlePointSelect = (pointId: string) => {
     const point = data.points.find((item) => item.id === pointId) ?? null
+    if (point?.historicalCaseId) {
+      setSelectedHistoricalCaseId(point.historicalCaseId)
+      setEventCardOpen(false)
+      setSelectedPointId(pointId)
+      return
+    }
     const hasEvent = getFloodPointEventId(point) !== null
     setSelectedHistoricalCaseId(null)
     setEventCardOpen((open) => hasEvent && (selectedPointId === pointId ? !open : true))
@@ -277,19 +283,19 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       </div>
       <div className="dashboard-side dashboard-side--right">
         <EventPanel
-          event={selectedEvent.event}
-          analysis={selectedEvent.analysis}
-          sensor={sensor}
-          sensorId={selectedEvent.sensorId}
+          event={selectedHistoricalCase ? null : selectedEvent.event}
+          analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
+          sensor={selectedHistoricalCase ? null : sensor}
+          sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
           historicalCases={data.historicalCases}
           selectedHistoricalCase={selectedHistoricalCase}
           onSelectHistoricalCase={setSelectedHistoricalCaseId}
           onClearHistoricalCase={() => setSelectedHistoricalCaseId(null)}
           onOpenVision={() => setVisionOpen(true)}
         />
-        <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+        <ForecastPreview forecast={selectedHistoricalCase ? null : selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={selectedHistoricalCase ? null : sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
         <CctvCard
-          camera={selectedEvent.camera}
+          camera={selectedHistoricalCase ? null : selectedEvent.camera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
           decision={selectedVideoFrame?.decision ?? null}

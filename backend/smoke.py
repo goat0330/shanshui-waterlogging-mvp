@@ -750,8 +750,9 @@ def main() -> None:
         assert len(historical_cases) == 8
         assert all(case["sourceType"] == "PUBLIC_REPORT" for case in historical_cases)
         assert all(case["dataStatus"] == "HISTORICAL_PUBLIC_REPORT" for case in historical_cases)
-        assert all(case["coordinates"] is None and case["sensorId"] is None for case in historical_cases)
-        print("PASS 200 GET /api/v1/historical-cases (8 historical public cases)")
+        assert all(case["coordinates"] and set(case["coordinates"]) == {"lon", "lat"} for case in historical_cases)
+        assert all(case["sensorId"] is None for case in historical_cases)
+        print("PASS 200 GET /api/v1/historical-cases (8 mapped historical public cases)")
         first_projection = next(point for point in points if point["id"] == "FP-001")
         assert first_projection["depthCm"] == 28.6
         assert first_projection["riskLevel"] == "HIGH"

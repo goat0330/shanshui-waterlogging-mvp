@@ -488,7 +488,7 @@ export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onCl
 
   return (
     <div className="historical-case-browser">
-      <p className="historical-case-intro">当前点位只有演示点位摘要。以下为已核验的历史公开案例，不代表当前告警。</p>
+      <p className="historical-case-intro">当前点位未关联正式实时事件。地图中的历史点位可点选，以下为已核验的公开案例，不代表当前告警。</p>
       <div className="historical-case-list" aria-label="历史公开案例列表">
         {cases.map((item) => (
           <button type="button" className="historical-case-item" key={item.candidateId} onClick={() => onSelect?.(item.candidateId)}>

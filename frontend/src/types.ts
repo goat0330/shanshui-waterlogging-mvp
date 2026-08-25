@@ -127,6 +127,7 @@ export interface FloodPoint {
   trend: 'UP' | 'STABLE' | 'DOWN'
   eventId?: string | null
   sensorId?: string | null
+  historicalCaseId?: string
 }
 
 export interface HistoricalFloodCase {
