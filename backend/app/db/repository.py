@@ -40,7 +40,7 @@ class PostgresRepository:
 
     @property
     def dashboard_overview(self) -> Any:
-        return self.fixture_repository.dashboard_overview
+        return self.fixture_repository.get_dashboard_overview()
 
     @property
     def rainfall(self) -> Any:

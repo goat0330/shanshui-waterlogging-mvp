@@ -14,7 +14,11 @@ from urllib.parse import urljoin, urlparse
 from fastapi import UploadFile
 import requests
 
-from .models import VisionDepthObservation
+from .models import (
+    VisionDecisionProjection,
+    VisionDecisionTrafficStatus,
+    VisionDepthObservation,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -28,6 +32,56 @@ _ALLOWED_UPLOAD_MEDIA_TYPES = set(ALLOWED_FORMATS.values())
 _MEDIA_TYPE_ALIASES = {"image/jpg": "image/jpeg"}
 _MEDIA_SUFFIXES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 _MAX_REDIRECTS = 3
+
+
+def project_vision_decision(
+    flood_detected: bool,
+    estimated_depth_cm: float | None,
+    approximate_depth_cm: float | None = None,
+    range_cm: list[float | None] | tuple[float | None, float | None] | None = None,
+) -> VisionDecisionProjection:
+    """Normalize image/video evidence into one decision-ready projection."""
+
+    if not flood_detected:
+        return VisionDecisionProjection(
+            floodDetected=False,
+            decisionDepthCm=0.0,
+            trafficStatus=VisionDecisionTrafficStatus.NORMAL,
+            recommendation="正常通行",
+        )
+
+    decision_depth = estimated_depth_cm if estimated_depth_cm is not None else approximate_depth_cm
+    if decision_depth is None and range_cm:
+        bounded_values = [float(value) for value in range_cm if value is not None]
+        decision_depth = max(bounded_values, default=None)
+
+    if decision_depth is None:
+        return VisionDecisionProjection(
+            floodDetected=True,
+            decisionDepthCm=None,
+            trafficStatus=VisionDecisionTrafficStatus.CAUTION,
+            recommendation="谨慎通行（视觉深度证据不足）",
+        )
+
+    if decision_depth < 10:
+        traffic_status = VisionDecisionTrafficStatus.NORMAL
+        recommendation = "正常通行"
+    elif decision_depth < 20:
+        traffic_status = VisionDecisionTrafficStatus.CAUTION
+        recommendation = "谨慎通行"
+    elif decision_depth < 30:
+        traffic_status = VisionDecisionTrafficStatus.NOT_RECOMMENDED
+        recommendation = "不建议通行"
+    else:
+        traffic_status = VisionDecisionTrafficStatus.PROHIBITED
+        recommendation = "禁止通行"
+
+    return VisionDecisionProjection(
+        floodDetected=True,
+        decisionDepthCm=float(decision_depth),
+        trafficStatus=traffic_status,
+        recommendation=recommendation,
+    )
 
 
 class VisionDepthError(Exception):
@@ -210,6 +264,13 @@ class VisionDepthAdapter:
             "licenseReview": license_review,
             "runtimePolicy": "research_mvp",
         }
+        depth = observation["depth"]
+        observation["decision"] = project_vision_decision(
+            flood_detected=bool(observation["floodDetected"]),
+            estimated_depth_cm=depth.get("estimatedDepthCm"),
+            approximate_depth_cm=depth.get("approximateDepthCm"),
+            range_cm=depth.get("rangeCm"),
+        ).model_dump(mode="json")
         mask_name = Path(str(observation["waterMaskPath"])).name
         self.artifact_path(mask_name)
         observation["waterMaskPath"] = f"/api/v1/vision-depth/artifacts/{mask_name}"

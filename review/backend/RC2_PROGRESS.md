@@ -61,3 +61,23 @@ git diff --check                     PASS (exit 0; only LF/CRLF warnings)
 - The shared image pipeline now emits optional `depth.approximateDepthCm` when flood is detected but no metric reference is available.
 - This value is a deterministic representative of the existing visual range (for `[50, null]`, the MVP display value is `50.0`), and `qualityFlags` includes `ROUGH_VISUAL_ESTIMATE`.
 - `depth.estimatedDepthCm` remains `null` in the no-reference case; the new field must not be used as calibrated sensor data or as a final passability measurement.
+
+## RC2.2 Decision-Ready Visual Intelligence
+
+- Main `5b3da2d` was merged without reset as merge checkpoint `e02e198`; the worker worktree was clean before sync.
+- `DashboardOverview.waterloggingSituation` is optional for old clients. Its `totalEvents`, disposition counts, district ranking, depth metrics, change proxy and new-today count are projected in `FixtureRepository.get_dashboard_overview()` from the checked-in events/flood-points fixtures. `source=FIXTURE_DERIVED`; these are not Shanghai real-time values.
+- Current summary sample: `totalEvents=1`, `changeVsHour=108.0`, `disposition={pending:0, handling:1, relieved:0}`, `topDistricts=[{district:黄浦区,eventCount:1}]`, metrics `{maxDepthCm:28.6, avgDepthCm:19.4, avgResponseMinutes:32.4, newToday:1}`. `avgResponseMinutes` is a fixture duration proxy because no response-latency field exists in the current fixture.
+- Vision image responses retain all old fields and add optional `decision={floodDetected, decisionDepthCm, trafficStatus, recommendation}`. The shared `project_vision_decision()` helper also accepts the existing video-frame shape; the smoke uses the checked-in synthetic video frame. Thresholds are lower-inclusive: `<10 NORMAL`, `10–<20 CAUTION`, `20–<30 NOT_RECOMMENDED`, `>=30 PROHIBITED` (therefore `>=50` is also prohibited).
+- The projection does not write `SensorState`, `FloodPoint.currentDepthCm`, or Forecast; it is evidence-derived and not calibrated sensor/passability truth.
+
+RC2.2 actual commands:
+
+```text
+python -m compileall -q app tools                                      PASS (exit 0)
+python -m json.tool ..\\contracts\\schemas\\dashboard-overview.schema.json    PASS (exit 0)
+python -m json.tool ..\\contracts\\schemas\\vision-depth-observation.schema.json PASS (exit 0)
+python -B smoke.py                                                     PASS (exit 0)
+git diff --check                                                       PASS (exit 0)
+```
+
+RC2.2 NOT VERIFIED：backend 没有新增视频 ingest/public video endpoint；当前仅验证 image API 与现有 synthetic video frame 的统一 projection helper。真实 CCTV、实时许可、校准深度、生产通行决策和外部实时数据仍未验证。

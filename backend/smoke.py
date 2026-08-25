@@ -17,7 +17,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 from app.config import load_settings
 from app.main import app, repository, sensor_repository
-from app.vision_depth import VisionDepthAdapter, VisionDepthError
+from app.vision_depth import VisionDepthAdapter, VisionDepthError, project_vision_decision
 
 try:
     import websocket
@@ -192,6 +192,30 @@ def main() -> None:
     assert set(ranking_schema["required"]) == {"stationId", "stationName", "intensityMmH"}
     assert ranking_schema["additionalProperties"] is False
     assert spec["paths"]["/api/v1/rainfall/stations/ranking"]["get"]["operationId"] == "listRainfallStationRanking"
+    overview_schema = spec["components"]["schemas"]["DashboardOverview"]
+    assert "waterloggingSituation" not in overview_schema["required"]
+    assert overview_schema["properties"]["waterloggingSituation"]["anyOf"][-1] == {"type": "null"}
+    situation_schema = spec["components"]["schemas"]["WaterloggingSituation"]
+    assert set(situation_schema["required"]) == {
+        "totalEvents",
+        "changeVsHour",
+        "disposition",
+        "topDistricts",
+        "metrics",
+        "source",
+    }
+    assert situation_schema["additionalProperties"] is False
+    assert set(spec["components"]["schemas"]["WaterloggingDisposition"]["required"]) == {
+        "pending",
+        "handling",
+        "relieved",
+    }
+    assert set(spec["components"]["schemas"]["WaterloggingMetrics"]["required"]) == {
+        "maxDepthCm",
+        "avgDepthCm",
+        "avgResponseMinutes",
+        "newToday",
+    }
     assert spec["paths"]["/api/v1/vision-depth/analyze/upload"]["post"]["operationId"] == "analyzeVisionDepthUpload"
     assert spec["paths"]["/api/v1/vision-depth/analyze/url"]["post"]["operationId"] == "analyzeVisionDepthUrl"
     upload_request = spec["paths"]["/api/v1/vision-depth/analyze/upload"]["post"]["requestBody"]
@@ -238,6 +262,21 @@ def main() -> None:
         "research_mvp",
         "production",
     ]
+    decision_schema = spec["components"]["schemas"]["VisionDecisionProjection"]
+    assert set(decision_schema["required"]) == {
+        "floodDetected",
+        "decisionDepthCm",
+        "trafficStatus",
+        "recommendation",
+    }
+    assert decision_schema["additionalProperties"] is False
+    assert spec["components"]["schemas"]["VisionDecisionTrafficStatus"]["enum"] == [
+        "NORMAL",
+        "CAUTION",
+        "NOT_RECOMMENDED",
+        "PROHIBITED",
+    ]
+    assert {"$ref": "#/components/schemas/VisionDecisionProjection"} in vision_schema["properties"]["decision"]["anyOf"]
     assert provenance_schema["properties"]["sourceId"]["minLength"] == 1
     assert {"type": "null"} in provenance_schema["properties"]["observedAt"]["anyOf"]
     assert spec["components"]["schemas"]["VisionDepthMethod"]["enum"] == [
@@ -276,6 +315,30 @@ def main() -> None:
         else:
             raise AssertionError(f"private URL was not blocked: {private_url}")
     print("PASS VisionDepth private-target/SSRF literal and localhost guards")
+    for depth_cm, expected_status in [
+        (0, "NORMAL"),
+        (10, "CAUTION"),
+        (20, "NOT_RECOMMENDED"),
+        (30, "PROHIBITED"),
+        (50, "PROHIBITED"),
+    ]:
+        decision = project_vision_decision(True, depth_cm)
+        assert decision.trafficStatus.value == expected_status, (depth_cm, decision)
+    dry_video_fixture = backend_dir.parent / "media" / "artifacts" / "video-smoke-synthetic.json"
+    video_frame = json.loads(dry_video_fixture.read_text(encoding="utf-8"))["frames"][0]["observation"]
+    video_decision = project_vision_decision(
+        flood_detected=video_frame["floodDetected"],
+        estimated_depth_cm=video_frame["depth"].get("estimatedDepthCm"),
+        approximate_depth_cm=video_frame["depth"].get("approximateDepthCm"),
+        range_cm=video_frame["depth"].get("rangeCm"),
+    )
+    assert video_decision.model_dump(mode="json") == {
+        "floodDetected": False,
+        "decisionDepthCm": 0.0,
+        "trafficStatus": "NORMAL",
+        "recommendation": "正常通行",
+    }
+    print("PASS Vision image/video decision projection thresholds and video sample")
     print("PASS OpenAPI formal paths/enums, VisionDepth Contract shape, SensorRegistryEntry, and adapter fixture validation")
 
     websocket_client = None
@@ -310,6 +373,9 @@ def main() -> None:
             "licenseReview": "pending",
             "runtimePolicy": "research_mvp",
         }
+        assert direct_url_observation.decision is not None
+        assert direct_url_observation.decision.trafficStatus.value == "NOT_RECOMMENDED"
+        assert direct_url_observation.decision.decisionDepthCm == 25.4
         with patch.object(VisionDepthAdapter, "_validate_public_url", return_value=None):
             try:
                 VisionDepthAdapter._download_public_url(f"{vision_base_url}/html")
@@ -362,6 +428,23 @@ def main() -> None:
             assert status == 200, (path, status, payload)
             json.dumps(payload, ensure_ascii=False)
             print(f"PASS 200 {path}")
+
+        status, overview = request("/api/v1/dashboard/overview")
+        assert status == 200
+        situation = overview["waterloggingSituation"]
+        assert situation["totalEvents"] == 1
+        assert situation["changeVsHour"] == 108.0
+        assert situation["disposition"] == {"pending": 0, "handling": 1, "relieved": 0}
+        assert situation["topDistricts"] == [{"district": "黄浦区", "eventCount": 1}]
+        assert situation["metrics"] == {
+            "maxDepthCm": 28.6,
+            "avgDepthCm": 19.4,
+            "avgResponseMinutes": 32.4,
+            "newToday": 1,
+        }
+        assert situation["source"] == "FIXTURE_DERIVED"
+        json.dumps(overview, ensure_ascii=False)
+        print("PASS dashboard waterloggingSituation fixture-derived summary")
 
         status, ranking = request("/api/v1/rainfall/stations/ranking")
         assert status == 200, (status, ranking)
@@ -485,6 +568,7 @@ def main() -> None:
             "qualityFlags",
             "model",
             "synthetic",
+            "decision",
         }
         assert upload_observation["imageId"] == "IMG-RC11-UPLOAD"
         assert upload_observation["source"]["type"] == "local"
@@ -496,6 +580,12 @@ def main() -> None:
             "observedAt": None,
             "licenseReview": "not_required",
             "runtimePolicy": "research_mvp",
+        }
+        assert upload_observation["decision"] == {
+            "floodDetected": True,
+            "decisionDepthCm": 25.4,
+            "trafficStatus": "NOT_RECOMMENDED",
+            "recommendation": "不建议通行",
         }
         assert "provenance" not in upload_observation["model"]
         assert upload_observation["synthetic"] is False

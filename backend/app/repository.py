@@ -75,6 +75,61 @@ class FixtureRepository:
             result[str(item[key])] = item
         return result
 
+    def get_dashboard_overview(self) -> dict[str, Any]:
+        """Project the optional situation block from the checked-in fixtures."""
+
+        events = list(self.events.values())
+        depths = [float(point["depthCm"]) for point in self.flood_points]
+        updated_at = datetime.fromisoformat(str(self.dashboard_overview["updatedAt"]))
+        disposition = {"pending": 0, "handling": 0, "relieved": 0}
+        districts: dict[str, int] = {}
+        response_minutes: list[float] = []
+        new_today = 0
+        change_vs_hour = 0.0
+
+        for event in events:
+            depth_cm = float(event.get("currentDepthCm", 0))
+            risk_level = str(event.get("riskLevel", "NORMAL"))
+            if depth_cm <= 0 or risk_level == "NORMAL":
+                disposition["relieved"] += 1
+            elif risk_level in {"HIGH", "CRITICAL"}:
+                disposition["handling"] += 1
+            else:
+                disposition["pending"] += 1
+
+            district = str(event.get("district", "未分区"))
+            districts[district] = districts.get(district, 0) + 1
+            rise_rate = event.get("riseRateCmMin")
+            if rise_rate is not None:
+                change_vs_hour += float(rise_rate) * 60
+            duration_seconds = event.get("durationSeconds")
+            if duration_seconds is not None:
+                response_minutes.append(float(duration_seconds) / 60)
+            started_at = event.get("startedAt")
+            if started_at and datetime.fromisoformat(str(started_at)).date() == updated_at.date():
+                new_today += 1
+
+        sorted_districts = sorted(districts.items(), key=lambda item: (-item[1], item[0]))
+        avg_depth = sum(depths) / len(depths) if depths else 0.0
+        avg_response = sum(response_minutes) / len(response_minutes) if response_minutes else 0.0
+        situation = {
+            "totalEvents": len(events),
+            "changeVsHour": round(change_vs_hour, 1),
+            "disposition": disposition,
+            "topDistricts": [
+                {"district": district, "eventCount": event_count}
+                for district, event_count in sorted_districts
+            ],
+            "metrics": {
+                "maxDepthCm": max(depths, default=0.0),
+                "avgDepthCm": round(avg_depth, 1),
+                "avgResponseMinutes": round(avg_response, 1),
+                "newToday": new_today,
+            },
+            "source": "FIXTURE_DERIVED",
+        }
+        return {**self.dashboard_overview, "waterloggingSituation": situation}
+
     def get_event(self, event_id: str) -> dict[str, Any] | None:
         return self.events.get(event_id)
 
@@ -149,7 +204,7 @@ class MemoryRepository:
 
     @property
     def dashboard_overview(self) -> Any:
-        return self.fixture_repository.dashboard_overview
+        return self.fixture_repository.get_dashboard_overview()
 
     @property
     def rainfall(self) -> Any:

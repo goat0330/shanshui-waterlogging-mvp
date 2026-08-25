@@ -87,12 +87,48 @@ class UrbanStatus(BaseModel):
     normal: int
 
 
+class WaterloggingDisposition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pending: int = Field(ge=0)
+    handling: int = Field(ge=0)
+    relieved: int = Field(ge=0)
+
+
+class WaterloggingDistrict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    district: str = Field(min_length=1)
+    eventCount: int = Field(ge=0)
+
+
+class WaterloggingMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    maxDepthCm: float = Field(ge=0)
+    avgDepthCm: float = Field(ge=0)
+    avgResponseMinutes: float = Field(ge=0)
+    newToday: int = Field(ge=0)
+
+
+class WaterloggingSituation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    totalEvents: int = Field(ge=0)
+    changeVsHour: float
+    disposition: WaterloggingDisposition
+    topDistricts: list[WaterloggingDistrict]
+    metrics: WaterloggingMetrics
+    source: str = Field(min_length=1)
+
+
 class DashboardOverview(BaseModel):
     updatedAt: datetime
     city: str
     weather: Weather
     urbanStatus: UrbanStatus
     activeFloodPoints: int
+    waterloggingSituation: WaterloggingSituation | None = None
 
 
 class RainfallTrendPoint(BaseModel):
@@ -258,6 +294,22 @@ class VisionDepthRuntimePolicy(str, Enum):
     PRODUCTION = "production"
 
 
+class VisionDecisionTrafficStatus(str, Enum):
+    NORMAL = "NORMAL"
+    CAUTION = "CAUTION"
+    NOT_RECOMMENDED = "NOT_RECOMMENDED"
+    PROHIBITED = "PROHIBITED"
+
+
+class VisionDecisionProjection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    floodDetected: bool
+    decisionDepthCm: float | None = Field(ge=0)
+    trafficStatus: VisionDecisionTrafficStatus
+    recommendation: str = Field(min_length=1)
+
+
 class VisionDepthProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -293,6 +345,7 @@ class VisionDepthObservation(BaseModel):
     qualityFlags: list[str]
     model: dict[str, Any]
     synthetic: bool
+    decision: VisionDecisionProjection | None = None
 
 
 class VisionDepthUrlRequest(BaseModel):

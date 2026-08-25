@@ -52,6 +52,49 @@
     },
     "activeFloodPoints": {
       "type": "integer"
+    },
+    "waterloggingSituation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["totalEvents", "changeVsHour", "disposition", "topDistricts", "metrics", "source"],
+      "properties": {
+        "totalEvents": {"type": "integer", "minimum": 0},
+        "changeVsHour": {"type": "number"},
+        "disposition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pending", "handling", "relieved"],
+          "properties": {
+            "pending": {"type": "integer", "minimum": 0},
+            "handling": {"type": "integer", "minimum": 0},
+            "relieved": {"type": "integer", "minimum": 0}
+          }
+        },
+        "topDistricts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["district", "eventCount"],
+            "properties": {
+              "district": {"type": "string", "minLength": 1},
+              "eventCount": {"type": "integer", "minimum": 0}
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxDepthCm", "avgDepthCm", "avgResponseMinutes", "newToday"],
+          "properties": {
+            "maxDepthCm": {"type": "number", "minimum": 0},
+            "avgDepthCm": {"type": "number", "minimum": 0},
+            "avgResponseMinutes": {"type": "number", "minimum": 0},
+            "newToday": {"type": "integer", "minimum": 0}
+          }
+        },
+        "source": {"type": "string", "minLength": 1}
+      }
     }
   }
 }
