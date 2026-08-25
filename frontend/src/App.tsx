@@ -91,7 +91,6 @@ const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
   depth: {
     level: 5,
     estimatedDepthCm: null,
-    approximateDepthCm: 50,
     rangeCm: [50, null],
     confidence: 0,
   },
@@ -99,9 +98,14 @@ const DEMO_VISION_OBSERVATION: VisionDepthObservation = {
   referenceObjects: [],
   waterMaskPath: 'DEMO_FIXTURE_MASK_NOT_ATTACHED',
   quality: 'REJECT',
-  qualityFlags: ['DEMO_FIXTURE', 'NO_REFERENCE', 'ROUGH_VISUAL_ESTIMATE'],
+  qualityFlags: ['DEMO_FIXTURE', 'NO_REFERENCE', 'CAMERA_UNCALIBRATED'],
   model: { waterSegmentation: 'fixture-only' },
   synthetic: true,
+  decision: {
+    decisionDepthCm: 50,
+    trafficStatus: '禁止通行',
+    recommendation: '积水较深，建议立即封控并组织排水',
+  },
 }
 
 export default function App() {
@@ -339,10 +343,10 @@ function GalleryPage() {
         <section className="gallery-section">
           <GallerySectionTitle title="Layout / Core Panels" note="页面骨架与核心业务面板" />
           <div className="gallery-grid gallery-grid--panels">
-            <GalleryCard title="StatusPanel" stateName="summary block · empty on Main 5b3">
+            <GalleryCard title="StatusPanel" stateName="fixture fallback · empty">
               <StatusPanel overview={homeFixtures.overview} />
             </GalleryCard>
-            <GalleryCard title="StatusPanel" stateName="high-risk · summary pending">
+            <GalleryCard title="StatusPanel" stateName="high-risk · fixture fallback">
               <StatusPanel overview={homeFixtures.overview} variant="high-risk" />
             </GalleryCard>
             <GalleryCard title="StatusPanel" stateName="empty">
@@ -411,7 +415,7 @@ function GalleryPage() {
             <GalleryCard title="SensorEvidence" stateName="DEMO_DEVICE / stale fixture">
               <SensorEvidence sensor={createDemoSensorEvidence(homeFixtures.event)} />
             </GalleryCard>
-            <GalleryCard title="VisionDepthDrawer" stateName="decision projection · empty / ready controls">
+            <GalleryCard title="VisionDepthDrawer" stateName="fixture decision · empty / ready controls">
               <VisionDepthGalleryPreview />
             </GalleryCard>
           </div>
@@ -446,9 +450,9 @@ function GalleryPage() {
             <a href="/?state=plus30">打开 Forecast +30 全屏 ↗</a>
           </div>
           <div className="full-dashboard-gallery">
-            <DashboardStateCard label="A · Default" note="summary pending · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
-            <DashboardStateCard label="B · High Risk" note="summary pending · 风险色增强但不铺满页面" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
-            <DashboardStateCard label="C · Forecast +30" note="summary pending · 场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
+            <DashboardStateCard label="A · Default" note="fixture fallback · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
+            <DashboardStateCard label="B · High Risk" note="fixture fallback · 风险色增强但不铺满页面" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
+            <DashboardStateCard label="C · Forecast +30" note="fixture fallback · 场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
           </div>
         </section>
 
@@ -476,7 +480,7 @@ function VisionDepthGalleryPreview() {
 
   return (
     <div className="gallery-vision-preview">
-      <p>同页入口：local upload / direct URL；Main 当前无 decision projection 时保持待判定。</p>
+      <p>同页入口：local upload / direct URL；fixture ready 展示最终决策卡。</p>
       <div className="gallery-vision-actions">
         <button type="button" onClick={() => showState('idle')}>empty</button>
         <button type="button" onClick={() => showState('loading')}>loading</button>

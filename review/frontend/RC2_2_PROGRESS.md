@@ -4,38 +4,41 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Baseline and ownership
 
-- Main baseline: `5b3da2d32634f4618ac0c78c59a2a0cc5a9589f3`
-- Branch: `worker/rc22-dashboard`
+- Main baseline: `b6ea92a` (backend/Cesium/Vision integration already merged)
+- Branch: `worker/rc22-dashboard-repair`
 - Worktree: `D:/研究生作业/上海城市内涝_智慧平台/worktrees/dashboard-rc11`
-- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/styles.css`, `frontend/src/types.ts`, and this review record.
+- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/types.ts`, and this review record.
 - Cesium, backend, contracts, public media, and new dependencies were not modified.
 
 ## Delivered
 
-- Replaced the legacy `城市态势` ring and `03/12/137 + 活跃点位` presentation with an optional backend `summary` block: total events, one-hour delta, pending/processing/mitigated, top three areas, depth, response time, and today's new events.
-- When Main's current overview has no `summary`, the panel stays in an explicit empty state (`SUMMARY BLOCK` / `等待城市积水汇总`) instead of inventing live values.
-- Vision image decision content now reads only the optional `observation.decision` projection: detection conclusion, decision depth, traffic status, and action recommendation. `approximateDepthCm`, confidence, flags, provenance, and source IDs remain in technical details or are not rendered as product conclusions.
+- Normalized backend `waterloggingSituation` into the existing frontend summary shape: total events, one-hour delta, pending/processing/mitigated, top three districts, depth, response time, and today's new events.
+- The fixture path remains an honest empty-summary fallback; API mode now renders the backend summary block instead of showing an empty panel.
+- Vision image decision content now reads only the optional `observation.decision` projection: detection conclusion, decision depth, traffic status, and action recommendation. The demo fixture carries `decisionDepthCm=50`, `禁止通行`, and `积水较深，建议立即封控并组织排水` while retaining `estimatedDepthCm=null` for the uncalibrated evidence path.
+- Backend enum traffic statuses are mapped to Chinese product copy in the main result cards; raw range/level/provenance stays in technical details.
+- Sensor main copy is now `传感器状态` with `在线/延迟/离线/未上报`, `当前实测水深`, and `最后上报`; source/provenance wording is not used as product copy.
 - CCTV receives the selected frame's optional decision projection and renders the same four decision fields in a compact video overlay. Its technical frame/provenance fields are under `技术详情`; the existing non-LIVE media/source labels remain truthful.
 - The Vision result tab remains the default and shows original image plus a semi-transparent mask when the mask asset is available. `原图` and `水体Mask` remain available as separate tabs.
-- Gallery/fullscreen review labels now explain that the current Main baseline intentionally exercises summary/decision empty states until the backend projection is merged.
+- Gallery/fullscreen review labels now distinguish the fixture fallback from the API-backed summary and decision surfaces.
 
 ## Conditional contract boundary
 
-- Main `5b3da2d` still exposes the frozen overview shape without `summary`, and the VisionDepth contract still has no `decision` block. The frontend types are optional so current API/fixture data remains valid; populated decision cards are `NOT VERIFIED` until the backend response and video adapter preserve these fields.
-- No old urban-status numbers are used as the new summary. No Vision estimate is promoted into `decisionDepthCm`.
+- `waterloggingSituation` is normalized at the frontend hook boundary; no backend or contract file was changed.
+- No old urban-status numbers are used as the new summary. The synthetic no-reference fixture decision is a product fixture, not a calibrated production estimate.
 
 ## Validation
 
 - `npm run typecheck`: PASS
-- `npm run build`: PASS; existing Cesium chunk-size warning only
+- `npm run build`: PASS; existing large Cesium bundle warning only
 - `git diff --check`: PASS
-- Browser local smoke: PASS for `/` and `/gallery` at the available `1280×720` browser viewport; no horizontal overflow, `/gallery` exposes 3 fullscreen review states, and the rendered Dashboard/CCTV decision labels are present. Exact 1920×1080 browser viewport was not available in this run.
+- Stale product-copy scan over `frontend/src`: PASS; no `SENSOR EVIDENCE`, old sensor disclaimer, `summary pending`, or `没有 decision projection` matches.
+- Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
+- Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
 ## NOT VERIFIED
 
-- Backend summary response and Vision decision projection are not present on the stated Main baseline.
-- Populated decision-state rendering with production/API data, Cesium runtime, legal/real CCTV, and final visual match against the target/Golden remain unverified.
+- Real CCTV/media, calibrated centimeter accuracy, production model/runtime, Cesium runtime, and final visual match against the target/Golden remain unverified.
 
 ## Checkpoint
 
