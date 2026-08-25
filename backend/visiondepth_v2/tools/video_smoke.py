@@ -15,6 +15,7 @@ for import_root in (PACKAGE_ROOT, REPO_ROOT):
         sys.path.insert(0, str(import_root))
 
 from media.video_pipeline import run_video_pipeline  # noqa: E402
+from vision.decision import project_decision  # noqa: E402
 from src.visiondepth.engine import guard_observation, is_calibrated  # noqa: E402
 from tools.data_gate import find_usable_videos, load_config, manifest_path  # noqa: E402
 
@@ -65,6 +66,8 @@ def _guard_video_result(
             allow_uncalibrated_depth_cm=allow_uncalibrated_depth_cm,
         )
         frame["observation"] = observation
+        decision = project_decision(observation)
+        frame["decision"] = decision
         result_path = _resolve_path(frame["resultPath"])
         _write_json(result_path, observation)
         frame["overlay"].update(
@@ -76,6 +79,7 @@ def _guard_video_result(
                 "confidence": observation["depth"]["confidence"],
                 "quality": observation["quality"],
                 "qualityFlags": observation["qualityFlags"],
+                "decision": decision,
             }
         )
     result["quality"] = "LOW"
@@ -105,6 +109,7 @@ def _frame_summary(frame: dict[str, Any]) -> dict[str, Any]:
         "method": observation["method"],
         "quality": observation["quality"],
         "qualityFlags": observation["qualityFlags"],
+        "decision": frame["decision"],
         "overlay": frame["overlay"],
     }
 

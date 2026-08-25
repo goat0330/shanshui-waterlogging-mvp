@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
+from .decision import project_decision
 from .ingest import ImageInputError
 from .pipeline import run_pipeline
 
@@ -20,6 +22,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="accepted for explicitness; V1 always saves the mask beside the JSON evidence",
     )
+    parser.add_argument(
+        "--decision-output",
+        help="optional sidecar JSON path for the product traffic decision projection",
+    )
     return parser
 
 
@@ -33,6 +39,22 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as exc:
         print(f"VisionDepth processing error: {exc}", file=sys.stderr)
         return 1
+    if args.decision_output:
+        decision_path = Path(args.decision_output)
+        decision_path.parent.mkdir(parents=True, exist_ok=True)
+        decision_path.write_text(
+            json.dumps(
+                {
+                    "imageId": observation["imageId"],
+                    "observationPath": Path(args.output).as_posix(),
+                    "decision": project_decision(observation),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     print(json.dumps(observation, ensure_ascii=False, indent=2))
     return 0
 

@@ -35,7 +35,7 @@ The current implementation is an OpenCV baseline:
 
 The smoke-calibrated baseline requires a lower-scene brown/blue chroma cue (`R-B` contrast) before declaring obvious water. It is intentionally conservative against dry pavement and can miss neutral-gray or night-time water; this is a known V1 ceiling, not a production accuracy claim.
 
-An object box alone never produces a metric depth estimate. When no reliable reference or camera calibration is available, the pipeline keeps `estimatedDepthCm` as `null` and may provide `approximateDepthCm` as a coarse range representative for the MVP display. That value is explicitly marked by `ROUGH_VISUAL_ESTIMATE`; it is not sensor-grade measurement and must not be used as a calibrated passability decision.
+An object box alone never produces a metric depth estimate. When no reliable reference or camera calibration is available, the pipeline keeps `estimatedDepthCm` as `null` and may provide `approximateDepthCm` as a coarse midpoint only for a closed visual range. The open-ended Level 5 range `[50, null]` keeps `approximateDepthCm=null`. The value is explicitly marked by `ROUGH_VISUAL_ESTIMATE`; it is not sensor-grade measurement. The shared `vision.decision.project_decision()` helper may use the lower bound `50` for a traffic-policy projection, but that decision value is not a calibrated depth estimate.
 
 The V-FloodNet project was used only as an architecture reference (water segmentation -> reference object -> waterline/submersion -> coarse depth). Its source was not copied; the repository planning document records its license metadata as undeclared, so it is not a runtime dependency.
 

@@ -59,5 +59,82 @@ git diff --check                     PASS (exit 0; only LF/CRLF warnings)
 ## Main follow-up — coarse visual display value
 
 - The shared image pipeline now emits optional `depth.approximateDepthCm` when flood is detected but no metric reference is available.
-- This value is a deterministic representative of the existing visual range (for `[50, null]`, the MVP display value is `50.0`), and `qualityFlags` includes `ROUGH_VISUAL_ESTIMATE`.
+- This value is a deterministic representative of a closed visual range; for the open-ended `[50, null]` Level 5 range it remains `null`, and `qualityFlags` includes `ROUGH_VISUAL_ESTIMATE` when applicable.
 - `depth.estimatedDepthCm` remains `null` in the no-reference case; the new field must not be used as calibrated sensor data or as a final passability measurement.
+
+## RC2.2 — explainable level control and unified decision projection
+
+### Scope and outcome
+
+This checkpoint repairs the shared OpenCV VisionDepth path used by both image and video evidence. MP4 sampling still calls `media.video_pipeline.run_video_pipeline`, and every sampled frame is passed through the same root `vision.pipeline`; no second video depth algorithm was introduced. The V2 video wrapper only applies the existing uncalibrated guard and projects product decision metadata.
+
+### Before / after
+
+- Before: `_visual_level()` had the Level 2–4 branches nested below the Level 1 return. Any non-dry segmentation score `>=0.32` therefore fell through to Level 5. A no-reference `[50, null]` result also exposed `approximateDepthCm=50.0`, which looked like a finite measurement despite the open-ended range.
+- After: thresholds are explicit and monotonic: `<0.32 -> Level 1`, `<0.46 -> Level 2`, `<0.62 -> Level 3`, `<0.80 -> Level 4`, otherwise Level 5. Closed ranges retain midpoint `approximateDepthCm`; Level 5 keeps it `null`. Schema validation rejects an approximate value for an open range or a non-midpoint value.
+
+### Decision projection
+
+`vision.decision.project_decision(observation)` is a parallel, deterministic projection and does not mutate the evidence object. It returns `floodDetected`, `decisionDepthCm`, `trafficStatus`, `recommendation`, and `decisionDepthSource`. The frozen policy is lower-inclusive / upper-exclusive: `0–<10 NORMAL/NORMAL_PASSAGE`, `10–<20 CAUTION/CAUTION_PASSAGE`, `20–<30 NOT_RECOMMENDED/DO_NOT_PASS`, and `>=30 PROHIBITED/NO_PASSAGE` (therefore `>=50` is also prohibited). A no-reference Level 5 uses `50.0` only as `LEVEL_LOWER_BOUND` for the traffic decision; it is not `estimatedDepthCm` or a calibrated centimetre estimate.
+
+Image CLI can write this projection as an optional sidecar with `--decision-output`. Video summaries put the same object at each frame and inside overlay metadata. The underlying `estimatedDepthCm`, `approximateDepthCm`, masks, references, confidence, method, and quality flags remain available unchanged apart from the corrected Level 5 approximation behavior.
+
+### Actual image evidence
+
+`python -m vision.smoke` passed for the existing three local smoke images. The relevant no-reference image was:
+
+```json
+{
+  "imageId": "IMG-00002",
+  "floodDetected": true,
+  "depth": {"level": 5, "estimatedDepthCm": null, "approximateDepthCm": null, "rangeCm": [50, null], "confidence": 0.4},
+  "method": "NO_REFERENCE",
+  "qualityFlags": ["BASELINE_ONLY", "MODEL_WEIGHT_MISSING", "NO_REFERENCE"],
+  "decision": {"decisionDepthCm": 50.0, "trafficStatus": "PROHIBITED", "recommendation": "NO_PASSAGE", "decisionDepthSource": "LEVEL_LOWER_BOUND"}
+}
+```
+
+The person-reference smoke image produced `level=3`, `estimatedDepthCm=25.4`, `decisionDepthCm=25.4`, `trafficStatus=NOT_RECOMMENDED`; the dry-street negative produced `floodDetected=false`, `level=0`, `decisionDepthCm=0.0`, `trafficStatus=NORMAL`.
+
+### Actual video evidence
+
+`python -m tools.video_smoke --config configs/local.yaml` passed against four locally available, sequentially decoded MP4s and produced `25` sampled frames (`synthetic=false`, `runtimeProfile=research_mvp`, `localOnly=true`). Per-frame JSON, water mask PNG, and overlay metadata were written under the ignored runtime directory `backend/visiondepth_v2/outputs/smoke/`. The summary is `backend/visiondepth_v2/outputs/smoke/smoke_summary.json`.
+
+One sampled no-reference frame:
+
+```json
+{
+  "frameId": "VF-LSU-20200624-1-F000000",
+  "timestampMs": 0.0,
+  "floodDetected": true,
+  "level": 5,
+  "rangeCm": [50, null],
+  "estimatedDepthCm": null,
+  "qualityFlags": ["BASELINE_ONLY", "CAMERA_UNCALIBRATED", "MODEL_WEIGHT_MISSING", "NO_REFERENCE"],
+  "decision": {"decisionDepthCm": 50.0, "trafficStatus": "PROHIBITED", "recommendation": "NO_PASSAGE", "decisionDepthSource": "LEVEL_LOWER_BOUND"},
+  "overlay": {"status": "METADATA_ONLY", "rendered": false, "waterMaskPath": "outputs/smoke/VF-LSU-20200624-1/VF-LSU-20200624-1-F000000-water-mask.png", "referenceBoxes": []}
+}
+```
+
+All video frames retained `estimatedDepthCm=null` and `CAMERA_UNCALIBRATED`; the video output is evidence metadata, not LIVE/CCTV or sensor truth. The source manifest remains local-only `MVP_REVIEW`; the four usable files are from the V-FloodNet `water_videos_for_test` sample, while two 11-frame files were excluded by the existing `>=30`-frame data gate. Original MP4s and runtime outputs remain outside public Git; no weights or full dataset were downloaded.
+
+### Commands
+
+```text
+python -m vision.smoke                                      PASS (3 images)
+python -m media.smoke --synthetic-check                     PASS (VIDEO_SOURCE_REQUIRED + synthetic adapter check)
+python -m pytest -q (backend/visiondepth_v2)                PASS (7 passed)
+python -m compileall -q vision backend/visiondepth_v2/...   PASS
+python -m tools.video_smoke --config configs/local.yaml      PASS (4 videos, 25 sampled frames)
+video_decision_audit                                        PASS (all frames projected and uncalibrated-guarded)
+git diff --check                                            PASS
+```
+
+### NOT VERIFIED / blockers
+
+- No labeled ground-truth evaluation was run; IoU/F1/MAE, true flood-depth accuracy, and before/after accuracy improvement are `NOT VERIFIED`.
+- CameraProfile is not calibrated. No image/video result in this checkpoint is a production centimetre measurement; `estimatedDepthCm` remains null for uncalibrated video.
+- The OpenCV baseline has no learned water/reference weights and remains LOW-confidence, with known sensitivity to lighting, gray water, occlusion, viewpoint, and pavement texture.
+- Per-frame overlay is metadata-only (`rendered=false`); browser/UI integration and backend API projection are other workers' scope.
+- V-FloodNet source/license status remains `MVP_REVIEW` for local research smoke only; final public-use/redistribution approval is deferred. No pending-license binary was added to Git.
+- Real CCTV/LIVE ingestion, production deployment, SensorState/Forecast integration, and threshold calibration are not verified.

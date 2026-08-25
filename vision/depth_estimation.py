@@ -10,15 +10,15 @@ from .water_segmentation import WaterSegmentation
 
 
 def _visual_level(segmentation: WaterSegmentation) -> int:
-  if segmentation.score < 0.32:
-    return 1
+    if segmentation.score < 0.32:
+        return 1
     if segmentation.score < 0.46:
         return 2
     if segmentation.score < 0.62:
         return 3
     if segmentation.score < 0.80:
         return 4
-  return 5
+    return 5
 
 
 def _approximate_depth(level: int) -> float | None:
@@ -28,7 +28,7 @@ def _approximate_depth(level: int) -> float | None:
     if minimum is None:
         return None
     if maximum is None:
-        return float(minimum)
+        return None
     return round((minimum + maximum) / 2.0, 1)
 
 
