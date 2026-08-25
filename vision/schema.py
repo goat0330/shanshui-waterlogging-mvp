@@ -82,6 +82,13 @@ def validate_observation(observation: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("approximateDepthCm must be non-negative or null")
     if depth["estimatedDepthCm"] is not None and approximate is not None:
         raise ValueError("estimatedDepthCm and approximateDepthCm cannot both be set")
+    if approximate is not None:
+        minimum, maximum = LEVEL_RANGES[depth["level"]]
+        if maximum is None or minimum is None or depth["level"] == 0:
+            raise ValueError("approximateDepthCm requires a finite non-zero visual range")
+        expected = (minimum + maximum) / 2.0
+        if round(float(approximate), 1) != round(expected, 1):
+            raise ValueError("approximateDepthCm must be the midpoint of its visual range")
     if len(depth["rangeCm"]) != 2:
         raise ValueError("depth.rangeCm must contain two values")
     if not 0 <= float(depth["confidence"]) <= 1:

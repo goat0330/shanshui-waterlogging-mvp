@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from vision.decision import _traffic_status, project_decision
+from vision.depth_estimation import _approximate_depth, _visual_level
 from src.visiondepth.backends.external_command import ExternalCommandBackend
 from src.visiondepth.engine import guard_observation
 from tools.check_third_party import _allows_local_research
@@ -32,6 +40,50 @@ def _observation() -> dict[str, object]:
         },
         "synthetic": False,
     }
+
+
+def test_visual_level_thresholds_and_open_range_are_explainable() -> None:
+    scores = (0.20, 0.40, 0.50, 0.70, 0.90)
+    assert [_visual_level(SimpleNamespace(score=score)) for score in scores] == [1, 2, 3, 4, 5]
+    assert _approximate_depth(4) == 40.0
+    assert _approximate_depth(5) is None
+
+
+def test_decision_projection_uses_evidence_and_frozen_traffic_rules() -> None:
+    assert [_traffic_status(value, True) for value in (0, 9.9, 10, 19.9, 20, 29.9, 30, 49.9, 50)] == [
+        "NORMAL",
+        "NORMAL",
+        "CAUTION",
+        "CAUTION",
+        "NOT_RECOMMENDED",
+        "NOT_RECOMMENDED",
+        "PROHIBITED",
+        "PROHIBITED",
+        "PROHIBITED",
+    ]
+    estimate = project_decision(_observation())
+    assert estimate == {
+        "floodDetected": True,
+        "decisionDepthCm": 17.0,
+        "trafficStatus": "CAUTION",
+        "recommendation": "CAUTION_PASSAGE",
+        "decisionDepthSource": "ESTIMATED_REFERENCE",
+    }
+
+    no_reference = _observation()
+    no_reference["method"] = "NO_REFERENCE"
+    no_reference["depth"] = {
+        "level": 5,
+        "estimatedDepthCm": None,
+        "approximateDepthCm": None,
+        "rangeCm": [50, None],
+        "confidence": 0.4,
+    }
+    lower_bound = project_decision(no_reference)
+    assert lower_bound["decisionDepthCm"] == 50.0
+    assert lower_bound["trafficStatus"] == "PROHIBITED"
+    assert lower_bound["recommendation"] == "NO_PASSAGE"
+    assert lower_bound["decisionDepthSource"] == "LEVEL_LOWER_BOUND"
 
 
 def test_uncalibrated_guard_keeps_contract_and_removes_cm() -> None:
