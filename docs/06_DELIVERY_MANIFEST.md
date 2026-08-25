@@ -8,9 +8,9 @@
 ## 1. Candidate / canonical identity
 
 ```text
-Status: CONDITIONAL / RC2.2 + VISUAL_REVIEW
+Status: CONDITIONAL / RC2.2 CANONICAL CLOSEOUT + VISUAL_REVIEW
 Canonical branch: main
-Current integrated functional checkpoint: 38df8df
+Current integrated functional checkpoint: d9f0661b0d24d535b4d28ad72441d17d28723ec2
 RC2.2 Main repairs: 0349a6a (Cesium building emphasis) + 49d5673 (backend decision projection) + e2c9375 (Vision decision projection) + b6ea92a (dashboard decision surface) + 94735ac (waterlogging summary wiring) + 38df8df (video decision adapter)
 Release tag: rc2-evidence-demo (immutable RC2 baseline; not moved)
 Release tag target SHA: b0a41d1e2245e60ed55eef2777ea03d6b899d6c2
@@ -67,9 +67,12 @@ The public source manifest is `docs/RC2_SOURCE_MANIFEST.csv`. The actual six-row
 |---|---|---|
 | Main branch and source boundary | PASS | Main is the release line; release staging and runtime boundary audit passed |
 | Backend memory Contract/Telemetry smoke | PASS | `python -B backend/smoke.py`; REST, CORS, WebSocket, telemetry, simulator, vision upload/URL and 404/422 boundaries |
+| Shanghai public-source adapter | PASS / CONDITIONAL | `DATA_MODE=hybrid` live smoke returned 63 rainfall, 45 ponding and 55 water-level records; source remains provisional and does not alter the formal Contract |
 | VisionDepth provenance contract | PASS | OpenAPI and JSON schema require `VISION_IMAGE`/`VISION_VIDEO` source provenance fields |
 | Frontend TypeScript/build | PASS | `npm run typecheck`; `npm run build`; only the existing Cesium chunk warning |
 | Dashboard decision integration | PASS / CONDITIONAL | API `waterloggingSituation` renders the summary block; image/video decision projection renders final Chinese product copy; user visual acceptance remains open |
+| Contract semantic alignment | PASS | Frontend consumes `waterloggingSituation` directly; no second `summary` business field remains; frame-level `decision` is preserved through the video adapter |
+| Generated runtime freshness | PASS / CONDITIONAL | V2 video smoke was regenerated from the current pipeline; ignored browser runtime overlay/masks were rebuilt, and the original FMP4 source was not modified |
 | Cesium geographic demo path | PASS / CONDITIONAL | 1920×1080 browser smoke shows `OSM BUILDINGS · GLOBAL`, geographic FP-001 and forecast layers; local Core Local, official hydro and portable token deployment remain unverified |
 | REST/WebSocket API mode | PASS | 1920×1080 browser smoke shows API summary and `API DATA · WS CONNECTED`; REST fallback/reconnect evidence remains from RC2.1 |
 | 60-second core chain | PASS | `review/e2e/60-second-chain.json` |
@@ -78,6 +81,7 @@ The public source manifest is `docs/RC2_SOURCE_MANIFEST.csv`. The actual six-row
 | Vision image result delivery | PASS / CONDITIONAL | `flood_no_reference.jpg` API upload returns `decisionDepthCm=50`, `PROHIBITED`, mask artifact and final product card; the value is the lower bound of an open visual range, not calibrated sensor depth |
 | MP4 → frame → evidence | PASS / CONDITIONAL | 4/6 videos pass `>=30` gate; 25 sampled frame JSON, masks, timestamps and overlay metadata; 2 source files have 11 frames |
 | Video decision projection → Dashboard | PASS / CONDITIONAL | Current local runtime overlay renders `检测到积水 / 约 50 cm / 禁止通行`; raw decision enums remain in the adapter/technical evidence boundary |
+| Browser image/video result surfaces | PASS / CONDITIONAL | API browser smoke verified image upload + mask + `约 50 cm / 禁止通行` and H.264 runtime video + the same frame decision; real production CCTV remains unverified |
 | RC2.1 synthetic browser video | PASS / CONDITIONAL | `frontend/public/demo/video/flood_cam_017.mp4` decodes in Chrome; flat frame overlay normalizes to nearest timestamp; all depth cm remain null |
 | RC2.1 SensorState → Cesium | PASS / CONDITIONAL | `SSZJ-NODE-001`, `28.6cm`, `WGS84 lon/lat`, `fallback=false` are passed to the geographic Cesium entity; official calibration remains unverified |
 | RC2.1 provenance semantics | PASS | local upload=`not_required`; remote URL=`pending`; frontend provenance is required and rendered without `NOT ATTACHED` for controlled observations |
@@ -95,7 +99,8 @@ Verified commands on the integrated Main line:
 - `python -B backend/smoke.py` — PASS, including VisionDepth upload provenance, URL SSRF boundary and SensorState non-overwrite.
 - OpenAPI/JSON schema parity — PASS; both expose the same provenance fields.
 - `python -m vision.smoke` — PASS for the three existing image evidence cases.
-- From `backend/visiondepth_v2/`: `python -m pytest -q` — `5 passed`; `compileall` — PASS; `data_gate` — `4 usable videos`; `video_smoke` — PASS with `4 videos / 25 sampled frames / synthetic=false`; third-party check — `RESEARCH_MVP_LOCAL_ONLY`.
+- From `backend/visiondepth_v2/`: `python -m pytest -q` — `7 passed`; `compileall` — PASS; `data_gate` — `4 usable videos`; `video_smoke` — PASS with `4 videos / 25 sampled frames / synthetic=false`; third-party check — `RESEARCH_MVP_LOCAL_ONLY`.
+- Shanghai public-source hybrid smoke — PASS: `63` rainfall records, `45` ponding records and `55` water-level records; source coordinates remain explicitly `SOURCE_REPORTED_XX2000_YY2000`.
 - `npm run typecheck` and `npm run build` — PASS.
 - `node review/frontend/rc2.1-video-overlay-adapter-smoke.mjs` — PASS for flat-frame normalization, nearest timestamp selection and null-depth guard.
 - Main browser smoke at `http://127.0.0.1:4173/` — PASS: 1920×1080 API mode renders the waterlogging summary, OSM Buildings scene label, geographic FP-001, WS-connected badge and the current video decision card; screenshot evidence is `review/e2e/rc22-main-1920x1080.jpg`.
@@ -117,6 +122,7 @@ Known deviations:
 - V-FloodNet source metadata remains `licenseReview=pending`; MP4s and weights are not redistributed.
 - Two official source MP4s genuinely contain 11 frames and are rejected by the 30-frame gate; no interpolation or duplicated frames are used.
 - The four accepted videos are uncalibrated; the algorithm reports masks/levels/ranges and null numeric centimetres, not calibrated depth or accuracy.
+- The research source MP4 is FMP4 and is kept unchanged under the external data root; the ignored browser runtime uses a derived H.264 Baseline copy so Chrome can decode the same verified frames.
 - The current `50 cm` image/video decision is the lower bound of an open visual range and is used for the MVP action projection; it is not a physical calibration claim. The backend retains this distinction while the main UI presents the approved product decision copy.
 - No labeled GT or approved checkpoint exists for a model-upgrade metric; `MODEL_UPGRADE=NOT_VERIFIED`.
 - The first dashboard request for a known sensor before telemetry has a valid 404 (`sensor-state` absent). The API/5-minute smoke records this as an expected console 404; after telemetry the state is present and the chain passes.
@@ -132,6 +138,7 @@ Known deviations:
 - [x] RC2.1 local upload/remote URL provenance semantics independently accepted.
 - [x] RC2.2 backend waterlogging summary, unified decision projection and Dashboard API wiring accepted on Main.
 - [x] RC2.2 local video frame decision adapter and 1920×1080 browser smoke accepted on Main.
+- [x] Canonical field/runtime closeout: `waterloggingSituation`, frame-level `decision`, fresh runtime assets, and final browser image/video smoke.
 - [x] Minimal CI workflow added; remote GitHub Actions execution remains unverified.
 - [x] Final docs commit and explicit staged allowlist recorded.
 - [x] GitHub `main` pushed.

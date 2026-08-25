@@ -62,4 +62,5 @@ export const fixtureClient: DashboardDataClient = {
     if (homeFixtures.timeline.scenarioId !== scenarioId) throw notFound('timeline', scenarioId)
     return homeFixtures.timeline
   },
+  getShanghaiWater: async () => null,
 }

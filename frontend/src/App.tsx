@@ -252,7 +252,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
         <RainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} />
-        <RankingPanel ranking={data.rainfallRanking} />
+        <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
       <div className="dashboard-side dashboard-side--right">
         <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} onOpenVision={() => setVisionOpen(true)} />
@@ -261,7 +261,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
           camera={selectedEvent.camera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
-          decision={selectedVideoFrame?.observation.decision ?? null}
+          decision={selectedVideoFrame?.decision ?? null}
           videoEvidenceState={videoEvidenceState}
           onVideoReady={setVideoReady}
           onVideoTimeUpdate={setVideoTimeSec}
@@ -310,7 +310,7 @@ function DashboardPage() {
   })
   const data = dashboard.data ?? homeFixtures
   const dataBadge = dashboard.source === 'api'
-    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : `API DATA · WS ${realtime.status.toUpperCase()}`
+    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : data.shanghaiWater ? `API DATA · SHANGHAI WATER LIVE · WS ${realtime.status.toUpperCase()}` : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 
   return (

@@ -1,66 +1,70 @@
 {
   "status": "PASS",
-  "backend_port": 34238,
-  "frontend_port": 34239,
+  "backend_port": 19664,
+  "frontend_port": 19665,
   "events": [
     {
-      "elapsed_s": 29.1,
+      "elapsed_s": 38.7,
       "name": "initial",
-      "badge": "API DATA · WS CONNECTED",
+      "badge": "API DATA · BASE FIXTURE · WS CONNECTED",
       "scene_source": "osm"
     },
     {
-      "elapsed_s": 30.1,
+      "elapsed_s": 39.6,
       "name": "fp001-selected",
       "event": "FP-001",
       "event_panel": "人民路 × 滨江大道"
     },
     {
-      "elapsed_s": 30.7,
+      "elapsed_s": 40.1,
       "name": "telemetry-12cm",
       "response_depth_cm": 12.0,
       "ui_depth": "12.0cm"
     },
     {
-      "elapsed_s": 31.2,
+      "elapsed_s": 40.6,
       "name": "telemetry-28-6cm",
       "response_depth_cm": 28.6,
       "ui_depth": "28.6cm"
     },
     {
-      "elapsed_s": 31.8,
+      "elapsed_s": 41.2,
       "name": "forecast-plus10",
       "forecast": "PLUS_10",
       "scene_source": "PLUS_10"
     },
     {
-      "elapsed_s": 32.4,
+      "elapsed_s": 41.8,
       "name": "forecast-plus30",
       "forecast": "PLUS_30",
       "scene_source": "PLUS_30"
     },
     {
-      "elapsed_s": 33.0,
+      "elapsed_s": 42.3,
       "name": "forecast-now",
       "forecast": "NOW",
       "scene_source": "NOW"
     },
     {
-      "elapsed_s": 36.2,
+      "elapsed_s": 46.0,
       "name": "degraded",
-      "badge": "API DATA · WS FALLBACK"
+      "badge": "API DATA · BASE FIXTURE · WS FALLBACK"
     },
     {
-      "elapsed_s": 39.5,
+      "elapsed_s": 49.4,
       "name": "return-realtime",
-      "badge": "API DATA · WS CONNECTED"
+      "badge": "API DATA · BASE FIXTURE · WS CONNECTED"
     }
   ],
   "console_errors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
   ],
   "page_errors": [],
   "screenshots": [

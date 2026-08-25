@@ -19,34 +19,8 @@ function applyLocalDemoMedia(camera: DashboardData['camera']): DashboardData['ca
   }
 }
 
-function normalizeOverview(overview: DashboardOverview): DashboardOverview {
-  if (!overview.waterloggingSituation) return overview
-
-  const situation = overview.waterloggingSituation
-  return {
-    ...overview,
-    summary: {
-      totalEvents: situation.totalEvents,
-      changeVs1h: situation.changeVsHour,
-      status: {
-        pending: situation.disposition.pending,
-        processing: situation.disposition.handling,
-        mitigated: situation.disposition.relieved,
-      },
-      topAreas: situation.topDistricts.map((item) => ({
-        name: item.district,
-        eventCount: item.eventCount,
-      })),
-      maxDepthCm: situation.metrics.maxDepthCm,
-      averageDepthCm: situation.metrics.avgDepthCm,
-      averageResponseMinutes: situation.metrics.avgResponseMinutes,
-      newToday: situation.metrics.newToday,
-    },
-  }
-}
-
 async function loadDashboardData(): Promise<DashboardData> {
-  const [overview, rainfall, rainfallRanking, points, event, forecast, analysis, cameras, timeline, sensor] = await Promise.all([
+  const [overview, rainfall, rainfallRanking, points, event, forecast, analysis, cameras, timeline, sensor, shanghaiWater] = await Promise.all([
     client.getOverview(),
     client.getRainfall(),
     client.getRainfallStationRanking(),
@@ -57,10 +31,11 @@ async function loadDashboardData(): Promise<DashboardData> {
     client.listCameras(),
     client.getTimeline(DEFAULT_SCENARIO_ID),
     client.getSensorState(defaultSensorId).catch(() => null),
+    client.getShanghaiWater(),
   ])
 
   return {
-    overview: normalizeOverview(overview),
+    overview,
     rainfall,
     rainfallRanking,
     points,
@@ -70,6 +45,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     analysis,
     timeline,
     sensor,
+    shanghaiWater,
   }
 }
 

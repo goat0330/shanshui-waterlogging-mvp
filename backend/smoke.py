@@ -17,6 +17,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 from app.config import load_settings
 from app.main import app, repository, sensor_repository
+from app.shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from app.vision_depth import VisionDepthAdapter, VisionDepthError, project_vision_decision
 
 try:
@@ -57,7 +58,12 @@ class QuietImageHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
 
-def request(path: str, method: str = "GET", payload: dict[str, object] | None = None) -> tuple[int, object]:
+def request(
+    path: str,
+    method: str = "GET",
+    payload: dict[str, object] | None = None,
+    timeout: float = 3,
+) -> tuple[int, object]:
     headers = {"Accept": "application/json"}
     data = None
     if payload is not None:
@@ -66,7 +72,7 @@ def request(path: str, method: str = "GET", payload: dict[str, object] | None = 
     try:
         with LOCAL_OPENER.open(
             Request(f"{BASE_URL}{path}", data=data, headers=headers, method=method),
-            timeout=3,
+            timeout=timeout,
         ) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
@@ -124,6 +130,8 @@ def main() -> None:
     backend_dir = Path(__file__).resolve().parent
     settings = load_settings()
     assert settings.repository_backend == "memory"
+    assert settings.shanghai_water_timeout_seconds > 0
+    assert settings.shanghai_water_cache_ttl_seconds > 0
     assert repository.backend == "memory"
     assert (backend_dir / "alembic.ini").exists()
     assert (backend_dir / ".env.example").read_text(encoding="utf-8").find("REPOSITORY_BACKEND=memory") >= 0
@@ -166,6 +174,7 @@ def main() -> None:
     }
     spec = app.openapi()
     assert set(spec["paths"]) == formal_paths | telemetry_paths | vision_paths
+    assert "/api/v1/external/shanghai-water" not in spec["paths"]
     assert spec["components"]["schemas"]["RiskLevel"]["enum"] == ["NORMAL", "WARNING", "HIGH", "CRITICAL"]
     assert spec["components"]["schemas"]["ForecastKey"]["enum"] == ["NOW", "PLUS_10", "PLUS_30"]
     assert spec["components"]["schemas"]["TelemetryTransport"]["enum"] == ["WIFI", "CELLULAR_4G", "SIMULATOR"]
@@ -341,6 +350,64 @@ def main() -> None:
     print("PASS Vision image/video decision projection thresholds and video sample")
     print("PASS OpenAPI formal paths/enums, VisionDepth Contract shape, SensorRegistryEntry, and adapter fixture validation")
 
+    source_row = {
+        "STATIONID": "S-001",
+        "STATIONNAME": "测试站",
+        "DATETIME": "2026-08-25 12:00:00",
+        "XX2000": "121.4874",
+        "YY2000": "31.2297",
+    }
+    source_rows = {
+        "SSYLMore": [{**source_row, "RAINVALUE": "12.3"}],
+        "JSJCMore": [{**source_row, "JISHUISTATUS": "8.5"}],
+        "SSSW": [{**source_row, "OUTWATER": "2.75"}],
+        "YJSW": [{**source_row, "YBCW": "2.90"}],
+    }
+    adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+    with patch.object(adapter, "_fetch_list", side_effect=lambda dataset_type: source_rows[dataset_type]):
+        snapshot = adapter.fetch(allow_partial=False)
+        assert snapshot.sourceStatus == "ok"
+        assert snapshot.receivedAt >= snapshot.fetchedAt
+        assert all(item.status.value == "ok" for item in snapshot.sourceHealth.values())
+        rainfall_item = snapshot.rainfall[0]
+        assert rainfall_item.observedAt.isoformat() == "2026-08-25T12:00:00+08:00"
+        assert rainfall_item.receivedAt.tzinfo is not None
+        assert rainfall_item.sourceId == rainfall_item.stationId
+        assert rainfall_item.provider == ShanghaiWaterAdapter.SOURCE
+        assert rainfall_item.rawSource.endswith("type=SSYLMore")
+        cached_snapshot = adapter.fetch(allow_partial=False)
+        assert cached_snapshot.cacheHit is True
+    print("PASS Shanghai Water per-record provenance, Shanghai timezone, and TTL cache")
+
+    malformed_rows = {**source_rows, "YJSW": [{**source_row, "DATETIME": "2026-08-25 12:00:00"}]}
+    partial_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+    with patch.object(partial_adapter, "_fetch_list", side_effect=lambda dataset_type: malformed_rows[dataset_type]):
+        partial_snapshot = partial_adapter.fetch(allow_partial=True)
+        assert partial_snapshot.sourceStatus == "partial"
+        assert partial_snapshot.sourceHealth["YJSW"].status.value == "schema_mismatch"
+        assert partial_snapshot.sourceHealth["YJSW"].errorCode == "SHANGHAI_WATER_SCHEMA_MISMATCH"
+    unavailable_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+
+    def fail_one_source(dataset_type: str) -> list[dict[str, object]]:
+        if dataset_type == "SSSW":
+            raise ShanghaiWaterError("SHANGHAI_WATER_FETCH_FAILED", "test timeout")
+        return source_rows[dataset_type]
+
+    with patch.object(unavailable_adapter, "_fetch_list", side_effect=fail_one_source):
+        unavailable_snapshot = unavailable_adapter.fetch(allow_partial=True)
+        assert unavailable_snapshot.sourceStatus == "partial"
+        assert unavailable_snapshot.sourceHealth["SSSW"].status.value == "unavailable"
+        assert unavailable_snapshot.sourceHealth["SSSW"].errorCode == "SHANGHAI_WATER_FETCH_FAILED"
+    strict_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+    with patch.object(strict_adapter, "_fetch_list", side_effect=lambda dataset_type: malformed_rows[dataset_type]):
+        try:
+            strict_adapter.fetch(allow_partial=False)
+        except ShanghaiWaterError as exc:
+            assert exc.code == "SHANGHAI_WATER_SCHEMA_MISMATCH"
+        else:
+            raise AssertionError("real-mode strict source failure was not raised")
+    print("PASS Shanghai Water schema gate, hybrid partial health, and real strict failure")
+
     websocket_client = None
     vision_server = None
     vision_thread = None
@@ -428,6 +495,55 @@ def main() -> None:
             assert status == 200, (path, status, payload)
             json.dumps(payload, ensure_ascii=False)
             print(f"PASS 200 {path}")
+
+        if settings.data_mode == "fixture":
+            status, external_snapshot = request("/api/v1/external/shanghai-water", timeout=20)
+            assert status == 503, (status, external_snapshot)
+            assert external_snapshot["detail"]["code"] == "REAL_SOURCE_DISABLED"
+            print("PASS Shanghai Water adapter disabled in fixture mode with explicit 503")
+        elif settings.data_mode == "real":
+            status, external_snapshot = request("/api/v1/external/shanghai-water", timeout=20)
+            if status == 200:
+                assert external_snapshot["sourceStatus"] == "ok"
+                assert all(item["status"] == "ok" for item in external_snapshot["sourceHealth"].values())
+                print("PASS Shanghai Water real mode with all four sources healthy")
+            else:
+                assert status == 503, (status, external_snapshot)
+                assert external_snapshot["detail"]["code"] in {
+                    "SHANGHAI_WATER_FETCH_FAILED",
+                    "SHANGHAI_WATER_SCHEMA_MISMATCH",
+                    "SHANGHAI_WATER_EMPTY",
+                    "SHANGHAI_WATER_UNAVAILABLE",
+                }
+                print(
+                    "PASS Shanghai Water real mode rejected incomplete source set with explicit 503 "
+                    f"code={external_snapshot['detail']['code']}"
+                )
+        elif os.environ.get("SMOKE_SHANGHAI_WATER") == "1":
+            status, external_snapshot = request("/api/v1/external/shanghai-water", timeout=20)
+            assert status == 200, (status, external_snapshot)
+            assert external_snapshot["source"] == "SHANGHAI_WATER_BUREAU_PUBLIC"
+            assert external_snapshot["sourceStatus"] in {"ok", "partial"}
+            assert set(external_snapshot["sourceHealth"]) == {"SSYLMore", "JSJCMore", "SSSW", "YJSW"}
+            assert external_snapshot["coordinateReference"] == "SOURCE_REPORTED_XX2000_YY2000"
+            assert external_snapshot["rainfall"]
+            assert external_snapshot["ponding"]
+            assert external_snapshot["waterLevels"]
+            assert all(item["rainfallValue"] >= 0 for item in external_snapshot["rainfall"])
+            assert all(item["depthCm"] >= 0 for item in external_snapshot["ponding"])
+            assert all(item["outWaterM"] >= 0 for item in external_snapshot["waterLevels"])
+            assert all(item["synthetic"] is False for item in external_snapshot["rainfall"])
+            assert all(item["sourceId"] == item["stationId"] for item in external_snapshot["rainfall"])
+            assert all("+08:00" in item["observedAt"] or "Z" in item["observedAt"] for item in external_snapshot["rainfall"])
+            json.dumps(external_snapshot, ensure_ascii=False)
+            print(
+                "PASS Shanghai Water live source "
+                f"rainfall={len(external_snapshot['rainfall'])} "
+                f"ponding={len(external_snapshot['ponding'])} "
+                f"waterLevels={len(external_snapshot['waterLevels'])}"
+            )
+        else:
+            print("SKIP Shanghai Water live fetch (set DATA_MODE=hybrid and SMOKE_SHANGHAI_WATER=1)")
 
         status, overview = request("/api/v1/dashboard/overview")
         assert status == 200

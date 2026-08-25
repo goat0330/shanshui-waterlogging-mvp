@@ -9,6 +9,7 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterSnapshot,
   SensorState,
 } from '../types'
 
@@ -37,6 +38,7 @@ export const apiClient: DashboardDataClient = {
   getCamera: (cameraId: string) => requestJson<Camera>(`/api/v1/cameras/${encodeURIComponent(cameraId)}`),
   getSensorState: (sensorId: string) => requestJson<SensorState>(`/api/v1/sensors/${encodeURIComponent(sensorId)}`),
   getTimeline: (scenarioId: string) => requestJson<ScenarioTimeline>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/timeline`),
+  getShanghaiWater: () => requestJson<ShanghaiWaterSnapshot>('/api/v1/external/shanghai-water').catch(() => null),
 }
 
 export function getRealtimeUrl(baseUrl = API_BASE_URL): string {

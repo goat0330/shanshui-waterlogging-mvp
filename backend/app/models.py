@@ -152,6 +152,120 @@ class RainfallStationRankingItem(BaseModel):
     intensityMmH: float = Field(ge=0)
 
 
+class ShanghaiWaterSourceStatus(str, Enum):
+    OK = "ok"
+    SCHEMA_MISMATCH = "schema_mismatch"
+    UNAVAILABLE = "unavailable"
+    EMPTY = "empty"
+
+
+class ShanghaiWaterSourceHealth(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: ShanghaiWaterSourceStatus
+    sourceUrl: str
+    recordCount: int = Field(ge=0)
+    observedLatestAt: datetime | None = None
+    fetchedAt: datetime | None = None
+    errorCode: str | None = None
+    synthetic: bool = False
+    fallbackReason: str | None = None
+
+
+class ShanghaiWaterRainfallStation(BaseModel):
+    """Raw, source-labelled rainfall value from the Shanghai Water Bureau page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str
+    sourceId: str
+    stationName: str
+    district: str | None = None
+    township: str | None = None
+    coordinates: Coordinates
+    rainfallValue: float = Field(ge=0)
+    observedAt: datetime
+    receivedAt: datetime
+    provider: str
+    synthetic: bool = False
+    rawSource: str
+    dataSource: str | None = None
+    isRaining: bool | None = None
+
+
+class ShanghaiWaterPondingSite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    siteId: str
+    sourceId: str
+    siteName: str
+    district: str | None = None
+    coordinates: Coordinates
+    depthCm: float = Field(ge=0)
+    observedAt: datetime
+    receivedAt: datetime
+    provider: str
+    synthetic: bool = False
+    rawSource: str
+    stage: str | None = None
+    state: str | None = None
+    dataSource: str | None = None
+
+
+class ShanghaiWaterLevelStation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str
+    sourceId: str
+    stationName: str
+    district: str | None = None
+    river: str | None = None
+    coordinates: Coordinates
+    outWaterM: float = Field(ge=0)
+    observedAt: datetime
+    receivedAt: datetime
+    provider: str
+    synthetic: bool = False
+    rawSource: str
+    dataSource: str | None = None
+
+
+class ShanghaiWaterLevelForecast(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str
+    sourceId: str
+    stationName: str
+    coordinates: Coordinates
+    forecastWaterLevelM: float = Field(ge=0)
+    forecastAt: datetime
+    receivedAt: datetime
+    provider: str
+    synthetic: bool = False
+    rawSource: str
+
+
+class ShanghaiWaterSnapshot(BaseModel):
+    """Provisional external-source response; formal Contract fixtures stay unchanged."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: str
+    fetchedAt: datetime
+    receivedAt: datetime
+    sourceStatus: str
+    sourceHealth: dict[str, ShanghaiWaterSourceHealth]
+    coordinateReference: str
+    sourceUrls: list[str] = Field(min_length=1)
+    rainfall: list[ShanghaiWaterRainfallStation]
+    ponding: list[ShanghaiWaterPondingSite]
+    waterLevels: list[ShanghaiWaterLevelStation]
+    waterLevelForecast: list[ShanghaiWaterLevelForecast]
+    synthetic: bool = False
+    fallbackReason: str | None = None
+    cacheHit: bool = False
+
+
 class FloodPoint(BaseModel):
     id: str
     name: str

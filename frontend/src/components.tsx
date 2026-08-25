@@ -13,6 +13,8 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterRainfallStation,
+  ShanghaiWaterSnapshot,
   SensorState,
   VisionDepthObservation,
 } from './types'
@@ -185,14 +187,14 @@ export interface StatusPanelProps {
 }
 
 export function StatusPanel({ overview, state = 'ready', variant = 'default' }: StatusPanelProps) {
-  const summary = overview.summary ?? null
+  const situation = overview.waterloggingSituation ?? null
 
   return (
     <Panel className={`status-panel ${variant === 'high-risk' ? 'status-panel--high-risk' : ''}`} state={state}>
       <PanelHeader title="当前积水态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
-      {summary ? <StatusSummary summary={summary} /> : (
+      {situation ? <StatusSummary situation={situation} /> : (
         <div className="status-summary-empty">
-          <span className="status-summary-kicker">SUMMARY BLOCK</span>
+          <span className="status-summary-kicker">城市积水汇总</span>
           <strong>—</strong>
           <span>等待城市积水汇总</span>
           <small>当前模式未提供城市积水汇总</small>
@@ -202,43 +204,43 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
   )
 }
 
-function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['summary']> }) {
-  const deltaLabel = `${summary.changeVs1h > 0 ? '+' : ''}${summary.changeVs1h.toFixed(1)}`
-  const deltaTone = summary.changeVs1h > 0 ? 'up' : summary.changeVs1h < 0 ? 'down' : 'flat'
+function StatusSummary({ situation }: { situation: NonNullable<DashboardOverview['waterloggingSituation']> }) {
+  const deltaLabel = `${situation.changeVsHour > 0 ? '+' : ''}${situation.changeVsHour.toFixed(1)}`
+  const deltaTone = situation.changeVsHour > 0 ? 'up' : situation.changeVsHour < 0 ? 'down' : 'flat'
 
   return (
     <div className="status-summary">
       <div className="status-summary-primary">
         <div>
           <span className="status-summary-label">积水事件总数</span>
-          <strong>{summary.totalEvents}</strong><small>起</small>
+          <strong>{situation.totalEvents}</strong><small>起</small>
         </div>
         <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
           {deltaLabel} <small>较1h前</small>
         </span>
       </div>
       <div className="status-workflow" aria-label="事件处置状态">
-        <StatusSummaryItem label="待处置" value={summary.status.pending} tone="pending" />
-        <StatusSummaryItem label="处理中" value={summary.status.processing} tone="processing" />
-        <StatusSummaryItem label="已缓解" value={summary.status.mitigated} tone="mitigated" />
+        <StatusSummaryItem label="待处置" value={situation.disposition.pending} tone="pending" />
+        <StatusSummaryItem label="处理中" value={situation.disposition.handling} tone="processing" />
+        <StatusSummaryItem label="已缓解" value={situation.disposition.relieved} tone="mitigated" />
       </div>
       <div className="status-summary-lower">
         <div className="status-top-areas">
           <div className="status-section-label">高发区域 <small>TOP 3</small></div>
-          {summary.topAreas.slice(0, 3).map((area, index) => (
-            <div className="status-area-row" key={`${area.name}-${index}`}>
+          {situation.topDistricts.slice(0, 3).map((area, index) => (
+            <div className="status-area-row" key={`${area.district}-${index}`}>
               <span>{String(index + 1).padStart(2, '0')}</span>
-              <strong>{area.name}</strong>
+              <strong>{area.district}</strong>
               <small>{area.eventCount} 起</small>
             </div>
           ))}
-          {summary.topAreas.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
+          {situation.topDistricts.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
         </div>
         <div className="status-summary-metrics">
-          <StatusSummaryMetric label="最大水深" value={`${summary.maxDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric label="平均水深" value={`${summary.averageDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric label="平均响应" value={`${summary.averageResponseMinutes.toFixed(0)} min`} />
-          <StatusSummaryMetric label="今日新增" value={`${summary.newToday} 起`} />
+          <StatusSummaryMetric label="最大水深" value={`${situation.metrics.maxDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric label="平均水深" value={`${situation.metrics.avgDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric label="平均响应" value={`${situation.metrics.avgResponseMinutes.toFixed(0)} min`} />
+          <StatusSummaryMetric label="今日新增" value={`${situation.metrics.newToday} 起`} />
         </div>
       </div>
     </div>
@@ -330,28 +332,37 @@ function MetricValue({ value, unit, label, tone, compact = false }: { value: str
 
 export interface RankingPanelProps {
   ranking: RainfallStationRankingItem[]
+  realRainfall?: ShanghaiWaterRainfallStation[] | null
+  realSource?: ShanghaiWaterSnapshot | null
   state?: PanelState
 }
 
-export function RankingPanel({ ranking, state = 'ready' }: RankingPanelProps) {
-  const rankedStations = [...ranking].sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5)
-  const maxValue = Math.max(...rankedStations.map((station) => station.intensityMmH), 1)
+export function RankingPanel({ ranking, realRainfall = null, realSource = null, state = 'ready' }: RankingPanelProps) {
+  const hasRealRainfall = Boolean(realRainfall?.length)
+  const rankedStations = hasRealRainfall
+    ? realRainfall!.slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.rainfallValue }))
+    : ranking.slice().sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.intensityMmH }))
+  const maxValue = Math.max(...rankedStations.map((station) => station.value), 1)
 
   return (
     <Panel className="ranking-panel" state={state}>
-      <PanelHeader title="重点区域雨强排行" icon="⌘" meta={<span>单位：mm/h</span>} />
-      <div className="ranking-caption"><span>排名 / 站点</span><small>雨强</small></div>
+      <PanelHeader title={hasRealRainfall ? '上海水务实时雨量' : '重点区域雨强排行'} icon="⌘" meta={<span>{hasRealRainfall ? '源站雨量值' : '单位：mm/h'}</span>} />
+      <div className="ranking-caption"><span>排名 / 站点</span><small>{hasRealRainfall ? '雨量值' : '雨强'}</small></div>
       <div className="ranking-list">
         {rankedStations.map((station, index) => (
           <div className="ranking-row" key={station.stationId}>
             <span className={`rank-badge rank-badge--${index + 1}`}>{index + 1}</span>
             <span className="ranking-name" title={station.stationName}>{station.stationName.replace(/站$/, '')}</span>
-            <span className="ranking-bar"><i style={{ width: `${(station.intensityMmH / maxValue) * 100}%` }} /></span>
-            <strong className="ranking-value ranking-value--high">{station.intensityMmH.toFixed(1)}</strong>
+            <span className="ranking-bar"><i style={{ width: `${(station.value / maxValue) * 100}%` }} /></span>
+            <strong className="ranking-value ranking-value--high">{station.value.toFixed(1)}</strong>
           </div>
         ))}
       </div>
-      <p className="panel-footnote">数据来源：Rainfall station ranking · 以雨强排序</p>
+      <p className="panel-footnote">
+        {hasRealRainfall
+          ? `数据来源：上海市水务局公开接口 · RAINVALUE；积水检测 ${realSource?.ponding.length ?? 0} 点，水位 ${realSource?.waterLevels.length ?? 0} 站`
+          : '数据来源：Rainfall station ranking · 以雨强排序'}
+      </p>
     </Panel>
   )
 }

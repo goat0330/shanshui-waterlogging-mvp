@@ -1,5 +1,7 @@
 # RC2 Backend Evidence API
 
+> Historical evidence only. Do not update this file for current state. The current release status is maintained in `docs/06_DELIVERY_MANIFEST.md`.
+
 状态：`PASS` memory backend 与 VisionDepth image provenance smoke；PostgreSQL/PostGIS、真实视频链路和生产运行保持 `NOT VERIFIED`。
 
 ## Audit and merge
