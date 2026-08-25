@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_FLOOD_POINT_ID, DEFAULT_SCENARIO_ID, FORMAL_EVENT_BY_FLOOD_POINT, SENSOR_FLOOD_POINT_MAPPINGS } from '../data/mappings'
 import { apiClient, DATA_SOURCE, type DataSource } from '../services/apiClient'
 import { fixtureClient } from '../services/fixtureClient'
-import type { DashboardData, SensorState } from '../types'
+import type { DashboardData, DashboardOverview, SensorState } from '../types'
 
 const client = DATA_SOURCE === 'api' ? apiClient : fixtureClient
 const defaultEventId = FORMAL_EVENT_BY_FLOOD_POINT[DEFAULT_FLOOD_POINT_ID]
@@ -16,6 +16,32 @@ function applyLocalDemoMedia(camera: DashboardData['camera']): DashboardData['ca
     ...camera,
     ...(localDemoVideoUrl ? { mediaUrl: localDemoVideoUrl } : {}),
     ...(localDemoOverlayUrl ? { overlayUrl: localDemoOverlayUrl } : {}),
+  }
+}
+
+function normalizeOverview(overview: DashboardOverview): DashboardOverview {
+  if (!overview.waterloggingSituation) return overview
+
+  const situation = overview.waterloggingSituation
+  return {
+    ...overview,
+    summary: {
+      totalEvents: situation.totalEvents,
+      changeVs1h: situation.changeVsHour,
+      status: {
+        pending: situation.disposition.pending,
+        processing: situation.disposition.handling,
+        mitigated: situation.disposition.relieved,
+      },
+      topAreas: situation.topDistricts.map((item) => ({
+        name: item.district,
+        eventCount: item.eventCount,
+      })),
+      maxDepthCm: situation.metrics.maxDepthCm,
+      averageDepthCm: situation.metrics.avgDepthCm,
+      averageResponseMinutes: situation.metrics.avgResponseMinutes,
+      newToday: situation.metrics.newToday,
+    },
   }
 }
 
@@ -34,7 +60,7 @@ async function loadDashboardData(): Promise<DashboardData> {
   ])
 
   return {
-    overview,
+    overview: normalizeOverview(overview),
     rainfall,
     rainfallRanking,
     points,

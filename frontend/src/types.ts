@@ -27,6 +27,27 @@ export interface DashboardSummary {
   newToday: number
 }
 
+export interface WaterloggingSituation {
+  totalEvents: number
+  changeVsHour: number
+  disposition: {
+    pending: number
+    handling: number
+    relieved: number
+  }
+  topDistricts: Array<{
+    district: string
+    eventCount: number
+  }>
+  metrics: {
+    maxDepthCm: number
+    avgDepthCm: number
+    avgResponseMinutes: number
+    newToday: number
+  }
+  source: string
+}
+
 export interface DashboardOverview {
   updatedAt: string
   city: string
@@ -41,6 +62,7 @@ export interface DashboardOverview {
   }
   activeFloodPoints: number
   summary?: DashboardSummary | null
+  waterloggingSituation?: WaterloggingSituation | null
 }
 
 export interface RainfallSnapshot {

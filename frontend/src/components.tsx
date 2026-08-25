@@ -195,7 +195,7 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
           <span className="status-summary-kicker">SUMMARY BLOCK</span>
           <strong>—</strong>
           <span>等待城市积水汇总</span>
-          <small>当前 API / fixture 尚未提供决策摘要</small>
+          <small>当前模式未提供城市积水汇总</small>
         </div>
       )}
     </Panel>
@@ -203,7 +203,7 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
 }
 
 function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['summary']> }) {
-  const deltaLabel = `${summary.changeVs1h > 0 ? '+' : ''}${summary.changeVs1h}`
+  const deltaLabel = `${summary.changeVs1h > 0 ? '+' : ''}${summary.changeVs1h.toFixed(1)}`
   const deltaTone = summary.changeVs1h > 0 ? 'up' : summary.changeVs1h < 0 ? 'down' : 'flat'
 
   return (
@@ -425,25 +425,29 @@ function getSensorFreshness(sensor: SensorState | null): SensorFreshnessStatus {
 
 export function SensorEvidence({ sensor }: SensorEvidenceProps) {
   const status = getSensorFreshness(sensor)
+  const statusLabel: Record<SensorFreshnessStatus, string> = {
+    ONLINE: '在线',
+    STALE: '延迟',
+    OFFLINE: '离线',
+    NO_EVIDENCE: '未上报',
+  }
+
   if (!sensor) {
     return (
       <div className="sensor-evidence sensor-evidence--empty" role="status">
-        <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · source=SENSOR</span><strong>NO EVIDENCE</strong></div>
-        <p>当前没有可验证的传感器状态；事件水深不等同于实测水深。</p>
+        <div className="sensor-evidence-head"><span>传感器状态</span><strong>{statusLabel[status]}</strong></div>
+        <p>当前暂无实测数据</p>
       </div>
     )
   }
 
   return (
     <div className={`sensor-evidence sensor-evidence--${status.toLowerCase()}`}>
-      <div className="sensor-evidence-head"><span>SENSOR EVIDENCE · source=SENSOR</span><strong>{status}</strong></div>
+      <div className="sensor-evidence-head"><span>传感器状态</span><strong>{statusLabel[status]}</strong></div>
       <div className="sensor-evidence-grid">
         <span><small>sensorId</small><b>{sensor.sensorId}</b></span>
-        <span><small>current depth</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
-        <span><small>observedAt</small><b>{formatClock(sensor.observedAt)}</b></span>
-        <span><small>freshness</small><b>{status}</b></span>
-        <span><small>source</small><b>SENSOR</b></span>
-        <span><small>device</small><b>{sensor.source ?? 'UNKNOWN'}</b></span>
+        <span><small>当前实测水深</small><b>{sensor.depthCm.toFixed(1)} cm</b></span>
+        <span><small>最后上报</small><b>{formatClock(sensor.receivedAt)}</b></span>
       </div>
     </div>
   )
@@ -672,17 +676,57 @@ interface DecisionDisplay {
   recommendation: string
 }
 
+const TRAFFIC_STATUS_LABELS: Record<string, string> = {
+  NORMAL: '正常通行',
+  NORMAL_PASSAGE: '正常通行',
+  CAUTION: '谨慎通行',
+  CAUTION_PASSAGE: '谨慎通行',
+  NOT_RECOMMENDED: '不建议通行',
+  DO_NOT_PASS: '不建议通行',
+  PROHIBITED: '禁止通行',
+  NO_PASSAGE: '禁止通行',
+  正常通行: '正常通行',
+  谨慎通行: '谨慎通行',
+  不建议通行: '不建议通行',
+  禁止通行: '禁止通行',
+}
+
+const RECOMMENDATION_BY_TRAFFIC_STATUS: Record<string, string> = {
+  正常通行: '可维持通行，继续关注现场变化',
+  谨慎通行: '建议减速观察，必要时临时管控',
+  不建议通行: '建议限制通行并加强现场处置',
+  禁止通行: '积水较深，建议立即封控并组织排水',
+}
+
+function normalizeTrafficStatus(value: string | undefined): string {
+  const candidate = value?.trim() ?? ''
+  if (!candidate) return '待判定'
+  return TRAFFIC_STATUS_LABELS[candidate] ?? TRAFFIC_STATUS_LABELS[candidate.toUpperCase()] ?? '待判定'
+}
+
+function isUsableRecommendation(value: string | undefined): value is string {
+  const candidate = value?.trim() ?? ''
+  return Boolean(candidate)
+    && /[\u4e00-\u9fff]/.test(candidate)
+    && !/(粗略|视觉估计|当前证据不足|待水深标定|仅供初筛|不等同|传感器实测|等待行动建议|待判定|暂无)/.test(candidate)
+    && !/(confidence|quality|source|rough|visual estimate)/i.test(candidate)
+}
+
 function getDecisionDisplay(floodDetected: boolean, decision?: DecisionProjection | null): DecisionDisplay {
   const decisionDepth = decision?.decisionDepthCm
   const depth = typeof decisionDepth === 'number' && Number.isFinite(decisionDepth)
     ? `约 ${decisionDepth.toFixed(0)} cm`
-    : '—'
+    : '待形成'
+  const trafficStatus = normalizeTrafficStatus(decision?.trafficStatus)
+  const recommendation = isUsableRecommendation(decision?.recommendation)
+    ? decision.recommendation.trim()
+    : RECOMMENDATION_BY_TRAFFIC_STATUS[trafficStatus] ?? (floodDetected ? '请结合现场情况处置' : '保持常规巡检')
 
   return {
     conclusion: floodDetected ? '检测到积水' : '未检测到积水',
     depth,
-    trafficStatus: decision?.trafficStatus?.trim() || '待判定',
-    recommendation: decision?.recommendation?.trim() || '等待行动建议',
+    trafficStatus,
+    recommendation,
   }
 }
 
