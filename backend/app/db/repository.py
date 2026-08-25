@@ -95,6 +95,9 @@ class PostgresRepository:
             for row in rows
         ]
 
+    def list_historical_cases(self) -> list[dict[str, Any]]:
+        return self.fixture_repository.get_historical_cases()
+
     def get_event(self, event_id: str) -> dict[str, Any] | None:
         statement = select(
             flood_events_table.c.event_id.label("id"),

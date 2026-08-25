@@ -27,11 +27,12 @@ function applyLocalDemoMedia(camera: DashboardData['camera']): DashboardData['ca
 }
 
 async function loadDashboardData(): Promise<DashboardData> {
-  const [overview, rainfall, rainfallRanking, points, cameras, timeline, shanghaiWater] = await Promise.all([
+  const [overview, rainfall, rainfallRanking, points, historicalCases, cameras, timeline, shanghaiWater] = await Promise.all([
     client.getOverview(),
     client.getRainfall(),
     client.getRainfallStationRanking(),
     client.listFloodPoints(),
+    client.listHistoricalCases().catch(() => []),
     client.listCameras(),
     client.getTimeline(DEFAULT_SCENARIO_ID),
     client.getShanghaiWater(),
@@ -79,6 +80,7 @@ async function loadDashboardData(): Promise<DashboardData> {
     rainfall,
     rainfallRanking,
     points,
+    historicalCases,
     event,
     forecast,
     camera,

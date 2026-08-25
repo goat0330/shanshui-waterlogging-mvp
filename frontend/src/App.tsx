@@ -128,6 +128,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
   const [eventCardOpen, setEventCardOpen] = useState(false)
+  const [selectedHistoricalCaseId, setSelectedHistoricalCaseId] = useState<string | null>(null)
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
   const [visionOpen, setVisionOpen] = useState(false)
   const [visionMode, setVisionMode] = useState<'local' | 'url'>('local')
@@ -153,6 +154,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     analysesByEventId: data.analysesByEventId,
     camerasById: data.camerasById,
   })
+  const selectedHistoricalCase = data.historicalCases.find((item) => item.candidateId === selectedHistoricalCaseId) ?? null
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
   const selectedSensor = selectedEvent.sensorId
     ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
@@ -248,6 +250,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const handlePointSelect = (pointId: string) => {
     const point = data.points.find((item) => item.id === pointId) ?? null
     const hasEvent = getFloodPointEventId(point) !== null
+    setSelectedHistoricalCaseId(null)
     setEventCardOpen((open) => hasEvent && (selectedPointId === pointId ? !open : true))
     setSelectedPointId(pointId)
   }
@@ -273,7 +276,17 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
       <div className="dashboard-side dashboard-side--right">
-        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} onOpenVision={() => setVisionOpen(true)} />
+        <EventPanel
+          event={selectedEvent.event}
+          analysis={selectedEvent.analysis}
+          sensor={sensor}
+          sensorId={selectedEvent.sensorId}
+          historicalCases={data.historicalCases}
+          selectedHistoricalCase={selectedHistoricalCase}
+          onSelectHistoricalCase={setSelectedHistoricalCaseId}
+          onClearHistoricalCase={() => setSelectedHistoricalCaseId(null)}
+          onOpenVision={() => setVisionOpen(true)}
+        />
         <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
         <CctvCard
           camera={selectedEvent.camera}
@@ -406,6 +419,9 @@ function GalleryPage() {
             <GalleryCard title="EventPanel" stateName="empty">
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} state="empty" />
             </GalleryCard>
+            <GalleryCard title="EventPanel" stateName="historical public cases">
+              <HistoricalCaseGalleryPreview />
+            </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="NOW active">
               <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" measuredDepthCm={createDemoSensorEvidence(homeFixtures.event).depthCm} onChange={() => undefined} />
             </GalleryCard>
@@ -529,6 +545,20 @@ function VisionDepthGalleryPreview() {
       />
     </div>
   )
+}
+
+function HistoricalCaseGalleryPreview() {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedCase = homeFixtures.historicalCases.find((item) => item.candidateId === selectedId) ?? null
+
+  return <EventPanel
+    event={null}
+    analysis={null}
+    historicalCases={homeFixtures.historicalCases}
+    selectedHistoricalCase={selectedCase}
+    onSelectHistoricalCase={setSelectedId}
+    onClearHistoricalCase={() => setSelectedId(null)}
+  />
 }
 
 function SceneOnlyPreview() {

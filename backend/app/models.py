@@ -383,6 +383,30 @@ class FloodPoint(BaseModel):
     sensorId: str | None = None
 
 
+class HistoricalFloodCase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candidateId: str
+    incidentDate: str
+    reportDate: str
+    district: str
+    locationText: str
+    sourceAgency: str
+    sourceTitle: str
+    sourceUrl: str
+    confirmedFacts: str
+    depthCm: float | None = None
+    depthEvidenceText: str | None = None
+    trafficImpact: str | None = None
+    officialActions: list[str]
+    evidenceLevel: Literal["OFFICIAL_EXACT", "OFFICIAL_AREA_ONLY", "MEDIA_CORROBORATED", "INSUFFICIENT"]
+    sourceType: Literal["PUBLIC_REPORT"]
+    dataStatus: Literal["HISTORICAL_PUBLIC_REPORT"]
+    floodPointId: str | None = None
+    sensorId: str | None = None
+    coordinates: Coordinates | None = None
+
+
 class FloodEvent(BaseModel):
     id: str
     name: str

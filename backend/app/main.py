@@ -14,6 +14,7 @@ from .models import (
     FloodEvent,
     FloodForecast,
     FloodPoint,
+    HistoricalFloodCase,
     MeteorologyContext,
     RainfallSnapshot,
     RainfallStationRankingItem,
@@ -132,6 +133,17 @@ def get_meteorology_context() -> MeteorologyContext:
 @app.get("/api/v1/flood-points", response_model=list[FloodPoint], operation_id="listFloodPoints")
 def list_flood_points() -> list[FloodPoint]:
     return repository.list_flood_points()
+
+
+@app.get(
+    "/api/v1/historical-cases",
+    response_model=list[HistoricalFloodCase],
+    operation_id="listHistoricalCases",
+    include_in_schema=False,
+    tags=["provisional-history"],
+)
+def list_historical_cases() -> list[HistoricalFloodCase]:
+    return repository.list_historical_cases()
 
 
 @app.get("/api/v1/flood-events/{event_id}", response_model=FloodEvent, operation_id="getFloodEvent")

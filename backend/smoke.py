@@ -745,6 +745,13 @@ def main() -> None:
         for flood_point_id in ["FP-002", "FP-003", "FP-004", "FP-005"]:
             assert points_by_id[flood_point_id]["eventId"] is None
             assert points_by_id[flood_point_id]["sensorId"] is None
+        status, historical_cases = request("/api/v1/historical-cases")
+        assert status == 200
+        assert len(historical_cases) == 8
+        assert all(case["sourceType"] == "PUBLIC_REPORT" for case in historical_cases)
+        assert all(case["dataStatus"] == "HISTORICAL_PUBLIC_REPORT" for case in historical_cases)
+        assert all(case["coordinates"] is None and case["sensorId"] is None for case in historical_cases)
+        print("PASS 200 GET /api/v1/historical-cases (8 historical public cases)")
         first_projection = next(point for point in points if point["id"] == "FP-001")
         assert first_projection["depthCm"] == 28.6
         assert first_projection["riskLevel"] == "HIGH"

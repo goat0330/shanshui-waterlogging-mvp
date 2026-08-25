@@ -9,6 +9,7 @@ import type {
   FloodPoint,
   ForecastFrame,
   ForecastKey,
+  HistoricalFloodCase,
   PanelState,
   RainfallSnapshot,
   RainfallStationRankingItem,
@@ -394,16 +395,27 @@ export interface EventPanelProps {
   analysis: AIAnalysis | null
   sensor?: SensorState | null
   sensorId?: string | null
+  historicalCases?: HistoricalFloodCase[]
+  selectedHistoricalCase?: HistoricalFloodCase | null
+  onSelectHistoricalCase?: (candidateId: string) => void
+  onClearHistoricalCase?: () => void
   onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, sensor = null, sensorId = null, onOpenVision, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   if (!event) {
+    const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
     return (
-      <Panel className="event-panel" state={state === 'ready' ? 'empty' : state}>
+      <Panel className="event-panel" state={emptyState}>
         <PanelHeader title="内涝事件" icon="▮" meta={<span>未关联正式事件</span>} />
+        <HistoricalCasePanel
+          cases={historicalCases}
+          selectedCase={selectedHistoricalCase}
+          onSelect={onSelectHistoricalCase}
+          onClear={onClearHistoricalCase}
+        />
       </Panel>
     )
   }
@@ -434,6 +446,58 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, on
       <SensorEvidence sensor={sensor} sensorId={sensorId} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
+  )
+}
+
+export interface HistoricalCasePanelProps {
+  cases: HistoricalFloodCase[]
+  selectedCase?: HistoricalFloodCase | null
+  onSelect?: (candidateId: string) => void
+  onClear?: () => void
+}
+
+export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onClear }: HistoricalCasePanelProps) {
+  if (selectedCase) {
+    return (
+      <div className="historical-case-detail">
+        <button type="button" className="historical-case-back" onClick={onClear}>← 历史案例列表</button>
+        <div className="historical-case-kicker">历史公开案例 · {selectedCase.incidentDate}</div>
+        <h3>{selectedCase.locationText}</h3>
+        <div className="historical-case-facts">
+          <div><span>区域</span><strong>{selectedCase.district}</strong></div>
+          <div><span>报道水深</span><strong>{selectedCase.depthCm == null ? selectedCase.depthEvidenceText ?? '来源未提供' : `${selectedCase.depthCm.toFixed(1)} cm`}</strong></div>
+          <div><span>传感器</span><strong>公开资料未提供</strong></div>
+          <div><span>报道日期</span><strong>{selectedCase.reportDate}</strong></div>
+        </div>
+        <section className="historical-case-section">
+          <h4>事件记录</h4>
+          <p>{selectedCase.confirmedFacts}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>交通影响</h4>
+          <p>{selectedCase.trafficImpact ?? '来源未说明'}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>官方处置</h4>
+          {selectedCase.officialActions.length > 0 ? <div className="historical-case-actions">{selectedCase.officialActions.map((action) => <span key={action}>{action}</span>)}</div> : <p>来源未逐项说明</p>}
+        </section>
+        <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="historical-case-browser">
+      <p className="historical-case-intro">当前点位只有演示点位摘要。以下为已核验的历史公开案例，不代表当前告警。</p>
+      <div className="historical-case-list" aria-label="历史公开案例列表">
+        {cases.map((item) => (
+          <button type="button" className="historical-case-item" key={item.candidateId} onClick={() => onSelect?.(item.candidateId)}>
+            <span className="historical-case-item-main"><strong>{item.district} · {item.locationText}</strong><small>{item.incidentDate}</small></span>
+            <span className="historical-case-item-note">{item.trafficImpact ?? '官方积水记录'} <i>›</i></span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

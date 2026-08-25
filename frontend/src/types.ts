@@ -129,6 +129,28 @@ export interface FloodPoint {
   sensorId?: string | null
 }
 
+export interface HistoricalFloodCase {
+  candidateId: string
+  incidentDate: string
+  reportDate: string
+  district: string
+  locationText: string
+  sourceAgency: string
+  sourceTitle: string
+  sourceUrl: string
+  confirmedFacts: string
+  depthCm: number | null
+  depthEvidenceText: string | null
+  trafficImpact: string | null
+  officialActions: string[]
+  evidenceLevel: 'OFFICIAL_EXACT' | 'OFFICIAL_AREA_ONLY' | 'MEDIA_CORROBORATED' | 'INSUFFICIENT'
+  sourceType: 'PUBLIC_REPORT'
+  dataStatus: 'HISTORICAL_PUBLIC_REPORT'
+  floodPointId: string | null
+  sensorId: string | null
+  coordinates: Coordinates | null
+}
+
 export interface FloodEvent {
   id: string
   name: string
@@ -250,6 +272,7 @@ export interface DashboardData {
   rainfall: RainfallSnapshot
   rainfallRanking: RainfallStationRankingItem[]
   points: FloodPoint[]
+  historicalCases: HistoricalFloodCase[]
   event: FloodEvent | null
   forecast: FloodForecast | null
   camera: Camera | null
@@ -269,6 +292,7 @@ export interface DashboardDataClient {
   getRainfall(): Promise<RainfallSnapshot>
   getRainfallStationRanking(): Promise<RainfallStationRankingItem[]>
   listFloodPoints(): Promise<FloodPoint[]>
+  listHistoricalCases(): Promise<HistoricalFloodCase[]>
   getFloodEvent(eventId: string): Promise<FloodEvent>
   getFloodForecast(eventId: string): Promise<FloodForecast>
   getFloodAnalysis(eventId: string): Promise<AIAnalysis>
@@ -284,6 +308,7 @@ export interface HomeFixtures {
   rainfall: RainfallSnapshot
   rainfallRanking: RainfallStationRankingItem[]
   points: FloodPoint[]
+  historicalCases: HistoricalFloodCase[]
   event: FloodEvent
   forecast: FloodForecast
   camera: Camera

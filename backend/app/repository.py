@@ -49,6 +49,9 @@ class FixtureRepository:
     def __init__(self, fixture_dir: Path | None = None) -> None:
         self.fixture_dir = fixture_dir or Path(__file__).resolve().parents[2] / "contracts" / "fixtures"
         self.dashboard_overview = self._load("dashboard-overview.json")
+        historical_path = Path(__file__).resolve().parents[2] / "data" / "historical-cases.json"
+        with historical_path.open("r", encoding="utf-8") as file:
+            self.historical_cases = json.load(file)["records"]
         self.rainfall = self._load("rainfall-current.json")
         self.rainfall_station_ranking = self._load("rainfall-stations-ranking.json")
         self.flood_points = self._load("flood-points.json")
@@ -130,6 +133,9 @@ class FixtureRepository:
             "source": "FIXTURE_DERIVED",
         }
         return {**self.dashboard_overview, "waterloggingSituation": situation}
+
+    def get_historical_cases(self) -> list[dict[str, Any]]:
+        return list(self.historical_cases)
 
     def get_event(self, event_id: str) -> dict[str, Any] | None:
         return self.events.get(event_id)
@@ -231,6 +237,9 @@ class MemoryRepository:
             }
             for point in self.fixture_repository.flood_points
         ]
+
+    def list_historical_cases(self) -> list[dict[str, Any]]:
+        return self.fixture_repository.get_historical_cases()
 
     def get_event(self, event_id: str) -> dict[str, Any] | None:
         return self.fixture_repository.get_event(event_id)

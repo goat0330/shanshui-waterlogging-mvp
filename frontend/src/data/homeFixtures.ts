@@ -8,7 +8,8 @@ import rainfallFixture from '../../../contracts/fixtures/rainfall-current.json'
 import rainfallRankingFixture from '../../../contracts/fixtures/rainfall-stations-ranking.json'
 import sensorFloodPointMappingFixture from '../../../contracts/fixtures/sensor-floodpoint-mapping.json'
 import timelineFixture from '../../../contracts/fixtures/timeline-SHANGHAI-DEMO-001.json'
-import type { HomeFixtures, SensorFloodPointMapping } from '../types'
+import historicalCasesFixture from '../../../data/historical-cases.json'
+import type { HistoricalFloodCase, HomeFixtures, SensorFloodPointMapping } from '../types'
 
 export const sensorFloodPointMapping = sensorFloodPointMappingFixture as SensorFloodPointMapping
 
@@ -33,6 +34,7 @@ export const homeFixtures: HomeFixtures = {
   rainfall: rainfallFixture as HomeFixtures['rainfall'],
   rainfallRanking: rainfallRankingFixture as HomeFixtures['rainfallRanking'],
   points: floodPointsFixture as HomeFixtures['points'],
+  historicalCases: historicalCasesFixture.records as HistoricalFloodCase[],
   event: eventFixture as HomeFixtures['event'],
   forecast: forecastFixture as HomeFixtures['forecast'],
   camera: {
