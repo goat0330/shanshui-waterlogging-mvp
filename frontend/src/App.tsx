@@ -257,6 +257,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
           camera={selectedEvent.camera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
+          decision={selectedVideoFrame?.observation.decision ?? null}
           videoEvidenceState={videoEvidenceState}
           onVideoReady={setVideoReady}
           onVideoTimeUpdate={setVideoTimeSec}
@@ -338,10 +339,10 @@ function GalleryPage() {
         <section className="gallery-section">
           <GallerySectionTitle title="Layout / Core Panels" note="页面骨架与核心业务面板" />
           <div className="gallery-grid gallery-grid--panels">
-            <GalleryCard title="StatusPanel" stateName="default">
+            <GalleryCard title="StatusPanel" stateName="summary block · empty on Main 5b3">
               <StatusPanel overview={homeFixtures.overview} />
             </GalleryCard>
-            <GalleryCard title="StatusPanel" stateName="high-risk">
+            <GalleryCard title="StatusPanel" stateName="high-risk · summary pending">
               <StatusPanel overview={homeFixtures.overview} variant="high-risk" />
             </GalleryCard>
             <GalleryCard title="StatusPanel" stateName="empty">
@@ -410,7 +411,7 @@ function GalleryPage() {
             <GalleryCard title="SensorEvidence" stateName="DEMO_DEVICE / stale fixture">
               <SensorEvidence sensor={createDemoSensorEvidence(homeFixtures.event)} />
             </GalleryCard>
-            <GalleryCard title="VisionDepthDrawer" stateName="local upload / contract empty">
+            <GalleryCard title="VisionDepthDrawer" stateName="decision projection · empty / ready controls">
               <VisionDepthGalleryPreview />
             </GalleryCard>
           </div>
@@ -445,9 +446,9 @@ function GalleryPage() {
             <a href="/?state=plus30">打开 Forecast +30 全屏 ↗</a>
           </div>
           <div className="full-dashboard-gallery">
-            <DashboardStateCard label="A · Default" note="城市态势 default · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
-            <DashboardStateCard label="B · High Risk" note="风险色增强但不铺满页面 · selected event" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
-            <DashboardStateCard label="C · Forecast +30" note="中央场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
+            <DashboardStateCard label="A · Default" note="summary pending · NOW · selected event · demo video" initialForecast="NOW" statusVariant="default" />
+            <DashboardStateCard label="B · High Risk" note="summary pending · 风险色增强但不铺满页面" initialForecast="NOW" statusVariant="high-risk" event={criticalEventFixture} />
+            <DashboardStateCard label="C · Forecast +30" note="summary pending · 场景、预测摘要与 Timeline 同步到 PLUS_30" initialForecast="PLUS_30" statusVariant="high-risk" event={homeFixtures.event} />
           </div>
         </section>
 
@@ -475,7 +476,7 @@ function VisionDepthGalleryPreview() {
 
   return (
     <div className="gallery-vision-preview">
-      <p>同页入口：local upload / direct URL；状态由真实 Drawer 展示。</p>
+      <p>同页入口：local upload / direct URL；Main 当前无 decision projection 时保持待判定。</p>
       <div className="gallery-vision-actions">
         <button type="button" onClick={() => showState('idle')}>empty</button>
         <button type="button" onClick={() => showState('loading')}>loading</button>

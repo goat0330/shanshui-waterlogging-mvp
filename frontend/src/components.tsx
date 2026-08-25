@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type {
   AIAnalysis,
   Camera,
   DashboardOverview,
+  DecisionProjection,
   FloodEvent,
   FloodForecast,
   FloodPoint,
@@ -184,42 +185,72 @@ export interface StatusPanelProps {
 }
 
 export function StatusPanel({ overview, state = 'ready', variant = 'default' }: StatusPanelProps) {
-  const { critical, warning, normal } = overview.urbanStatus
-  const total = Math.max(critical + warning + normal, 1)
-  const criticalEnd = (critical / total) * 100
-  const warningEnd = ((critical + warning) / total) * 100
-  const ringStyle = {
-    background: `conic-gradient(var(--critical) 0 ${criticalEnd}%, var(--warning) ${criticalEnd}% ${warningEnd}%, var(--cyan) ${warningEnd}% 100%)`,
-  } as CSSProperties
+  const summary = overview.summary ?? null
 
   return (
     <Panel className={`status-panel ${variant === 'high-risk' ? 'status-panel--high-risk' : ''}`} state={state}>
-      <PanelHeader title="城市态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
-      <div className="status-content">
-        <div className="status-ring" style={ringStyle} aria-label={`严重 ${critical}，警戒 ${warning}，正常 ${normal}`}>
-          <div className="status-ring-hole">
-            <strong className="status-ring-value">{overview.activeFloodPoints}</strong>
-            <span className="status-ring-label">活跃点位</span>
-          </div>
+      <PanelHeader title="当前积水态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
+      {summary ? <StatusSummary summary={summary} /> : (
+        <div className="status-summary-empty">
+          <span className="status-summary-kicker">SUMMARY BLOCK</span>
+          <strong>—</strong>
+          <span>等待城市积水汇总</span>
+          <small>当前 API / fixture 尚未提供决策摘要</small>
         </div>
-        <div className="status-list">
-          <StatusRow label="严重" count={critical} detail="涉及区域" tone="critical" />
-          <StatusRow label="警戒" count={warning} detail="涉及区域" tone="warning" />
-          <StatusRow label="正常" count={normal} detail="涉及区域" tone="normal" />
-        </div>
-      </div>
+      )}
     </Panel>
   )
 }
 
-function StatusRow({ label, count, detail, tone }: { label: string; count: number; detail: string; tone: string }) {
+function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['summary']> }) {
+  const deltaLabel = `${summary.changeVs1h > 0 ? '+' : ''}${summary.changeVs1h}`
+  const deltaTone = summary.changeVs1h > 0 ? 'up' : summary.changeVs1h < 0 ? 'down' : 'flat'
+
   return (
-    <div className={`status-row status-row--${tone}`}>
-      <span className="status-row-icon">{tone === 'critical' ? '◆' : tone === 'warning' ? '◆' : '◉'}</span>
-      <span className="status-row-copy"><strong>{label}</strong><small>{detail} {count}</small></span>
-      <strong className="status-row-value">{String(count).padStart(2, '0')}</strong>
+    <div className="status-summary">
+      <div className="status-summary-primary">
+        <div>
+          <span className="status-summary-label">积水事件总数</span>
+          <strong>{summary.totalEvents}</strong><small>起</small>
+        </div>
+        <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
+          {deltaLabel} <small>较1h前</small>
+        </span>
+      </div>
+      <div className="status-workflow" aria-label="事件处置状态">
+        <StatusSummaryItem label="待处置" value={summary.status.pending} tone="pending" />
+        <StatusSummaryItem label="处理中" value={summary.status.processing} tone="processing" />
+        <StatusSummaryItem label="已缓解" value={summary.status.mitigated} tone="mitigated" />
+      </div>
+      <div className="status-summary-lower">
+        <div className="status-top-areas">
+          <div className="status-section-label">高发区域 <small>TOP 3</small></div>
+          {summary.topAreas.slice(0, 3).map((area, index) => (
+            <div className="status-area-row" key={`${area.name}-${index}`}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{area.name}</strong>
+              <small>{area.eventCount} 起</small>
+            </div>
+          ))}
+          {summary.topAreas.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
+        </div>
+        <div className="status-summary-metrics">
+          <StatusSummaryMetric label="最大水深" value={`${summary.maxDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric label="平均水深" value={`${summary.averageDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric label="平均响应" value={`${summary.averageResponseMinutes.toFixed(0)} min`} />
+          <StatusSummaryMetric label="今日新增" value={`${summary.newToday} 起`} />
+        </div>
+      </div>
     </div>
   )
+}
+
+function StatusSummaryItem({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return <div className={`status-workflow-item status-workflow-item--${tone}`}><span>{label}</span><strong>{value}</strong></div>
+}
+
+function StatusSummaryMetric({ label, value }: { label: string; value: string }) {
+  return <div className="status-summary-metric"><span>{label}</span><strong>{value}</strong></div>
 }
 
 export interface RainfallPanelProps {
@@ -470,6 +501,7 @@ export interface CctvCardProps {
   state?: PanelState
   showOverlay?: boolean
   overlayData?: CctvOverlayData
+  decision?: DecisionProjection | null
   videoEvidenceState?: VideoEvidenceState
   onVideoReady?: (ready: boolean) => void
   onVideoTimeUpdate?: (currentTimeSec: number) => void
@@ -477,7 +509,7 @@ export interface CctvCardProps {
 
 export type CctvOverlayData = VideoOverlayData
 
-export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
+export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -507,10 +539,10 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         : 'RESULT NOT ATTACHED'
   const researchVideo = camera.mediaUrl?.startsWith('/runtime/vision-video/') === true ||
     (overlayData?.runtimePolicy === 'research_mvp' && !overlayData.synthetic)
-  const displayName = researchVideo ? `研究视频 · ${overlayData?.sourceId ?? '本地研究证据'}` : camera.name
+  const displayName = researchVideo ? '研究视频 · 非实时' : camera.name
   const mediaStatusLabel = researchVideo ? 'RESEARCH · NOT LIVE' : camera.status
   const sourceLabel = researchVideo ? 'VISION_VIDEO · RESEARCH_MVP / NOT LIVE' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`
-  const licenseLabel = overlayData?.licenseReview === 'pending' ? 'LICENSE_PENDING' : overlayData?.licenseReview === 'approved' ? 'LICENSE_APPROVED' : overlayData?.licenseReview === 'not_required' ? 'LICENSE_NOT_REQUIRED' : null
+  const decisionDisplay = overlayData ? getDecisionDisplay(overlayData.floodDetected, decision) : null
 
   return (
     <Panel className="cctv-panel" state={state}>
@@ -546,9 +578,25 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
         ))}
         <span className="cctv-source-tag">{mediaState === 'ready' ? sourceLabel : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
         <span className="cctv-overlay-status">{overlayStatusLabel}</span>
-        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <span className="cctv-evidence-meta">
-          {overlayData.synthetic ? 'SYNTHETIC_DEMO' : overlayData.sourceType} · {overlayData.sourceId} · {overlayData.runtimePolicy.toUpperCase()} · {licenseLabel ?? 'LICENSE_UNKNOWN'} · t={overlayData.timestampMs}ms · L{overlayData.level} · {formatRangeCm(overlayData.rangeCm)} · {overlayData.estimatedDepthCm === null ? 'estimatedDepthCm=null' : `estimatedDepthCm=${overlayData.estimatedDepthCm.toFixed(1)}cm`} · {overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'qualityFlags=none'}
-        </span>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && decisionDisplay && <div className="cctv-decision-strip" aria-label="视频决策结论">
+          <div><small>检测结论</small><b>{decisionDisplay.conclusion}</b></div>
+          <div><small>估计水深</small><b>{decisionDisplay.depth}</b></div>
+          <div><small>通行状态</small><b>{decisionDisplay.trafficStatus}</b></div>
+          <p>行动建议：{decisionDisplay.recommendation}</p>
+        </div>}
+        {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && <details className="cctv-tech-details">
+          <summary>技术详情</summary>
+          <dl>
+            <div><dt>sourceType</dt><dd>{overlayData.sourceType}</dd></div>
+            <div><dt>sourceId</dt><dd>{overlayData.sourceId}</dd></div>
+            <div><dt>runtimePolicy</dt><dd>{overlayData.runtimePolicy}</dd></div>
+            <div><dt>licenseReview</dt><dd>{overlayData.licenseReview}</dd></div>
+            <div><dt>frame</dt><dd>{overlayData.frameId} · t={overlayData.timestampMs}ms</dd></div>
+            <div><dt>rangeCm</dt><dd>{formatRangeCm(overlayData.rangeCm)}</dd></div>
+            <div><dt>estimatedDepthCm</dt><dd>{overlayData.estimatedDepthCm === null ? 'null' : `${overlayData.estimatedDepthCm.toFixed(1)} cm`}</dd></div>
+            <div><dt>quality</dt><dd>{overlayData.quality} · {overlayData.qualityFlags.join(' · ') || 'none'}</dd></div>
+          </dl>
+        </details>}
         <span className={`cctv-media-status cctv-media-status--${mediaState}`}><i />{mediaState === 'ready' ? mediaStatusLabel : mediaState === 'loading' ? 'MEDIA CHECKING' : `${mediaStatusLabel} · PLACEHOLDER`}</span>
         {state === 'empty' && <span className="cctv-empty-copy">fixture 已提供媒体路径，当前未发现合法本地媒体</span>}
       </div>
@@ -617,60 +665,24 @@ function formatVisionRange(range: VisionDepthObservation['depth']['rangeCm']): s
   return `${minimum}–${maximum} cm`
 }
 
-function getVisionBusinessResult(observation: VisionDepthObservation) {
-  if (!observation.floodDetected) {
-    return {
-      status: '未检测到积水',
-      depth: '未发现积水',
-      note: '当前图像未检测到明确积水区域。',
-    }
-  }
-
-  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
-    return {
-      status: '检测到积水',
-      depth: `约 ${observation.depth.approximateDepthCm.toFixed(0)} cm`,
-      note: '粗略视觉估计：依据当前积水范围代表值，不等同于传感器实测水深。',
-    }
-  }
-
-  if (observation.depth.estimatedDepthCm === null) {
-    return {
-      status: '检测到积水',
-      depth: '水深暂不可量化',
-      note: '当前证据不足以形成可复核厘米值；不会用 level 或 range 代替精确水深。',
-    }
-  }
-
-  return {
-    status: '检测到积水',
-    depth: `约 ${observation.depth.estimatedDepthCm.toFixed(1)} cm`,
-    note: '视觉估计值仅作为独立证据，不覆盖传感器当前实测水深。',
-  }
+interface DecisionDisplay {
+  conclusion: string
+  depth: string
+  trafficStatus: string
+  recommendation: string
 }
 
-function getVisionPassability(observation: VisionDepthObservation) {
-  if (!observation.floodDetected) {
-    return {
-      label: '未发现积水阻断证据',
-      note: '仅代表当前图像证据，不代表道路整体通行条件。',
-    }
-  }
-  if (observation.depth.estimatedDepthCm === null && observation.depth.approximateDepthCm != null) {
-    return {
-      label: '粗略参考 · 待水深标定',
-      note: '当前数值用于演示和初筛，正式通行判断仍需标定水深。',
-    }
-  }
-  if (observation.depth.estimatedDepthCm === null) {
-    return {
-      label: '待水深标定',
-      note: '没有可复核厘米值，不进行通行能力推断。',
-    }
-  }
+function getDecisionDisplay(floodDetected: boolean, decision?: DecisionProjection | null): DecisionDisplay {
+  const decisionDepth = decision?.decisionDepthCm
+  const depth = typeof decisionDepth === 'number' && Number.isFinite(decisionDepth)
+    ? `约 ${decisionDepth.toFixed(0)} cm`
+    : '—'
+
   return {
-    label: '待通行阈值判定',
-    note: '当前 Contract 未提供车型/道路通行阈值，避免由单一水深值直接推断可通行性。',
+    conclusion: floodDetected ? '检测到积水' : '未检测到积水',
+    depth,
+    trafficStatus: decision?.trafficStatus?.trim() || '待判定',
+    recommendation: decision?.recommendation?.trim() || '等待行动建议',
   }
 }
 
@@ -693,8 +705,7 @@ export function VisionDepthDrawer({
   const originalUrl = sourcePreviewUrl ?? (mode === 'url' ? sourceValue : '')
   const maskUrl = resolveVisionMediaUrl(observation?.waterMaskPath)
   const range = observation?.depth.rangeCm ?? [null, null]
-  const businessResult = observation ? getVisionBusinessResult(observation) : null
-  const passability = observation ? getVisionPassability(observation) : null
+  const decisionDisplay = observation ? getDecisionDisplay(observation.floodDetected, observation.decision) : null
   const calibrationLabel = observation?.qualityFlags.includes('CAMERA_UNCALIBRATED')
     ? '未标定（CAMERA_UNCALIBRATED）'
     : '当前 Contract 未显式提供 CameraProfile 标定状态'
@@ -727,15 +738,14 @@ export function VisionDepthDrawer({
       {state === 'error' && <p className="vision-state vision-state--error" role="alert">{errorMessage ?? 'VisionDepth 读取失败'}</p>}
       {state === 'loading' && <p className="vision-state" role="status">正在等待 VisionDepth Observation；不会覆盖 NOW 实测水深。</p>}
 
-      {observation && businessResult && passability && (
+      {observation && decisionDisplay && (
         <section className={`vision-business-card ${observation.floodDetected ? 'is-flood' : 'is-clear'}`} aria-label="图像积水业务结论">
-          <div className="vision-business-status"><i />{businessResult.status}</div>
-          <strong className="vision-business-depth">{businessResult.depth}</strong>
-          <p className="vision-business-note">{businessResult.note}</p>
+          <div className="vision-business-status"><i />{decisionDisplay.conclusion}</div>
+          <div className="vision-business-depth"><span>估计水深</span><strong>{decisionDisplay.depth}</strong></div>
           <div className="vision-passability">
             <span>通行状态</span>
-            <b>{passability.label}</b>
-            <small>{passability.note}</small>
+            <b>{decisionDisplay.trafficStatus}</b>
+            <small>行动建议：{decisionDisplay.recommendation}</small>
           </div>
         </section>
       )}

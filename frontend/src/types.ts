@@ -9,6 +9,24 @@ export interface Coordinates {
   lon: number
 }
 
+export interface DashboardSummary {
+  totalEvents: number
+  changeVs1h: number
+  status: {
+    pending: number
+    processing: number
+    mitigated: number
+  }
+  topAreas: Array<{
+    name: string
+    eventCount: number
+  }>
+  maxDepthCm: number
+  averageDepthCm: number
+  averageResponseMinutes: number
+  newToday: number
+}
+
 export interface DashboardOverview {
   updatedAt: string
   city: string
@@ -22,6 +40,7 @@ export interface DashboardOverview {
     normal: number
   }
   activeFloodPoints: number
+  summary?: DashboardSummary | null
 }
 
 export interface RainfallSnapshot {
@@ -129,6 +148,12 @@ export interface VisionDepthProvenance {
   runtimePolicy: 'research_mvp' | 'production'
 }
 
+export interface DecisionProjection {
+  decisionDepthCm: number | null
+  trafficStatus: string
+  recommendation: string
+}
+
 export interface VisionDepthObservation {
   imageId: string
   source: {
@@ -151,6 +176,7 @@ export interface VisionDepthObservation {
   qualityFlags: string[]
   model: Record<string, unknown>
   synthetic: boolean
+  decision?: DecisionProjection | null
 }
 
 export interface SensorFloodPointMapping {
