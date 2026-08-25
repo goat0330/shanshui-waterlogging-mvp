@@ -4,10 +4,10 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Baseline and ownership
 
-- Main baseline: `b6ea92a` (backend/Cesium/Vision integration already merged)
-- Branch: `worker/rc22-dashboard-repair`
+- Main baseline: `38df8df` (all four RC2.2 worker checkpoints integrated)
+- Branch: `main` after parent cherry-pick
 - Worktree: `D:/研究生作业/上海城市内涝_智慧平台/worktrees/dashboard-rc11`
-- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/types.ts`, and this review record.
+- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/types.ts`, `frontend/src/adapters/videoEvidenceAdapter.ts`, and this review record.
 - Cesium, backend, contracts, public media, and new dependencies were not modified.
 
 ## Delivered
@@ -35,7 +35,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Stale product-copy scan over `frontend/src`: PASS; no `SENSOR EVIDENCE`, old sensor disclaimer, `summary pending`, or `没有 decision projection` matches.
 - Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
 - Adapter decision repro: PASS for flat `frame.decision` and `frame.overlay.decision`; existing nearest-frame/null-depth smoke remains PASS.
-- Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
+- Browser/API visual review: PASS on Main at `http://127.0.0.1:4173/` in API mode; summary, WS badge, Cesium scene label, video decision and image upload result were independently checked. Evidence screenshots: `review/e2e/rc22-main-1920x1080.jpg` and `review/e2e/rc22-vision-api-1920x1080.jpg`.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
 ## NOT VERIFIED
@@ -44,4 +44,4 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Checkpoint
 
-- Commit SHA: `51472c66a2001e55769f896c6dabd86c1ef5f234`
+- Parent-integrated commit SHA: `38df8df`
