@@ -207,54 +207,72 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
 }
 
 function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['summary']> }) {
-  const deltaLabel = `${summary.changeVs1h > 0 ? '+' : ''}${summary.changeVs1h.toFixed(1)}`
+  const deltaMagnitude = Math.abs(summary.changeVs1h).toFixed(1)
+  const deltaPrefix = summary.changeVs1h > 0 ? '+' : summary.changeVs1h < 0 ? '−' : ''
+  const deltaArrow = summary.changeVs1h > 0 ? '↑' : summary.changeVs1h < 0 ? '↓' : '→'
   const deltaTone = summary.changeVs1h > 0 ? 'up' : summary.changeVs1h < 0 ? 'down' : 'flat'
+  const maxAreaEvents = Math.max(...summary.topAreas.map((area) => area.eventCount), 1)
 
   return (
     <div className="status-summary">
-      <div className="status-summary-primary">
-        <div>
-          <span className="status-summary-label">积水事件总数</span>
-          <strong>{summary.totalEvents}</strong><small>起</small>
+      <div className="status-summary-main">
+        <div className="status-summary-ring" role="img" aria-label={`积水事件 ${summary.totalEvents} 起，较1小时前${deltaPrefix}${deltaMagnitude}`}>
+          <div className="status-summary-ring-core">
+            <strong>{summary.totalEvents}</strong>
+            <span>积水事件</span>
+            <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
+              <b>{deltaArrow}</b>{deltaPrefix}{deltaMagnitude}<small>较1h前</small>
+            </span>
+          </div>
         </div>
-        <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
-          {deltaLabel} <small>较1h前</small>
-        </span>
-      </div>
-      <div className="status-workflow" aria-label="事件处置状态">
-        <StatusSummaryItem label="待处置" value={summary.status.pending} tone="pending" />
-        <StatusSummaryItem label="处理中" value={summary.status.processing} tone="processing" />
-        <StatusSummaryItem label="已缓解" value={summary.status.mitigated} tone="mitigated" />
+        <div className="status-workflow" aria-label="事件处置状态">
+          <StatusSummaryItem label="待处置" detail="新发现事件" value={summary.status.pending} tone="pending" />
+          <StatusSummaryItem label="处理中" detail="正在排水 / 管控" value={summary.status.processing} tone="processing" />
+          <StatusSummaryItem label="已缓解" detail="水位持续下降" value={summary.status.mitigated} tone="mitigated" />
+        </div>
       </div>
       <div className="status-summary-lower">
         <div className="status-top-areas">
-          <div className="status-section-label">高发区域 <small>TOP 3</small></div>
+          <div className="status-section-label"><span>高发区域</span><small>TOP 3</small></div>
           {summary.topAreas.slice(0, 3).map((area, index) => (
             <div className="status-area-row" key={`${area.name}-${index}`}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
+              <span className="status-area-rank">{String(index + 1).padStart(2, '0')}</span>
               <strong>{area.name}</strong>
-              <small>{area.eventCount} 起</small>
+              <span className="status-area-bar"><i style={{ width: `${(area.eventCount / maxAreaEvents) * 100}%` }} /></span>
+              <small>{String(area.eventCount).padStart(2, '0')}</small>
             </div>
           ))}
           {summary.topAreas.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
         </div>
         <div className="status-summary-metrics">
-          <StatusSummaryMetric label="最大水深" value={`${summary.maxDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric label="平均水深" value={`${summary.averageDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric label="平均响应" value={`${summary.averageResponseMinutes.toFixed(0)} min`} />
-          <StatusSummaryMetric label="今日新增" value={`${summary.newToday} 起`} />
+          <StatusSummaryMetric icon="depth" label="最大水深" value={`${summary.maxDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="average" label="平均水深" value={`${summary.averageDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="response" label="平均响应时间" value={`${summary.averageResponseMinutes.toFixed(0)} min`} />
+          <StatusSummaryMetric icon="today" label="今日新增" value={`${summary.newToday > 0 ? '+' : ''}${summary.newToday} 起`} />
         </div>
       </div>
     </div>
   )
 }
 
-function StatusSummaryItem({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return <div className={`status-workflow-item status-workflow-item--${tone}`}><span>{label}</span><strong>{value}</strong></div>
+function StatusSummaryItem({ label, detail, value, tone }: { label: string; detail: string; value: number; tone: string }) {
+  return (
+    <div className={`status-workflow-item status-workflow-item--${tone}`}>
+      <span className="status-workflow-icon" aria-hidden="true" />
+      <div className="status-workflow-copy"><span>{label}</span><small>{detail}</small></div>
+      <strong>{String(value).padStart(2, '0')}</strong>
+    </div>
+  )
 }
 
-function StatusSummaryMetric({ label, value }: { label: string; value: string }) {
-  return <div className="status-summary-metric"><span>{label}</span><strong>{value}</strong></div>
+function StatusSummaryMetric({ icon, label, value }: { icon: 'depth' | 'average' | 'response' | 'today'; label: string; value: string }) {
+  return (
+    <div className="status-summary-metric">
+      <span className={`status-summary-metric-icon status-summary-metric-icon--${icon}`} aria-hidden="true" />
+      <span className="status-summary-metric-label">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  )
 }
 
 export interface RainfallPanelProps {

@@ -7,19 +7,20 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Main baseline: `b6ea92a` (backend/Cesium/Vision integration already merged)
 - Branch: `worker/rc22-dashboard-repair`
 - Worktree: `D:/研究生作业/上海城市内涝_智慧平台/worktrees/dashboard-rc11`
-- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/types.ts`, and this review record.
+- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/data/homeFixtures.ts`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/styles.css`, `frontend/src/types.ts`, and this review record.
 - Cesium, backend, contracts, public media, and new dependencies were not modified.
 
 ## Delivered
 
 - Normalized backend `waterloggingSituation` into the existing frontend summary shape: total events, one-hour delta, pending/processing/mitigated, top three districts, depth, response time, and today's new events.
-- The fixture path remains an honest empty-summary fallback; API mode now renders the backend summary block instead of showing an empty panel.
+- The legacy fixture overview now receives an explicit demo-only summary projection so the visual component is reviewable locally; API mode remains authoritative and normalizes backend `waterloggingSituation` at the hook boundary.
 - Vision image decision content now reads only the optional `observation.decision` projection: detection conclusion, decision depth, traffic status, and action recommendation. The demo fixture carries `decisionDepthCm=50`, `禁止通行`, and `积水较深，建议立即封控并组织排水` while retaining `estimatedDepthCm=null` for the uncalibrated evidence path.
 - Backend enum traffic statuses are mapped to Chinese product copy in the main result cards; raw range/level/provenance stays in technical details.
 - Sensor main copy is now `传感器状态` with `在线/延迟/离线/未上报`, `当前实测水深`, and `最后上报`; source/provenance wording is not used as product copy.
 - CCTV receives the selected frame's optional decision projection and renders the same four decision fields in a compact video overlay. Flat `frame.decision` and `frame.overlay.decision` are validated and preserved; a valid nested observation decision takes precedence. No depth is inferred from level/range.
 - Research/local video uses the concise visible state `非实时视频`; raw runtime policy, source type, license, and frame metadata remain under `技术详情`.
 - Added image-to-code `SceneEventCard`: click a selected scene point to open a compact event overlay with location, risk label, current depth, sensor identity/freshness, last report, and existing analysis actions. It consumes the existing frontend API/fixture data path and does not modify Cesium or backend contracts.
+- Reworked image-to-code `StatusPanel` against the user-provided reference: ring-based event total and delta, three workflow cards, TOP3 area bars, and four summary metrics. The current backend/demo values remain data-driven; unavailable footer metrics from the reference are not invented.
 - The Vision result tab remains the default and shows original image plus a semi-transparent mask when the mask asset is available. `原图` and `水体Mask` remain available as separate tabs.
 - Gallery/fullscreen review labels now distinguish the fixture fallback from the API-backed summary and decision surfaces.
 
@@ -37,6 +38,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
 - Adapter decision repro: PASS for flat `frame.decision` and `frame.overlay.decision`; existing nearest-frame/null-depth smoke remains PASS.
 - SceneEventCard browser smoke: PASS; `/` point click opens the card and repeating the same point click closes it; `/gallery` exposes the selected/high-risk component state.
+- StatusPanel browser smoke: PASS; local `/` renders the reference structure in fixture mode with the demo-only summary projection. Screenshot review used the running 1280px browser viewport; exact 1920×1080 and user visual acceptance remain open.
 - Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
@@ -46,6 +48,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Checkpoint
 
-- Commit SHA: `0d42783c543da060d449e4e7617898f42bd42df9`
+- Commit SHA: `d0f210d706604b91d19f0b79135905ee107cc0f0`
 - SceneEventCard is the bounded image-to-code addition for the selected event point; status remains `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW` pending user visual review.
 - The card consumes the existing selected event, sensor, and analysis data path in API/fixture modes. The running local sensor endpoint was not verified as available; no backend contract or fallback truthfulness was changed.
+- StatusPanel target source: `C:\Users\WangChi\AppData\Local\Temp\codex-clipboard-94f3bfbf-5f6b-4292-9aa2-a91ed80e0342.png`; previous implementation comparison: `C:\Users\WangChi\AppData\Local\Temp\codex-clipboard-001137d8-10af-476f-b9ae-380ff3219e8f.png`.

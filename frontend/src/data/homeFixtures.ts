@@ -15,9 +15,23 @@ export const sensorFloodPointMapping = sensorFloodPointMappingFixture as SensorF
 const demoCamera = camerasFixture[0] as HomeFixtures['camera']
 const localDemoVideoUrl = import.meta.env.VITE_DEMO_VIDEO_URL?.trim()
 const localDemoOverlayUrl = import.meta.env.VITE_DEMO_VIDEO_OVERLAY_URL?.trim()
+const demoOverview = dashboardOverviewFixture as HomeFixtures['overview']
+
+// Demo-only projection keeps the legacy fixture visible in the same shape as the backend summary.
+// API mode remains authoritative and normalizes waterloggingSituation at the hook boundary.
+const fixtureDerivedSummary: NonNullable<HomeFixtures['overview']['summary']> = {
+  totalEvents: 1,
+  changeVs1h: 108,
+  status: { pending: 0, processing: 1, mitigated: 0 },
+  topAreas: [{ name: '黄浦区', eventCount: 1 }],
+  maxDepthCm: 28.6,
+  averageDepthCm: 19.4,
+  averageResponseMinutes: 32.4,
+  newToday: 1,
+}
 
 export const homeFixtures: HomeFixtures = {
-  overview: dashboardOverviewFixture as HomeFixtures['overview'],
+  overview: { ...demoOverview, summary: fixtureDerivedSummary },
   rainfall: rainfallFixture as HomeFixtures['rainfall'],
   rainfallRanking: rainfallRankingFixture as HomeFixtures['rainfallRanking'],
   points: floodPointsFixture as HomeFixtures['points'],
