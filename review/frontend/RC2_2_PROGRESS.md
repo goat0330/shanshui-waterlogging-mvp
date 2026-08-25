@@ -57,6 +57,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Checkpoint
 
+- Point relation integration checkpoint: worker `8028482`; local Main cherry-pick `2fbdfda`.
 - Commit SHA: `d0f210d706604b91d19f0b79135905ee107cc0f0`
 - SceneEventCard is the bounded image-to-code addition for the selected event point; status remains `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW` pending user visual review.
 - The card consumes the existing selected event, sensor, and analysis data path in API/fixture modes. The running local sensor endpoint was not verified as available; no backend contract or fallback truthfulness was changed.
