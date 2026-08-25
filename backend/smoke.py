@@ -17,6 +17,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 from app.config import load_settings
 from app.main import app, repository, sensor_repository
+from app.meteorology import MeteorologyContextService, MeteorologyError
 from app.shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from app.vision_depth import VisionDepthAdapter, VisionDepthError, project_vision_decision
 
@@ -175,6 +176,7 @@ def main() -> None:
     spec = app.openapi()
     assert set(spec["paths"]) == formal_paths | telemetry_paths | vision_paths
     assert "/api/v1/external/shanghai-water" not in spec["paths"]
+    assert "/api/v1/context/meteorology" not in spec["paths"]
     assert spec["components"]["schemas"]["RiskLevel"]["enum"] == ["NORMAL", "WARNING", "HIGH", "CRITICAL"]
     assert spec["components"]["schemas"]["ForecastKey"]["enum"] == ["NOW", "PLUS_10", "PLUS_30"]
     assert spec["components"]["schemas"]["TelemetryTransport"]["enum"] == ["WIFI", "CELLULAR_4G", "SIMULATOR"]
@@ -386,6 +388,39 @@ def main() -> None:
         assert cached_snapshot.cacheHit is True
     print("PASS Shanghai Water per-record provenance, Shanghai timezone, and TTL cache")
 
+    context_service = MeteorologyContextService(adapter)
+    fixture_context = context_service.get("fixture")
+    assert fixture_context.dataStatus.value == "SYNTHETIC"
+    assert [frame.offsetMinutes for frame in fixture_context.nowcast.frames] == [0, 30, 60, 120]
+    assert all(frame.rasterUrl is None and not frame.renderableInCesium for frame in fixture_context.nowcast.frames)
+    with patch.object(adapter, "fetch", return_value=snapshot):
+        hybrid_context = context_service.get("hybrid")
+        real_context = context_service.get("real")
+    assert hybrid_context.dataStatus.value == "MIXED"
+    assert real_context.dataStatus.value == "DEGRADED"
+    assert len(hybrid_context.rainfallNow.stations) == 1
+    assert hybrid_context.rainfallNow.stations[0].windowMinutes is None
+    assert not hasattr(hybrid_context.rainfallNow.stations[0], "intensityMmH")
+    assert hybrid_context.nowcast.frames == []
+    assert any(item.status.value == "NOT_VERIFIED" for item in hybrid_context.sourceHealth)
+
+    failed_context_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+    failed_context_service = MeteorologyContextService(failed_context_adapter)
+    with patch.object(
+        failed_context_adapter,
+        "fetch",
+        side_effect=ShanghaiWaterError("SHANGHAI_WATER_FETCH_FAILED", "test timeout"),
+    ):
+        hybrid_degraded = failed_context_service.get("hybrid")
+        assert hybrid_degraded.dataStatus.value == "DEGRADED"
+        try:
+            failed_context_service.get("real")
+        except MeteorologyError as exc:
+            assert exc.code == "METEOROLOGY_UNAVAILABLE"
+        else:
+            raise AssertionError("real meteorology fallback was not blocked")
+    print("PASS MeteorologyContext fixture/hybrid/real fallback and raster gate")
+
     malformed_rows = {**source_rows, "YJSW": [{**source_row, "DATETIME": "2026-08-25 12:00:00"}]}
     partial_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
     with patch.object(partial_adapter, "_fetch_list", side_effect=lambda dataset_type: malformed_rows[dataset_type]):
@@ -502,6 +537,51 @@ def main() -> None:
             assert status == 200, (path, status, payload)
             json.dumps(payload, ensure_ascii=False)
             print(f"PASS 200 {path}")
+
+        if settings.data_mode == "fixture" or os.environ.get("SMOKE_METEOROLOGY") == "1":
+            status, meteorology = request("/api/v1/context/meteorology", timeout=20)
+            if settings.data_mode == "real" and status != 200:
+                assert status == 503, (status, meteorology)
+                assert meteorology["detail"]["code"] in {
+                    "METEOROLOGY_UNAVAILABLE",
+                    "METEOROLOGY_RAINFALL_UNAVAILABLE",
+                }
+                print(
+                    "PASS meteorology real mode rejected unavailable rainfall with explicit 503 "
+                    f"code={meteorology['detail']['code']}"
+                )
+            else:
+                assert status == 200, (status, meteorology)
+                assert set(meteorology) == {
+                    "observedAt",
+                    "receivedAt",
+                    "source",
+                    "coordinateReference",
+                    "mode",
+                    "dataStatus",
+                    "warnings",
+                    "rainfallNow",
+                    "nowcast",
+                    "sourceHealth",
+                }
+                assert meteorology["mode"] == settings.data_mode
+                assert isinstance(meteorology["rainfallNow"]["stations"], list)
+                assert all("intensityMmH" not in station for station in meteorology["rainfallNow"]["stations"])
+                assert all(frame["renderableInCesium"] is False for frame in meteorology["nowcast"]["frames"])
+                if settings.data_mode == "fixture":
+                    assert meteorology["dataStatus"] == "SYNTHETIC"
+                    assert [frame["offsetMinutes"] for frame in meteorology["nowcast"]["frames"]] == [0, 30, 60, 120]
+                    assert all(frame["rasterUrl"] is None for frame in meteorology["nowcast"]["frames"])
+                else:
+                    assert meteorology["dataStatus"] in {"MIXED", "DEGRADED"}
+                    assert all(item["synthetic"] is False for item in meteorology["rainfallNow"]["stations"])
+                json.dumps(meteorology, ensure_ascii=False)
+                print(
+                    "PASS provisional MeteorologyContext "
+                    f"mode={meteorology['mode']} status={meteorology['dataStatus']}"
+                )
+        else:
+            print("SKIP MeteorologyContext live mode (set SMOKE_METEOROLOGY=1)")
 
         if settings.data_mode == "fixture":
             status, external_snapshot = request("/api/v1/external/shanghai-water", timeout=20)

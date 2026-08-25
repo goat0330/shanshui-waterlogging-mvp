@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -264,6 +264,111 @@ class ShanghaiWaterSnapshot(BaseModel):
     synthetic: bool = False
     fallbackReason: str | None = None
     cacheHit: bool = False
+
+
+class MeteorologyMode(str, Enum):
+    FIXTURE = "fixture"
+    HYBRID = "hybrid"
+    REAL = "real"
+
+
+class MeteorologyDataStatus(str, Enum):
+    REAL = "REAL"
+    MIXED = "MIXED"
+    SYNTHETIC = "SYNTHETIC"
+    DEGRADED = "DEGRADED"
+
+
+class MeteorologySourceHealthStatus(str, Enum):
+    OK = "OK"
+    SYNTHETIC = "SYNTHETIC"
+    UNAVAILABLE = "UNAVAILABLE"
+    NOT_VERIFIED = "NOT_VERIFIED"
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    SCHEMA_MISMATCH = "SCHEMA_MISMATCH"
+    TIMEOUT = "TIMEOUT"
+
+
+class MeteorologyWarning(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    level: str
+    issuedAt: datetime
+    expiresAt: datetime | None = None
+    sourceId: str
+    area: str | None = None
+    synthetic: bool = False
+
+
+class MeteorologyRainfallStation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str | None = None
+    stationName: str
+    district: str | None = None
+    coordinates: Coordinates | None = None
+    coordinateReference: str | None = None
+    rainfallValue: float = Field(ge=0)
+    unit: str = "mm"
+    windowMinutes: int | None = Field(default=None, ge=0)
+    observedAt: datetime
+    sourceId: str
+    synthetic: bool = False
+
+
+class MeteorologyRainfallNow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stations: list[MeteorologyRainfallStation]
+
+
+class MeteorologyNowcastFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    offsetMinutes: Literal[0, 30, 60, 120]
+    validAt: datetime
+    rasterUrl: str | None = None
+    previewUrl: str | None = None
+    mediaType: str | None = None
+    crs: str | None = None
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    georeferenced: bool = False
+    renderableInCesium: bool = False
+    sourceId: str
+    synthetic: bool = False
+
+
+class MeteorologyNowcast(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frames: list[MeteorologyNowcastFrame]
+
+
+class MeteorologySourceHealth(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    sourceId: str
+    status: MeteorologySourceHealthStatus
+    observedAt: datetime | None = None
+    receivedAt: datetime
+    message: str | None = None
+
+
+class MeteorologyContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    observedAt: datetime | None = None
+    receivedAt: datetime
+    source: str
+    coordinateReference: str | None = None
+    mode: MeteorologyMode
+    dataStatus: MeteorologyDataStatus
+    warnings: list[MeteorologyWarning]
+    rainfallNow: MeteorologyRainfallNow
+    nowcast: MeteorologyNowcast
+    sourceHealth: list[MeteorologySourceHealth]
 
 
 class FloodPoint(BaseModel):

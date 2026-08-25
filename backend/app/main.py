@@ -14,6 +14,7 @@ from .models import (
     FloodEvent,
     FloodForecast,
     FloodPoint,
+    MeteorologyContext,
     RainfallSnapshot,
     RainfallStationRankingItem,
     ScenarioTimeline,
@@ -25,6 +26,7 @@ from .models import (
 )
 from .config import load_settings
 from .repository import UnknownSensorError, build_repository
+from .meteorology import MeteorologyContextService, MeteorologyError
 from .shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from .vision_depth import VisionDepthAdapter, VisionDepthError
 
@@ -53,6 +55,7 @@ shanghai_water_adapter = ShanghaiWaterAdapter(
     timeout_seconds=settings.shanghai_water_timeout_seconds,
     cache_ttl_seconds=settings.shanghai_water_cache_ttl_seconds,
 )
+meteorology_context_service = MeteorologyContextService(shanghai_water_adapter)
 
 
 def not_found(resource: str, identifier: str) -> HTTPException:
@@ -109,6 +112,20 @@ def get_shanghai_water_snapshot() -> ShanghaiWaterSnapshot:
     try:
         return shanghai_water_adapter.fetch(allow_partial=settings.data_mode == "hybrid")
     except ShanghaiWaterError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
+
+
+@app.get(
+    "/api/v1/context/meteorology",
+    response_model=MeteorologyContext,
+    operation_id="getMeteorologyContext",
+    tags=["provisional-context"],
+    include_in_schema=False,
+)
+def get_meteorology_context() -> MeteorologyContext:
+    try:
+        return meteorology_context_service.get(settings.data_mode)
+    except MeteorologyError as exc:
         raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
 
 
