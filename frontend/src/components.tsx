@@ -68,7 +68,7 @@ export function TopNav({ activeItem = '实时监测', overview, updatedAt }: Top
       <a className="brand" href="/" aria-label="返回实时监测首页">
         <LogoMark />
         <span className="brand-copy">
-          <span className="brand-title">山水智鉴</span>
+          <span className="brand-title">启晓平台</span>
           <span className="brand-divider">|</span>
           <span className="brand-subtitle">城市内涝智能防控中心</span>
         </span>
