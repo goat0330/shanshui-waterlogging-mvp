@@ -28,6 +28,7 @@ RUN cd /src/frontend \
 
 COPY frontend /src/frontend
 COPY data /src/data
+COPY contracts /src/contracts
 COPY deploy /src/deploy
 COPY --from=media /media /media
 
