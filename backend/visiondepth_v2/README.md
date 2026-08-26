@@ -17,9 +17,10 @@ only a camera-calibration guard: when the camera is uncalibrated,
 `estimatedDepthCm` is forced to `null` and confidence is capped low. Water
 segmentation and reference detection are not duplicated here.
 
-V-FloodNet remains an external research adapter only. Its source, weights and
-large datasets are not copied or committed. The six small test videos are
-kept outside Git for this local-only MVP smoke and are recorded as
+V-FloodNet is represented in the registry as a local research-video source for
+this MVP only. Its source, weights and large datasets are not copied or
+committed, and no external V-FloodNet command/model is executed. The six small
+test videos are kept outside Git for the local-only smoke and are recorded as
 `MVP_REVIEW`; this is not final public-use approval. The registry keeps the
 pending license state. `tools.check_third_party --config configs/local.yaml`
 passes only for the explicitly non-redistributable `research_mvp` profile and
@@ -38,7 +39,8 @@ python -m compileall -q src tools tests
 
 The data and third-party roots are intentionally outside Git. Do not add MP4,
 model weights, raw datasets, `.env.local`, or external repositories to this
-package. `runtime_profile: research_mvp` permits only the local OpenCV path;
-it does not approve pending third-party licenses, external model execution, or
-redistribution. Production/redistribution profiles remain blocked until review
-is explicitly approved.
+package. `runtime_profile: research_mvp` permits the local OpenCV path and the
+explicitly scoped local research-video evidence input; it does not approve
+pending third-party licenses, external model execution, or redistribution.
+Production/redistribution profiles remain blocked until review is explicitly
+approved.

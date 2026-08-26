@@ -209,6 +209,7 @@ def main() -> int:
             "dataset": "Urban Flood Image Dataset",
             "resource": "https://www.hydroshare.org/resource/24866122a6ee456c8f7c80aa87a9abcb/",
             "declaredLicense": "CC BY 4.0",
+            "mvpVerification": "VERIFIED_FOR_RESEARCH_MVP",
             "rightsReview": "DEFERRED_TO_USER",
             "runtimePolicy": "research_mvp_local_only",
         },

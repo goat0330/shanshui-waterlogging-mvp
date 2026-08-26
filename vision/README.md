@@ -41,7 +41,7 @@ The V-FloodNet project was used only as an architecture reference (water segment
 
 ## Optional RC2.3 learned candidate
 
-`vision.train_water_segmenter` is an opt-in research command. It trains a small pixel-level Logistic Regression mask adapter on the locally acquired Urban Flood Image Dataset and evaluates it on a source-level WebCOOS holdout. The default V1/V2 pipeline remains OpenCV; no checkpoint is downloaded automatically or committed to Git.
+`vision.train_water_segmenter` is an opt-in research command. It trains a small pixel-level Logistic Regression mask adapter on the locally acquired Urban Flood Image Dataset and evaluates it on a source-level WebCOOS holdout. The candidate is frozen as `VERIFIED_FOR_RESEARCH_MVP` for water segmentation only; the source declares `CC BY 4.0`, while final public/redistribution review remains deferred. The default V1/V2 pipeline remains OpenCV; no checkpoint is downloaded automatically or committed to Git.
 
 ```text
 python -m vision.train_water_segmenter --data-root <local Urban-Flood-Image-Dataset> --model-out <local checkpoint.joblib> --metrics-out vision/artifacts/urban-flood-segmentation-metrics.json --examples-dir <local examples>
