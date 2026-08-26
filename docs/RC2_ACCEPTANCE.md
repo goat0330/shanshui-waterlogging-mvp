@@ -1,69 +1,24 @@
-# RC2 Acceptance Matrix
+# MVP Acceptance Matrix — Current
 
-Main maintains this matrix after independent reruns. Worker self-reports are evidence, not final acceptance.
+This matrix is subordinate to `docs/06_DELIVERY_MANIFEST.md` and the frozen evidence policy.
 
-## RC2.1 Closure — Main independent rerun
-
-| Gate | Status | Evidence / boundary |
+| Gate | Status | Current boundary |
 |---|---|---|
-| Synthetic browser video decode | PASS / CONDITIONAL | `flood_cam_017.mp4`: Chrome `readyState=4`, 320×240, 1s; synthetic-only, not CCTV/LIVE |
-| Flat video frame → Dashboard Overlay | PASS / CONDITIONAL | `a018a74` adapter normalizes worker flat frames; playback changes nearest frame; `RESULT FRAME`, `SYNTHETIC_DEMO`, null cm and uncalibrated flags visible |
-| SensorState → Cesium geographic entity | PASS / CONDITIONAL | `SSZJ-NODE-001`, `siteId`, `28.6cm`, WGS84 and `fallback=false` pass through `DigitalTwinScene` into Cesium |
-| Local/remote Vision provenance | PASS | local upload=`not_required`; remote URL=`pending`; no sensor overwrite |
-| Minimal CI workflow | ADDED / NOT VERIFIED | `.github/workflows/ci.yml` is parsed and committed; remote Action run/branch protection not claimed |
+| 9 formal events | PASS | 1 realtime + 8 `VERIFIED_FOR_MVP` historical public-report cases |
+| Historical/Sensor separation | PASS | historical cases do not inherit Sensor/Forecast/LIVE CCTV |
+| Historical CASE_SOURCE_MEDIA | PASS / OPTIONAL | same-event approved media is canonical; missing media does not invalidate a case |
+| Backend memory contract smoke | PASS / rerun after patch | existing smoke plus `backend/smoke_leanguard.py` |
+| Frontend API routing | PASS / rerun after patch | same-origin `/api`/`/ws` → Vite proxy → backend `8000`; `8002` is non-canonical |
+| Granular degraded mode | IMPLEMENTED | one failed domain no longer collapses the entire dashboard |
+| Shanghai Water hybrid | PASS / CONDITIONAL | prior live evidence 63 rainfall / 45 ponding / 55 water-level records |
+| SSSW strict normalization | IMPLEMENTED / local smoke | aliases, signed level and row-level invalid-source handling |
+| CMA warning/nowcast seam | IMPLEMENTED / NOT VERIFIED SOURCE | provider is configurable; no endpoint is fabricated |
+| Vision image API | PASS / CONDITIONAL | image → mask → decision evidence; does not overwrite sensor |
+| Learned water segmentation | PASS / RESEARCH MVP | WebCOOS IoU 0.648314 vs OpenCV 0.395276 |
+| Learned runtime hook | IMPLEMENTED | valid local checkpoint → shared image/video pipeline; missing checkpoint → OpenCV fallback |
+| Video pipeline | PASS / LOCAL RESEARCH | 4 usable videos / 25 sampled frames; non-live/research labeling required |
+| Metric centimetre Vision depth | NOT VERIFIED | camera calibration remains separate |
+| PostGIS/MQTT/Auth | NOT VERIFIED / NON-BLOCKING MVP | production hardening |
+| Final human visual acceptance | VISUAL_REVIEW | user gate |
 
-## Regression and integration
-
-| Gate | Status | Evidence / boundary |
-|---|---|---|
-| Backend compile/smoke | PASS | `python -B backend/smoke.py`; REST, WebSocket, telemetry, forecast, analysis, upload, URL safety and non-overwrite checks |
-| Frontend typecheck/build | PASS | `npm run typecheck`; `npm run build`; Cesium large-chunk warning only |
-| Vision image smoke | PASS | `python -m vision.smoke`; 3 existing image evidence cases |
-| Real video smoke | PASS / CONDITIONAL | 4 usable MP4, 25 sampled frames; 2 of 6 source files are genuinely 11 frames and remain rejected |
-| API-mode browser chain | PASS | `review/e2e/api-realtime-browser-smoke.json` |
-| WebSocket fallback/reconnect | PASS | live WS → REST polling fallback → reconnect; induced network errors are expected evidence |
-| Cesium geographic scene/orbit/zoom | PASS / CONDITIONAL | clean controlled smoke passes; real Core Local/official hydro calibration is not verified |
-| NOW/+10/+30 | PASS / CONDITIONAL | geographic GeoJSON surfaces switch in controlled smoke; values remain `NOW=SENSOR`, future=`FORECAST` |
-| 60-second chain | PASS | `review/e2e/60-second-chain.json`; page errors zero |
-| 5-minute rehearsal | PASS / CONDITIONAL | `review/e2e/5-minute-rehearsal.json`; CCTV/AI remain placeholder-conditional |
-
-## Evidence and provenance
-
-| Gate | Status | Evidence / boundary |
-|---|---|---|
-| Upload response provenance | PASS | API response and OpenAPI/JSON schema include `sourceType`, `sourceId`, `observedAt`, `licenseReview`, `runtimePolicy` |
-| URL safety | PASS | HTTP/HTTPS, DNS/private-target, timeout, MIME, size and redirect guards; `trust_env=false` |
-| Vision does not overwrite sensor | PASS | backend smoke verifies upload does not change SensorState/FloodPoint |
-| Video frame evidence | PASS / CONDITIONAL | 25 readable frame JSON, masks, timestamps and overlay metadata; uncalibrated depth is null |
-| Source manifest | PASS | 6 public metadata rows with URL/project/hash/policy; runtime manifest is outside Git |
-| Pending-license binaries/weights absent from Git | PASS | Git file audit shows no MP4, raw runtime video, model weight or V2 output tree |
-
-## Dashboard and human review
-
-| Gate | Status | Evidence / boundary |
-|---|---|---|
-| Source labels | PASS / VISUAL_REVIEW | Dashboard separates `SENSOR`, `VISION_IMAGE`, `VISION_VIDEO`, `FORECAST`; final legibility is user review |
-| Measured/visual/forecast separation | PASS | NOW uses sensor baseline; future frames use forecast values; vision never overwrites sensor |
-| No fake LIVE / meaningless overlay | PASS / VISUAL_REVIEW | current asset is explicitly `SYNTHETIC_DEMO`; timestamped metadata overlay renders only after media readiness; final visual interpretation belongs to user |
-| 1920×1080 states | PASS / VISUAL_REVIEW | default/high-risk/+30/gallery screenshots have no critical overflow; user golden comparison remains open |
-
-## Scenarios and release
-
-| Gate | Status | Evidence / boundary |
-|---|---|---|
-| Scenario A Sensor-driven | PASS | API/WS → 12cm/28.6cm → FP-001/event → geographic forecast → fallback/reconnect; 60s and 5m evidence |
-| Scenario B Vision-driven | PASS / CONDITIONAL | image API evidence plus synthetic browser video `MP4 → timestamped overlay`; Sensor 28.6cm remains unchanged; real CCTV and calibrated cm remain unavailable |
-| README / AGENTS / Delivery Manifest | PASS | current RC2 docs describe actual code/evidence boundaries |
-| Source manifest/download instructions | PASS | public metadata only; binaries remain local-only |
-| Git clean / no secrets | PASS | release staging contained only docs/evidence; runtime MP4/weights/V2 outputs are absent |
-| `rc2-evidence-demo` tag | PASS | pushed after the final release commit; tag target is verified independently |
-
-## Allowed final status
-
-```text
-PASS / RC2 EVIDENCE-BACKED DEMO / VISUAL_REVIEW
-CONDITIONAL / RC2
-BLOCKED
-```
-
-This release is not a production deployment, not a calibrated water-depth model, not official live Shanghai data, and not a final third-party redistribution approval.
+Local research-video MVP use is approved by project policy. External public redistribution/production rights remain a separate gate and must not be used to block local MVP execution.

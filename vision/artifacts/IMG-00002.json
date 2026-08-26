@@ -6,14 +6,14 @@
   },
   "floodDetected": true,
   "depth": {
-    "level": 5,
+    "level": 4,
     "estimatedDepthCm": null,
-    "approximateDepthCm": null,
+    "approximateDepthCm": 40.0,
     "rangeCm": [
-      50,
-      null
+      30,
+      50
     ],
-    "confidence": 0.4
+    "confidence": 0.39
   },
   "method": "NO_REFERENCE",
   "referenceObjects": [
@@ -26,8 +26,8 @@
         "height": 354
       },
       "confidence": 0.462,
-      "waterOverlapRatio": 0.643,
-      "waterlineY": 0.387,
+      "waterOverlapRatio": 0.596,
+      "waterlineY": 0.608,
       "reliable": false,
       "detector": "opencv_hog"
     },
@@ -40,8 +40,8 @@
         "height": 42
       },
       "confidence": 0.338,
-      "waterOverlapRatio": 0.991,
-      "waterlineY": 0.37,
+      "waterOverlapRatio": 0.229,
+      "waterlineY": 0.63,
       "reliable": false,
       "detector": "opencv_color_heuristic"
     }
@@ -49,12 +49,13 @@
   "waterMaskPath": "artifacts/IMG-00002-water-mask.png",
   "quality": "LOW",
   "qualityFlags": [
-    "BASELINE_ONLY",
-    "MODEL_WEIGHT_MISSING",
-    "NO_REFERENCE"
+    "LEARNED_WATER_SEGMENTATION",
+    "METRIC_DEPTH_UNVERIFIED",
+    "NO_REFERENCE",
+    "ROUGH_VISUAL_ESTIMATE"
   ],
   "model": {
-    "waterSegmentation": "opencv_baseline",
+    "waterSegmentation": "pixel_logistic_regression",
     "referenceDetection": "opencv_hog_and_color_heuristic",
     "geometrySupport": "none"
   },

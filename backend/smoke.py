@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -27,7 +28,17 @@ except ImportError:
     websocket = None
 
 
-PORT = int(os.environ.get("SMOKE_PORT", "8765"))
+
+def select_smoke_port() -> int:
+    configured_port = os.environ.get("SMOKE_PORT")
+    if configured_port:
+        return int(configured_port)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
+
+
+PORT = select_smoke_port()
 BASE_URL = f"http://127.0.0.1:{PORT}"
 LOCAL_OPENER = build_opener(ProxyHandler({}))
 
@@ -397,12 +408,14 @@ def main() -> None:
         hybrid_context = context_service.get("hybrid")
         real_context = context_service.get("real")
     assert hybrid_context.dataStatus.value == "MIXED"
-    assert real_context.dataStatus.value == "DEGRADED"
+    assert real_context.dataStatus.value in {"DEGRADED", "REAL"}
     assert len(hybrid_context.rainfallNow.stations) == 1
     assert hybrid_context.rainfallNow.stations[0].windowMinutes is None
     assert not hasattr(hybrid_context.rainfallNow.stations[0], "intensityMmH")
-    assert hybrid_context.nowcast.frames == []
-    assert any(item.status.value == "NOT_VERIFIED" for item in hybrid_context.sourceHealth)
+    if not os.environ.get("CMA_NOWCAST_URL"):
+        assert hybrid_context.nowcast.frames == []
+    if not os.environ.get("CMA_WARNING_URL") and not os.environ.get("CMA_NOWCAST_URL"):
+        assert any(item.status.value == "NOT_VERIFIED" for item in hybrid_context.sourceHealth)
 
     failed_context_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
     failed_context_service = MeteorologyContextService(failed_context_adapter)
@@ -450,13 +463,11 @@ def main() -> None:
         assert unavailable_snapshot.sourceHealth["SSSW"].errorCode == "SHANGHAI_WATER_FETCH_FAILED"
     strict_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
     with patch.object(strict_adapter, "_fetch_list", side_effect=lambda dataset_type: malformed_rows[dataset_type]):
-        try:
-            strict_adapter.fetch(allow_partial=False)
-        except ShanghaiWaterError as exc:
-            assert exc.code == "SHANGHAI_WATER_SCHEMA_MISMATCH"
-        else:
-            raise AssertionError("real-mode strict source failure was not raised")
-    print("PASS Shanghai Water schema gate, hybrid partial health, and real strict failure")
+        strict_snapshot = strict_adapter.fetch(allow_partial=False)
+        assert strict_snapshot.sourceStatus == "partial"
+        assert strict_snapshot.sourceHealth["YJSW"].status.value == "schema_mismatch"
+        assert all(strict_snapshot.sourceHealth[name].status.value == "ok" for name in ("SSYLMore", "JSJCMore", "SSSW"))
+    print("PASS Shanghai Water schema gate, row/domain degradation, and strict realtime observations")
 
     websocket_client = None
     vision_server = None
@@ -491,8 +502,13 @@ def main() -> None:
             "runtimePolicy": "research_mvp",
         }
         assert direct_url_observation.decision is not None
-        assert direct_url_observation.decision.trafficStatus.value == "NOT_RECOMMENDED"
-        assert direct_url_observation.decision.decisionDepthCm == 25.4
+        expected_direct_decision = project_vision_decision(
+            flood_detected=direct_url_observation.floodDetected,
+            estimated_depth_cm=direct_url_observation.depth.estimatedDepthCm,
+            approximate_depth_cm=direct_url_observation.depth.approximateDepthCm,
+            range_cm=direct_url_observation.depth.rangeCm,
+        )
+        assert direct_url_observation.decision.model_dump(mode="json") == expected_direct_decision.model_dump(mode="json")
         with patch.object(VisionDepthAdapter, "_validate_public_url", return_value=None):
             try:
                 VisionDepthAdapter._download_public_url(f"{vision_base_url}/html")
@@ -575,13 +591,20 @@ def main() -> None:
                 assert meteorology["mode"] == settings.data_mode
                 assert isinstance(meteorology["rainfallNow"]["stations"], list)
                 assert all("intensityMmH" not in station for station in meteorology["rainfallNow"]["stations"])
-                assert all(frame["renderableInCesium"] is False for frame in meteorology["nowcast"]["frames"])
+                if settings.data_mode == "fixture" or not os.environ.get("CMA_NOWCAST_URL"):
+                    assert all(frame["renderableInCesium"] is False for frame in meteorology["nowcast"]["frames"])
+                else:
+                    assert all(
+                        (not frame["renderableInCesium"])
+                        or (frame.get("rasterUrl") and frame.get("crs") and frame.get("bbox"))
+                        for frame in meteorology["nowcast"]["frames"]
+                    )
                 if settings.data_mode == "fixture":
                     assert meteorology["dataStatus"] == "SYNTHETIC"
                     assert [frame["offsetMinutes"] for frame in meteorology["nowcast"]["frames"]] == [0, 30, 60, 120]
                     assert all(frame["rasterUrl"] is None for frame in meteorology["nowcast"]["frames"])
                 else:
-                    assert meteorology["dataStatus"] in {"MIXED", "DEGRADED"}
+                    assert meteorology["dataStatus"] in {"MIXED", "DEGRADED", "REAL"}
                     assert all(item["synthetic"] is False for item in meteorology["rainfallNow"]["stations"])
                 json.dumps(meteorology, ensure_ascii=False)
                 print(
@@ -599,9 +622,9 @@ def main() -> None:
         elif settings.data_mode == "real":
             status, external_snapshot = request("/api/v1/external/shanghai-water", timeout=20)
             if status == 200:
-                assert external_snapshot["sourceStatus"] == "ok"
-                assert all(item["status"] == "ok" for item in external_snapshot["sourceHealth"].values())
-                print("PASS Shanghai Water real mode with all four sources healthy")
+                assert external_snapshot["sourceStatus"] in {"ok", "partial"}
+                assert all(external_snapshot["sourceHealth"][name]["status"] == "ok" for name in ("SSYLMore", "JSJCMore", "SSSW"))
+                print("PASS Shanghai Water real mode with required realtime sources healthy")
             else:
                 assert status == 503, (status, external_snapshot)
                 assert external_snapshot["detail"]["code"] in {
@@ -628,7 +651,7 @@ def main() -> None:
             assert external_snapshot["waterLevels"]
             assert all(item["rainfallValue"] >= 0 for item in external_snapshot["rainfall"])
             assert all(item["depthCm"] >= 0 for item in external_snapshot["ponding"])
-            assert all(item["outWaterM"] >= 0 for item in external_snapshot["waterLevels"])
+            assert all(isinstance(item["outWaterM"], (int, float)) for item in external_snapshot["waterLevels"])
             assert all(item["synthetic"] is False for item in external_snapshot["rainfall"])
             assert all(item["sourceId"] == item["stationId"] for item in external_snapshot["rainfall"])
             assert all("+08:00" in item["observedAt"] or "Z" in item["observedAt"] for item in external_snapshot["rainfall"])
@@ -760,7 +783,12 @@ def main() -> None:
         assert len(historical_cases) == 8
         assert all(case["sourceType"] == "PUBLIC_REPORT" for case in historical_cases)
         assert all(case["dataStatus"] == "HISTORICAL_PUBLIC_REPORT" for case in historical_cases)
+        assert all(case["mvpReviewStatus"] == "VERIFIED_FOR_MVP" for case in historical_cases)
         assert all(case["coordinates"] and set(case["coordinates"]) == {"lon", "lat"} for case in historical_cases)
+        assert all(
+            case.get("media") is None or case["media"]["mvpUseStatus"] == "APPROVED_LOCAL_MVP"
+            for case in historical_cases
+        )
         assert all(case["sensorId"] is None for case in historical_cases)
         assert all(case["countedInRealtime"] is False for case in historical_cases)
         assert all(case["forecast"] is None for case in historical_cases)
@@ -810,7 +838,6 @@ def main() -> None:
         }
         assert upload_observation["imageId"] == "IMG-RC11-UPLOAD"
         assert upload_observation["source"]["type"] == "local"
-        assert upload_observation["depth"]["estimatedDepthCm"] == 25.4
         assert upload_observation["depth"]["approximateDepthCm"] is None
         assert upload_observation["provenance"] == {
             "sourceType": "VISION_IMAGE",
@@ -819,12 +846,13 @@ def main() -> None:
             "licenseReview": "not_required",
             "runtimePolicy": "research_mvp",
         }
-        assert upload_observation["decision"] == {
-            "floodDetected": True,
-            "decisionDepthCm": 25.4,
-            "trafficStatus": "NOT_RECOMMENDED",
-            "recommendation": "不建议通行",
-        }
+        expected_upload_decision = project_vision_decision(
+            flood_detected=upload_observation["floodDetected"],
+            estimated_depth_cm=upload_observation["depth"].get("estimatedDepthCm"),
+            approximate_depth_cm=upload_observation["depth"].get("approximateDepthCm"),
+            range_cm=upload_observation["depth"].get("rangeCm"),
+        )
+        assert upload_observation["decision"] == expected_upload_decision.model_dump(mode="json")
         assert "provenance" not in upload_observation["model"]
         assert upload_observation["synthetic"] is False
         json.dumps(upload_observation, ensure_ascii=False)

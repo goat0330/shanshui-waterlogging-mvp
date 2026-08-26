@@ -9,6 +9,7 @@ import { loadMajorRoadLayer, MAJOR_ROADS_GEOJSON_URL, MAJOR_ROADS_SOURCE_LABEL }
 import { addGeographicSensorEntity } from './scene/sensorEntity'
 
 const CORE_TILES_URL = '/data/runtime/shanghai-core/tileset.json'
+const OSM_BASEMAP_URL = 'https://tile.openstreetmap.org/'
 const CESIUM_ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN?.trim()
 const SENSOR_STATE_SOURCE = 'sensor-state-input'
 const FLOOD_POINT_FALLBACK_SOURCE = 'floodpoint-fallback'
@@ -43,6 +44,14 @@ function getLocalFailureReason(attemptReason: SourceAttemptReason): SourceReason
   return 'local_core_unavailable'
 }
 
+export interface SceneAnchorPosition {
+  x: number
+  y: number
+  viewportWidth: number
+  viewportHeight: number
+  visible: boolean
+}
+
 interface CesiumSceneProps {
   event: FloodEvent | null
   points: FloodPoint[]
@@ -52,6 +61,7 @@ interface CesiumSceneProps {
   selectedPointId: string
   layers: LayerVisibility
   onPointSelect: (id: string) => void
+  onSelectedPointScreenPosition?: (position: SceneAnchorPosition | null) => void
 }
 
 type LayerVisibility = {
@@ -100,9 +110,12 @@ function flyToTarget(viewer: Cesium.Viewer, target: { lon: number; lat: number }
   )
 }
 
-export function CesiumScene({ event, points, sensor = null, activeForecast, forecastFrame, selectedPointId, layers, onPointSelect }: CesiumSceneProps) {
+export function CesiumScene({ event, points, sensor = null, activeForecast, forecastFrame, selectedPointId, layers, onPointSelect, onSelectedPointScreenPosition }: CesiumSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
+  const basemapLayerRef = useRef<Cesium.ImageryLayer | null>(null)
+  const baseImageryRef = basemapLayerRef
+  const lastAnchorRef = useRef<SceneAnchorPosition | null>(null)
   const cityLayerRef = useRef<Cesium.PrimitiveCollection | null>(null)
   const hydroDataSourceRef = useRef<Cesium.GeoJsonDataSource[]>([])
   const roadDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
@@ -145,6 +158,17 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     cityLayerRef.current = cityLayer
     viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a1118')
     viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0d1921')
+    const basemapProvider = new Cesium.OpenStreetMapImageryProvider({
+      url: OSM_BASEMAP_URL,
+      maximumLevel: 19,
+    })
+    const basemapLayer = viewer.imageryLayers.addImageryProvider(basemapProvider, 0)
+    basemapLayer.alpha = 0.72
+    basemapLayer.brightness = 0.48
+    basemapLayer.contrast = 1.14
+    basemapLayer.saturation = 0.18
+    basemapLayer.show = layers.base
+    basemapLayerRef.current = basemapLayer
     viewer.scene.globe.enableLighting = false
     viewer.scene.globe.showGroundAtmosphere = false
     viewer.scene.fog.enabled = true
@@ -223,7 +247,10 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     return () => {
       disposed = true
       cityLayerRef.current = null
-      hydroDataSourceRef.current = null
+      baseImageryRef.current = null
+      lastAnchorRef.current = null
+      basemapLayerRef.current = null
+      hydroDataSourceRef.current = []
       forecastDataSourceRef.current = null
       viewerRef.current = null
       setViewerReady(false)
@@ -236,6 +263,57 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     if (!viewer || !viewerReady) return
     flyToTarget(viewer, target)
   }, [target.lat, target.lon, viewerReady])
+
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || !viewerReady || !onSelectedPointScreenPosition) return
+    const coordinates = selectedPoint?.coordinates ?? event?.coordinates ?? null
+    if (!coordinates) {
+      lastAnchorRef.current = null
+      onSelectedPointScreenPosition(null)
+      return
+    }
+    const world = Cesium.Cartesian3.fromDegrees(coordinates.lon, coordinates.lat, 2)
+
+    const publish = () => {
+      if (viewer.isDestroyed()) return
+      const windowPosition = viewer.scene.cartesianToCanvasCoordinates(world)
+      const viewportWidth = viewer.scene.canvas.clientWidth
+      const viewportHeight = viewer.scene.canvas.clientHeight
+      const toPoint = Cesium.Cartesian3.normalize(
+        Cesium.Cartesian3.subtract(world, viewer.camera.positionWC, new Cesium.Cartesian3()),
+        new Cesium.Cartesian3(),
+      )
+      const visible = Boolean(windowPosition)
+        && Cesium.Cartesian3.dot(viewer.camera.directionWC, toPoint) > 0
+        && windowPosition!.x >= 0
+        && windowPosition!.y >= 0
+        && windowPosition!.x <= viewportWidth
+        && windowPosition!.y <= viewportHeight
+      const next: SceneAnchorPosition = {
+        x: windowPosition?.x ?? 0,
+        y: windowPosition?.y ?? 0,
+        viewportWidth,
+        viewportHeight,
+        visible,
+      }
+      const previous = lastAnchorRef.current
+      if (previous
+        && previous.visible === next.visible
+        && Math.abs(previous.x - next.x) < 1
+        && Math.abs(previous.y - next.y) < 1
+        && previous.viewportWidth === next.viewportWidth
+        && previous.viewportHeight === next.viewportHeight) return
+      lastAnchorRef.current = next
+      onSelectedPointScreenPosition(next)
+    }
+
+    publish()
+    viewer.scene.postRender.addEventListener(publish)
+    return () => {
+      if (!viewer.isDestroyed()) viewer.scene.postRender.removeEventListener(publish)
+    }
+  }, [event?.coordinates.lat, event?.coordinates.lon, onSelectedPointScreenPosition, selectedPoint?.coordinates.lat, selectedPoint?.coordinates.lon, viewerReady])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -394,7 +472,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       coordinates: marker.coordinates,
       depthCm: marker.depthCm,
       riskLevel: marker.riskLevel,
-      selected: marker.selectId === selectedPointId && !marker.historical,
+      selected: marker.selectId === selectedPointId,
+      historical: marker.historical,
       source: marker.source,
       eventId: marker.eventId,
       siteId: marker.siteId,
@@ -478,6 +557,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   }, [activeForecast, forecastFrame?.geometryUrl, viewerReady])
 
   useEffect(() => {
+    if (baseImageryRef.current) baseImageryRef.current.show = layers.base
     if (cityLayerRef.current) cityLayerRef.current.show = layers.base
     if (roadDataSourceRef.current) roadDataSourceRef.current.show = layers.base
     if (labelDataSourceRef.current) labelDataSourceRef.current.show = layers.base
@@ -494,7 +574,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       data-source-reason={sourceReason}
       data-local-tileset={CORE_TILES_URL}
       data-coordinate-system="WGS84 lon/lat"
-      data-ground-source="dark-globe-no-label"
+      data-ground-source="osm-online-dimmed"
       data-hydro-source={SHANGHAI_WATER_POLYGONS_GEOJSON_URL}
       data-hydro-waterways-source={SHANGHAI_WATERWAYS_GEOJSON_URL}
       data-hydro-attribution={SHANGHAI_WATER_SOURCE_LABEL}
@@ -518,7 +598,8 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     >
       {status === 'loading' && <span className="cesium-scene-status">{CESIUM_ION_TOKEN ? 'OSM BUILDINGS LOADING' : 'LOCAL CITY LOADING'}</span>}
       {status === 'error' && <span className="cesium-scene-status cesium-scene-status--error">CITY DATA UNAVAILABLE</span>}
-      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · DARK NO-LABEL GROUND' : source === 'local' ? `LOCAL HUANGPU · DARK GROUND${sourceReasonSuffix}` : `DEMO CITY BLOCKS · DARK GROUND${sourceReasonSuffix}`}</span>}
+      {status === 'ready' && source && <span className="cesium-scene-source">{source === 'osm' ? 'OSM BUILDINGS · OSM ONLINE BASEMAP' : source === 'local' ? `LOCAL HUANGPU · OSM ONLINE BASEMAP${sourceReasonSuffix}` : `DEMO CITY BLOCKS · OSM ONLINE BASEMAP${sourceReasonSuffix}`}</span>}
+      <a className="cesium-scene-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Water data © OpenStreetMap contributors · ODbL</a>
     </div>
   )
 }

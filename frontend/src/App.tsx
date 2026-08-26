@@ -17,6 +17,8 @@ import {
   RankingPanel,
   RainfallPanel,
   SceneEventCard,
+  HistoricalSceneCaseCard,
+  HistoricalMediaPanel,
   SensorEvidence,
   StatusPanel,
   TimelineBar,
@@ -25,10 +27,14 @@ import {
   type LayerVisibility,
   type EventIndexItem,
 } from './components'
+import { LiveRainfallPanel } from './LiveRainfallPanel'
+import { SceneEventOverlay } from './SceneEventOverlay'
+import type { SceneAnchorPosition } from './CesiumScene'
 import { homeFixtures } from './data/homeFixtures'
 import { getHistoricalCaseMedia } from './data/historicalCaseMedia'
 import { DEFAULT_FLOOD_POINT_ID, getFloodPointEventId } from './data/mappings'
 import { useDashboardData } from './hooks/useDashboardData'
+import { useExternalDataRefresh } from './hooks/useExternalDataRefresh'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
 import { DATA_SOURCE } from './services/apiClient'
@@ -59,6 +65,20 @@ const criticalEventFixture: FloodEvent = {
   riskLevel: 'CRITICAL',
   currentDepthCm: 48.8,
   pipeLoadPercent: 97,
+}
+
+const criticalOverviewFixture = {
+  ...homeFixtures.overview,
+  waterloggingSituation: homeFixtures.overview.waterloggingSituation
+    ? {
+        ...homeFixtures.overview.waterloggingSituation,
+        disposition: { pending: 0, handling: 1, relieved: 0 },
+        metrics: {
+          ...homeFixtures.overview.waterloggingSituation.metrics,
+          maxDepthCm: criticalEventFixture.currentDepthCm,
+        },
+      }
+    : null,
 }
 
 const offlineCamera: Camera = {
@@ -130,6 +150,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
   const [eventCardOpen, setEventCardOpen] = useState(false)
+  const [eventCardAnchor, setEventCardAnchor] = useState<SceneAnchorPosition | null>(null)
   const [selectedHistoricalCaseId, setSelectedHistoricalCaseId] = useState<string | null>(null)
   const [selectedEventKey, setSelectedEventKey] = useState<string | null>('REALTIME_EVENT')
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
@@ -158,6 +179,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     camerasById: data.camerasById,
   })
   const selectedHistoricalCase = data.historicalCases.find((item) => item.candidateId === selectedHistoricalCaseId) ?? null
+  const selectedHistoricalCaseMedia = selectedHistoricalCase ? getHistoricalCaseMedia(selectedHistoricalCase.candidateId) : null
   const formalHistoricalCases = data.historicalCases.filter((item) => item.dataStatus === 'HISTORICAL_PUBLIC_REPORT')
   const realtimeEvent = eventOverride ?? data.event
   const eventOptions: EventIndexItem[] = [
@@ -175,20 +197,14 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     })),
   ]
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
-  const isHistoricalSelection = Boolean(selectedHistoricalCase)
-  const referenceEvent = eventOverride ?? data.event
-  const referenceSensor = data.sensor ?? (dataBadge.includes('FIXTURE') && referenceEvent ? createDemoSensorEvidence(referenceEvent) : null)
-  const referenceForecast = data.forecast
-  const referenceCamera = data.camera
-  const referenceContextLabel = isHistoricalSelection ? '当前运行参考 · 非历史事件证据' : undefined
   const selectedSensor = selectedEvent.sensorId
     ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
     : null
-  const sensor = selectedSensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
+  const allowDemoSensor = dataBadge.startsWith('DEMO') || dataBadge.startsWith('API UNAVAILABLE')
+  const sensor = selectedSensor ?? (allowDemoSensor && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
   const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
-  const panelCamera = isHistoricalSelection ? referenceCamera : selectedEvent.camera
-  const cameraId = panelCamera?.id ?? null
-  const overlayUrl = panelCamera?.overlayUrl ?? null
+  const cameraId = selectedEvent.camera?.id ?? null
+  const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
 
   useEffect(() => {
     if (!visionFile) {
@@ -226,6 +242,15 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       cancelled = true
     }
   }, [cameraId, overlayUrl])
+
+  useEffect(() => {
+    if (!eventCardOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setEventCardOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [eventCardOpen])
 
   const toggleLayer = (layer: keyof LayerVisibility) => {
     setLayers((current) => ({ ...current, [layer]: !current[layer] }))
@@ -278,7 +303,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       setSelectedEventKey('REALTIME_EVENT')
       setSelectedHistoricalCaseId(null)
       setSelectedPointId(DEFAULT_FLOOD_POINT_ID)
-      setEventCardOpen(false)
+      setEventCardOpen(true)
       return
     }
     const historicalCase = formalHistoricalCases.find((item) => item.candidateId === eventKey)
@@ -287,15 +312,16 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     setSelectedHistoricalCaseId(eventKey)
     const historicalPoint = data.points.find((point) => point.historicalCaseId === eventKey)
     if (historicalPoint) setSelectedPointId(historicalPoint.id)
-    setEventCardOpen(false)
+    setEventCardOpen(Boolean(historicalPoint))
   }
 
   const handlePointSelect = (pointId: string) => {
     const point = data.points.find((item) => item.id === pointId) ?? null
     if (point?.historicalCaseId) {
+      const sameHistoricalPoint = selectedPointId === pointId && selectedHistoricalCaseId === point.historicalCaseId
       setSelectedEventKey(point.historicalCaseId)
       setSelectedHistoricalCaseId(point.historicalCaseId)
-      setEventCardOpen(false)
+      setEventCardOpen((open) => sameHistoricalPoint ? !open : true)
       setSelectedPointId(pointId)
       return
     }
@@ -318,26 +344,33 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         layers={layers}
         onPointSelect={handlePointSelect}
         onLayerToggle={toggleLayer}
+        onSelectedPointScreenPosition={setEventCardAnchor}
       />
-      {eventCardOpen && <SceneEventCard event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} />}
+      <SceneEventOverlay
+        open={eventCardOpen}
+        anchor={eventCardAnchor}
+        event={selectedHistoricalCase ? null : selectedEvent.event}
+        historicalCase={selectedHistoricalCase}
+        analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
+        sensor={selectedHistoricalCase ? null : sensor}
+        sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
+        onClose={() => setEventCardOpen(false)}
+      />
       <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
-        <RainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} />
+        <LiveRainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} realSource={data.shanghaiWater} />
         <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
-      <div className="dashboard-side dashboard-side--right">
+      <div className={`dashboard-side dashboard-side--right ${selectedHistoricalCase ? 'dashboard-side--historical' : ''}`}>
         <EventPanel
           event={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.event}
           analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
           sensor={selectedHistoricalCase ? null : sensor}
           sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
-          referenceEvent={referenceEvent}
-          referenceSensor={referenceSensor}
-          referenceSensorId={referenceSensor?.sensorId ?? null}
           historicalCases={formalHistoricalCases}
           selectedHistoricalCase={selectedHistoricalCase}
-          historicalCaseMedia={selectedHistoricalCase ? getHistoricalCaseMedia(selectedHistoricalCase.candidateId) : null}
+          historicalCaseMedia={null}
           eventOptions={eventOptions}
           selectedEventKey={selectedEventKey}
           onSelectEvent={selectFormalEvent}
@@ -346,27 +379,26 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
             setSelectedEventKey('REALTIME_EVENT')
             setSelectedHistoricalCaseId(null)
             setSelectedPointId(DEFAULT_FLOOD_POINT_ID)
+            setEventCardOpen(false)
           }}
           onOpenVision={() => setVisionOpen(true)}
         />
-        <ForecastPreview
-          forecast={isHistoricalSelection ? referenceForecast : selectedEvent.forecast}
-          activeKey={activeForecast}
-          measuredDepthCm={isHistoricalSelection ? referenceSensor?.depthCm ?? null : sensor?.depthCm ?? null}
-          sourceLabel={forecastSourceLabel}
-          contextLabel={referenceContextLabel}
-          onChange={setActiveForecast}
-        />
-        <CctvCard
-          camera={panelCamera}
-          showOverlay={layers.video}
-          overlayData={videoOverlayData}
-          decision={selectedVideoFrame?.decision ?? null}
-          contextLabel={referenceContextLabel}
-          videoEvidenceState={videoEvidenceState}
-          onVideoReady={setVideoReady}
-          onVideoTimeUpdate={setVideoTimeSec}
-        />
+        {selectedHistoricalCase ? (
+          <HistoricalMediaPanel historicalCase={selectedHistoricalCase} media={selectedHistoricalCaseMedia} />
+        ) : selectedEventKey === 'REALTIME_EVENT' ? (
+          <>
+            <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+            <CctvCard
+              camera={selectedEvent.camera}
+              showOverlay={layers.video}
+              overlayData={videoOverlayData}
+              decision={selectedVideoFrame?.decision ?? null}
+              videoEvidenceState={videoEvidenceState}
+              onVideoReady={setVideoReady}
+              onVideoTimeUpdate={setVideoTimeSec}
+            />
+          </>
+        ) : null}
       </div>
       <TimelineBar timeline={data.timeline} activeKey={activeForecast} onForecastChange={setActiveForecast} />
       <div className="dashboard-demo-badge">{dataBadge}</div>
@@ -409,9 +441,22 @@ function DashboardPage() {
     onSensorUpdated: dashboard.applySensorState,
     onRestFallback: dashboard.reload,
   })
-  const data = dashboard.data ?? homeFixtures
+  const external = useExternalDataRefresh({
+    enabled: dashboard.source === 'api',
+    initialShanghaiWater: dashboard.data?.shanghaiWater ?? null,
+  })
+  const baseData = dashboard.data ?? homeFixtures
+  const data = external.shanghaiWater && dashboard.source === 'api'
+    ? { ...baseData, shanghaiWater: external.shanghaiWater }
+    : baseData
   const dataBadge = dashboard.source === 'api'
-    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : data.shanghaiWater ? `API DATA · SHANGHAI WATER LIVE · WS ${realtime.status.toUpperCase()}` : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
+    ? dashboard.error
+      ? 'API UNAVAILABLE · FIXTURE FALLBACK'
+      : dashboard.degraded
+        ? `API DEGRADED · PARTIAL FIXTURE FALLBACK · WS ${realtime.status.toUpperCase()}`
+        : data.shanghaiWater
+          ? `HYBRID MVP · SHANGHAI WATER ${external.waterStatus.toUpperCase()} · WS ${realtime.status.toUpperCase()}`
+          : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 
   return (
@@ -448,7 +493,7 @@ function GalleryPage() {
               <StatusPanel overview={homeFixtures.overview} />
             </GalleryCard>
             <GalleryCard title="StatusPanel" stateName="high-risk · fixture fallback">
-              <StatusPanel overview={homeFixtures.overview} variant="high-risk" />
+              <StatusPanel overview={criticalOverviewFixture} variant="high-risk" />
             </GalleryCard>
             <GalleryCard title="StatusPanel" stateName="empty">
               <StatusPanel overview={homeFixtures.overview} state="empty" />

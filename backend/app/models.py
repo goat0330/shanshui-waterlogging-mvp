@@ -221,7 +221,7 @@ class ShanghaiWaterLevelStation(BaseModel):
     district: str | None = None
     river: str | None = None
     coordinates: Coordinates
-    outWaterM: float = Field(ge=0)
+    outWaterM: float
     observedAt: datetime
     receivedAt: datetime
     provider: str
@@ -237,7 +237,7 @@ class ShanghaiWaterLevelForecast(BaseModel):
     sourceId: str
     stationName: str
     coordinates: Coordinates
-    forecastWaterLevelM: float = Field(ge=0)
+    forecastWaterLevelM: float
     forecastAt: datetime
     receivedAt: datetime
     provider: str
@@ -383,6 +383,15 @@ class FloodPoint(BaseModel):
     sensorId: str | None = None
 
 
+class HistoricalCaseMedia(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sourceType: Literal["CASE_SOURCE_MEDIA"]
+    sourcePage: str = Field(min_length=1)
+    urls: list[str] = Field(min_length=1)
+    mvpUseStatus: Literal["APPROVED_LOCAL_MVP"]
+
+
 class HistoricalFloodCase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -402,6 +411,8 @@ class HistoricalFloodCase(BaseModel):
     evidenceLevel: Literal["OFFICIAL_EXACT", "OFFICIAL_AREA_ONLY", "MEDIA_CORROBORATED", "INSUFFICIENT"]
     sourceType: Literal["PUBLIC_REPORT"]
     dataStatus: Literal["HISTORICAL_PUBLIC_REPORT"]
+    mvpReviewStatus: Literal["VERIFIED_FOR_MVP"]
+    media: HistoricalCaseMedia | None = None
     countedInRealtime: Literal[False] = False
     floodPointId: str | None = None
     sensorId: Literal[None] = None

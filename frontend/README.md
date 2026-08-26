@@ -1,60 +1,45 @@
-# Frontend
+# Frontend — canonical MVP runtime
 
-状态：`CONDITIONAL` / `VISUAL_REVIEW`
+Status: `IMPLEMENTED / CONDITIONAL`.
 
-这是山水智鉴城市内涝 MVP 的 React + TypeScript + Vite canonical frontend。它负责可复用展示组件、Contract fixture Mock、API/WebSocket mode，以及通过 `DigitalTwinScene` mount boundary 接入的 Cesium 城市底座。当前默认数据源是 fixture；API mode 和 OSM Buildings 都是单独的条件 gate。
+## Local API-mode run
 
-## Run
-
-从本目录执行：
-
-```bash
-npm install
-npm run typecheck
-npm run build
-npm run dev
-```
-
-开发服务器启动后：
-
-- `/`：默认 1920×1080 首页骨架
-- `/?state=high-risk`：高风险首页状态
-- `/?state=plus30`：Forecast +30 首页状态
-- `/gallery`：组件与完整 Dashboard 状态 Gallery
-
-## Modes and environment names
-
-只记录名称，不把任何本地值写入 Git：
-
-| Name | Use | Status |
-|---|---|---|
-| `VITE_DATA_SOURCE` | Set to `api` for backend REST/WebSocket; unset/other uses fixtures | Optional; fixture default |
-| `VITE_API_BASE_URL` | API base URL; code default is local `127.0.0.1:8000` | Conditional API mode |
-| backend `DATA_MODE` | Set to `hybrid` or `real` to enable the provisional Shanghai Water Bureau source adapter | Conditional live-source mode; fixture default |
-| `VITE_CESIUM_ION_TOKEN` | OSM Buildings access | Optional for local Huangpu fallback; value must remain local/ignored |
-| `VITE_DEMO_VIDEO_URL` | Local-only verified MP4 served from ignored `public/runtime/` | Optional; default is tracked synthetic browser evidence |
-| `VITE_DEMO_VIDEO_OVERLAY_URL` | Local-only timestamped VisionDepth overlay JSON | Optional; must match `VITE_DEMO_VIDEO_URL` |
-
-Example API-mode setup uses only local, non-secret configuration names:
+Backend canonical port is **8000** and frontend preview/dev port is **4173**.
 
 ```powershell
+# backend
+cd backend
+$env:DATA_MODE = "hybrid"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# frontend, second terminal
+cd frontend
 $env:VITE_DATA_SOURCE = "api"
-$env:VITE_API_BASE_URL = "http://127.0.0.1:8000"
-npm run dev
+npm install
+npm run dev -- --host 127.0.0.1 --port 4173
 ```
 
-To let the API-mode dashboard consume the public Shanghai water source seam, start the backend with `DATA_MODE=hybrid`. The existing formal Contract endpoints remain fixture-backed; the frontend calls the provisional `/api/v1/external/shanghai-water` response and labels the panel as source-reported rainfall. The source field is `RAINVALUE` (“雨量值”), not silently converted to `intensityMmH`; source-reported coordinates are not independently WGS84/GCJ-02 calibrated. If the public endpoint is unavailable, the UI keeps its existing fixture/API fallback.
+The frontend now calls same-origin `/api/*` and `/ws/*` by default. Vite proxies them to `VITE_DEV_PROXY_TARGET`, default `http://127.0.0.1:8000`. `VITE_API_BASE_URL` is only needed for an explicit cross-origin deployment.
 
-`VITE_CESIUM_ION_TOKEN` is not required for the local Huangpu fallback. Do not paste its value into this README, manifests, screenshots, build logs or commit messages.
+## Degraded mode
 
-To view the local research video evidence, place the verified MP4 and its derived overlay bundle under the ignored `public/runtime/` directory, set the two `VITE_DEMO_VIDEO_*` names in `.env.local`, and restart Vite. The bundle remains `research_mvp`/local-only: pending-license media is not committed, `LIVE` is not claimed, and an uncalibrated camera keeps `estimatedDepthCm=null`.
+One failed API domain no longer collapses the entire dashboard. Static verified domains may fall back independently. Current sensor state is never fabricated in API mode; before telemetry it may legitimately be absent.
 
-`dist/` is generated and ignored. Do not commit or distribute it; a local build can embed locally configured Cesium access material, so the release build must use the parent's secret-safe procedure.
+## Historical events
 
-## Evidence and limits
+The formal product set is 1 realtime event + 8 verified historical public-report cases. Historical cases are not current alarms and do not reuse Sensor/Forecast/CCTV. Missing depth or media is valid. Same-event approved media is `CASE_SOURCE_MEDIA`.
 
-Mock Adapter 位于 `src/data/homeFixtures.ts`，直接读取 `../contracts/fixtures/` 的首页相关 fixture；API mode 已通过独立浏览器联调，证据为 `review/e2e/api-realtime-browser-smoke.json`，包括 WS connected、5 秒 REST fallback polling 和 reconnect。
+## Video
 
-The current scene supports an OSM Buildings path and a local Huangpu fallback. The local runtime tiles and source binaries are intentionally outside Git. The integrated browser evidence is `review/dashboard-cesium-1920x1080.png`; technical Cesium/forecast evidence is `review/e2e/rc0-cesium-geographic-smoke.json`. Neither is a final Golden Reference acceptance.
+Tracked `/demo/video/flood_cam_017.mp4` is a synthetic browser fallback. For the MVP demonstration, use the verified local research MP4/overlay via:
 
-The default fixture CCTV is a tracked synthetic browser evidence asset. With the optional local runtime variables above, `CctvCard` plays a verified research MP4 and selects its timestamped VisionDepth frame evidence; it is still not a live city camera or calibrated Shanghai CCTV depth. Huangpu alignment is range-level only; formal control-point/building-element calibration is `NOT VERIFIED`. The page remains `VISUAL_REVIEW` until a human compares the integrated 1920×1080 output with `references/golden-dashboard.png`.
+```text
+VITE_DEMO_VIDEO_URL=/runtime/vision-video/...
+VITE_DEMO_VIDEO_OVERLAY_URL=/runtime/vision-video/....json
+```
+
+Research video must remain non-live/research and must not be labeled Shanghai LIVE CCTV.
+
+## RC2.4 visual closure
+
+Cesium keeps `baseLayer:false` at Viewer construction but the product now immediately adds an online OpenStreetMap imagery layer as the geographic ground surface. The imagery is dimmed/desaturated so the explicit major-road, city-label, event, sensor and forecast layers remain visually dominant. Historical selections use a dedicated historical event card plus same-event `CASE_SOURCE_MEDIA`; they never inherit the FP-001 research video, current SensorState or Forecast.

@@ -1,35 +1,27 @@
 # Repository Rules
 
-1. **Latest `main` is the only development baseline.**
-   This closeout starts from `main@53b4830`; after closeout, the latest `main` is the only baseline. Old RC and repair branches are historical only.
-2. **Shared contracts have one meaning.**
-   Use the backend contract field names directly. Do not invent local business aliases. When a shared field changes, update and validate every affected producer and consumer.
-3. **Generated runtime assets must be fresh.**
-   If decision logic or a schema changes, regenerate overlays and results before validation. Never validate against stale generated JSON.
-4. **Workers repair their own task before creating another repair branch.**
-   Prefer implement → test → repair → retest on the same task branch.
-5. **`docs/06_DELIVERY_MANIFEST.md` is the only current-state document.**
-   RC0, RC11, RC2, and VisionDepth progress documents are historical evidence only and must not be used as shared current-state write points.
-6. **A task is complete only after the affected end-to-end path passes.**
-   Run the smallest relevant integration smoke before merging to `main`.
+1. Latest `main` is the only development baseline. Old RC/worker branches are historical evidence only.
+2. Shared contracts have one meaning. External source drift is normalized in source adapters; do not loosen internal domain schemas to absorb upstream variants.
+3. Generated runtime assets must be fresh after decision/schema changes.
+4. Workers own implement → test → repair → retest for their bounded task before creating another repair branch.
+5. `docs/06_DELIVERY_MANIFEST.md` is the current-state document. `docs/RC2_SOURCE_PROVENANCE_POLICY.md` is the frozen MVP evidence-gate policy.
+6. A task is complete only after the smallest affected end-to-end path passes.
+
+## Frozen MVP evidence gates
+
+Do not reopen the following as blockers unless new contradictory evidence is produced:
+
+- 8 historical public-report cases are `VERIFIED_FOR_MVP`.
+- Missing historical media/depth is valid and does not invalidate a case.
+- Approved same-event media is `CASE_SOURCE_MEDIA`; do not render or report `权限待用户确认`.
+- Local research video is allowed for local MVP when labeled non-live/research. External redistribution/production rights are separate gates.
+- Learned water-segmentation candidate is verified for research MVP by the checked-in held-out mask metrics; this does not verify metric centimetre depth.
 
 ## worker-ship execution policy
 
-For bounded frontend/backend work, the originating Worker owns the change through
-latest-main sync, self-review, relevant checks, PR/CI, serialized merge, and
-confirmation that `origin/main` contains the result. The main controller does not
-repeat Worker-local diff review, conflict repair, module tests, or CI debugging.
+For bounded frontend/backend work, the originating Worker owns latest-main sync, self-review, relevant checks, PR/CI, serialized merge, and confirmation that `origin/main` contains the result. Do not repeatedly ask the user to reconfirm a gate already frozen above.
 
-- “Push to main” means branch push → PR/CI → Merge Queue or recoverable local lease
-  → confirm `origin/main`; parallel direct pushes to `main` are not allowed.
-- `contracts/**` remains single-owner Contract/Architect work; frontend shared
-  types/adapters, generated runtime, and the delivery manifest also have one owner.
-- If no main controller is present, designate one existing Worker or CI as the
-  release owner for exactly one final cross-module E2E. This is not a second audit.
-- Old worktrees are classified as ACTIVE / SHIPPED_CLEAN / MISSING /
-  BROKEN_METADATA / STALE_DIRTY. Dirty historical worktrees are frozen. Removal of
-  a worktree or branch requires explicit confirmation.
-
-The ownership model in `docs/00_MASTER_BLUEPRINT.md` remains valid for Contract and
-product decisions; its Architect/Integration role is not a requirement to re-audit
-every Worker after this shipping policy is active.
+- “Push to main” means branch push → PR/CI → serialized merge → confirm `origin/main`.
+- `contracts/**` remains single-owner Contract/Architect work.
+- Dirty historical worktrees are frozen; do not delete them without explicit instruction.
+- PostGIS/MQTT/Auth/production hardening must not block the current fixture/API MVP unless the task explicitly targets production readiness.

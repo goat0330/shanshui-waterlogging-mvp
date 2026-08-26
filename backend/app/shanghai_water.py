@@ -27,7 +27,12 @@ class ShanghaiWaterError(RuntimeError):
 
 
 class ShanghaiWaterAdapter:
-    """Small stdlib adapter for the public Shanghai Water Bureau JSON endpoints."""
+    """Public Shanghai Water Bureau adapter with source-local normalization.
+
+    Upstream field drift is absorbed here. The internal Pydantic/domain models
+    remain strict. A small number of malformed upstream rows no longer turns an
+    otherwise usable source into a total failure.
+    """
 
     SOURCE = "SHANGHAI_WATER_BUREAU_PUBLIC"
     BASE_URL = "https://swgxh.swj.sh.gov.cn/swj/swj/businessConvenientService"
@@ -38,14 +43,22 @@ class ShanghaiWaterAdapter:
         "SSSW": ("STATIONID", "STATIONNAME", "OUTWATER", "DATETIME", "XX2000", "YY2000"),
         "YJSW": ("STATIONID", "STATIONNAME", "YBCW", "DATETIME", "XX2000", "YY2000"),
     }
-    NUMERIC_FIELDS = {"RAINVALUE", "JISHUISTATUS", "OUTWATER", "YBCW", "XX2000", "YY2000"}
-    MEASUREMENT_FIELDS = {"RAINVALUE", "JISHUISTATUS", "OUTWATER", "YBCW"}
-    MEASUREMENT_FIELD_BY_DATASET = {
-        "SSYLMore": "RAINVALUE",
-        "JSJCMore": "JISHUISTATUS",
-        "SSSW": "OUTWATER",
-        "YJSW": "YBCW",
+    # Only the three current-observation feeds are required for strict real mode.
+    # Forecast is useful context but must not collapse a usable real snapshot.
+    STRICT_REQUIRED_DATASETS = {"SSYLMore", "JSJCMore", "SSSW"}
+    FIELD_ALIASES = {
+        "STATIONID": ("STATION_ID", "STCD", "STATIONCODE", "ID"),
+        "STATIONNAME": ("STATION_NAME", "STNM", "NAME"),
+        "RAINVALUE": ("RAIN_VALUE", "RAINFALL", "RAIN", "VALUE"),
+        "JISHUISTATUS": ("JISHUI", "DEPTH", "DEPTHCM", "WATERDEPTH"),
+        "OUTWATER": ("OUT_WATER", "WATERLEVEL", "WATER_LEVEL", "WATERLEVELVALUE", "SW", "Z"),
+        "YBCW": ("FORECASTWATER", "FORECAST_WATER_LEVEL", "FORECASTLEVEL"),
+        "DATETIME": ("DATE_TIME", "OBSERVEDAT", "OBSERVED_AT", "UPDATETIME", "UPDATE_TIME", "TIME", "TM"),
+        "XX2000": ("LON", "LONGITUDE", "LGTD", "X", "XX"),
+        "YY2000": ("LAT", "LATITUDE", "LTTD", "Y", "YY"),
     }
+    NUMERIC_FIELDS = {"RAINVALUE", "JISHUISTATUS", "OUTWATER", "YBCW", "XX2000", "YY2000"}
+    SIGNED_NUMERIC_FIELDS = {"OUTWATER", "YBCW"}
     TEXT_FIELDS = {"STATIONID", "STATIONNAME"}
 
     def __init__(self, timeout_seconds: float = 8.0, cache_ttl_seconds: float = 45.0) -> None:
@@ -58,19 +71,13 @@ class ShanghaiWaterAdapter:
 
     @property
     def source_urls(self) -> list[str]:
-        return [
-            f"{self.BASE_URL}/getList?type=SSYLMore",
-            f"{self.BASE_URL}/getList?type=JSJCMore",
-            f"{self.BASE_URL}/getList?type=SSSW",
-            f"{self.BASE_URL}/getList?type=YJSW",
-        ]
+        return [f"{self.BASE_URL}/getList?type={name}" for name in ("SSYLMore", "JSJCMore", "SSSW", "YJSW")]
 
     def fetch(self, *, allow_partial: bool = True) -> ShanghaiWaterSnapshot:
         now = datetime.now(timezone.utc)
         if self._cache is not None:
             cached_at, cached_snapshot = self._cache
-            cache_age = (now - cached_at).total_seconds()
-            if cache_age < self.cache_ttl_seconds:
+            if (now - cached_at).total_seconds() < self.cache_ttl_seconds:
                 return cached_snapshot.model_copy(update={"cacheHit": True})
 
         parsers = {
@@ -81,6 +88,7 @@ class ShanghaiWaterAdapter:
         }
         results: dict[str, list[Any]] = {}
         health: dict[str, ShanghaiWaterSourceHealth] = {}
+
         for dataset_type, parser in parsers.items():
             source_url = f"{self.BASE_URL}/getList?type={dataset_type}"
             try:
@@ -89,30 +97,47 @@ class ShanghaiWaterAdapter:
                 parsed_items: list[Any] = []
                 invalid_count = 0
                 for raw in raw_items:
-                    if not isinstance(raw, dict) or not self._schema_valid(dataset_type, raw):
+                    if not isinstance(raw, dict):
                         invalid_count += 1
                         continue
-                    item = parser(raw, received_at, source_url)
+                    normalized = self._normalize_record(dataset_type, raw)
+                    if not self._schema_valid(dataset_type, normalized):
+                        invalid_count += 1
+                        continue
+                    item = parser(normalized, received_at, source_url)
                     if item is None:
-                        if not self._missing_measurement(raw.get(self.MEASUREMENT_FIELD_BY_DATASET[dataset_type])):
-                            invalid_count += 1
+                        invalid_count += 1
                     else:
                         parsed_items.append(item)
+
                 results[dataset_type] = parsed_items
-                status = (
-                    ShanghaiWaterSourceStatus.SCHEMA_MISMATCH
-                    if invalid_count
-                    else ShanghaiWaterSourceStatus.OK
-                    if parsed_items
-                    else ShanghaiWaterSourceStatus.EMPTY
-                )
+                if parsed_items:
+                    # Row-level source noise is recorded but does not poison the
+                    # entire dataset once canonical rows are available.
+                    status = ShanghaiWaterSourceStatus.OK
+                    error_code = None
+                    fallback_reason = (
+                        f"{invalid_count} upstream record(s) skipped after normalization"
+                        if invalid_count
+                        else None
+                    )
+                elif invalid_count:
+                    status = ShanghaiWaterSourceStatus.SCHEMA_MISMATCH
+                    error_code = "SHANGHAI_WATER_SCHEMA_MISMATCH"
+                    fallback_reason = f"{invalid_count} upstream record(s) were unusable"
+                else:
+                    status = ShanghaiWaterSourceStatus.EMPTY
+                    error_code = None
+                    fallback_reason = None
+
                 health[dataset_type] = ShanghaiWaterSourceHealth(
                     status=status,
                     sourceUrl=source_url,
                     recordCount=len(parsed_items),
                     observedLatestAt=self._latest_at(parsed_items),
                     fetchedAt=received_at,
-                    errorCode="SHANGHAI_WATER_SCHEMA_MISMATCH" if invalid_count else None,
+                    errorCode=error_code,
+                    fallbackReason=fallback_reason,
                 )
             except ShanghaiWaterError as exc:
                 status = (
@@ -129,12 +154,16 @@ class ShanghaiWaterAdapter:
                     errorCode=exc.code,
                 )
 
-        failed_sources = [name for name, item in health.items() if item.status != ShanghaiWaterSourceStatus.OK]
-        if not allow_partial and failed_sources:
-            first_failure = health[failed_sources[0]]
+        strict_failures = [
+            name
+            for name in self.STRICT_REQUIRED_DATASETS
+            if health[name].status != ShanghaiWaterSourceStatus.OK
+        ]
+        if not allow_partial and strict_failures:
+            first_failure = health[strict_failures[0]]
             raise ShanghaiWaterError(
                 first_failure.errorCode or "SHANGHAI_WATER_UNAVAILABLE",
-                f"Shanghai Water source unavailable: {', '.join(failed_sources)}",
+                f"Required Shanghai Water source unavailable: {', '.join(sorted(strict_failures))}",
             )
 
         rainfall = sorted(results["SSYLMore"], key=lambda item: item.rainfallValue, reverse=True)
@@ -144,6 +173,7 @@ class ShanghaiWaterAdapter:
         if not rainfall and not ponding and not levels and not forecasts:
             raise ShanghaiWaterError("SHANGHAI_WATER_EMPTY", "Shanghai Water Bureau returned no usable observations")
 
+        failed_sources = [name for name, item in health.items() if item.status != ShanghaiWaterSourceStatus.OK]
         completed_at = datetime.now(timezone.utc)
         snapshot = ShanghaiWaterSnapshot(
             source=self.SOURCE,
@@ -158,19 +188,13 @@ class ShanghaiWaterAdapter:
             waterLevels=levels,
             waterLevelForecast=forecasts,
         )
-        if not failed_sources:
+        if not strict_failures:
             self._cache = (completed_at, snapshot)
         return snapshot
 
     def _fetch_list(self, dataset_type: str) -> list[Any]:
         url = f"{self.BASE_URL}/getList?type={dataset_type}"
-        request = Request(
-            url,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "ShanshuiWaterloggingMVP/0.1",
-            },
-        )
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "ShanshuiWaterloggingMVP/0.1"})
         try:
             with self._opener.open(request, timeout=self.timeout_seconds) as response:
                 raw_body = response.read()
@@ -182,14 +206,37 @@ class ShanghaiWaterAdapter:
         try:
             payload = json.loads(raw_body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ShanghaiWaterError(
-                "SHANGHAI_WATER_SCHEMA_MISMATCH", f"{dataset_type} returned invalid JSON"
-            ) from exc
+            raise ShanghaiWaterError("SHANGHAI_WATER_SCHEMA_MISMATCH", f"{dataset_type} returned invalid JSON") from exc
         if not isinstance(payload, dict) or str(payload.get("code")) != "200" or not isinstance(payload.get("data"), list):
-            raise ShanghaiWaterError(
-                "SHANGHAI_WATER_SCHEMA_MISMATCH", f"{dataset_type} response has no data list"
-            )
+            raise ShanghaiWaterError("SHANGHAI_WATER_SCHEMA_MISMATCH", f"{dataset_type} response has no data list")
         return payload["data"]
+
+    @classmethod
+    def _normalize_record(cls, dataset_type: str, raw: dict[str, Any]) -> dict[str, Any]:
+        normalized = dict(raw)
+        lookup = {str(key).upper(): value for key, value in raw.items()}
+        for canonical in cls.REQUIRED_FIELDS[dataset_type]:
+            current = normalized.get(canonical)
+            if current is not None and str(current).strip().lower() not in {"", "null", "none"}:
+                continue
+            for alias in cls.FIELD_ALIASES.get(canonical, ()):
+                if alias.upper() in lookup:
+                    normalized[canonical] = lookup[alias.upper()]
+                    break
+        # Optional metadata is normalized only when present; no synthetic values.
+        for optional, aliases in {
+            "QUYU": ("DISTRICT", "AREA"),
+            "JZ": ("TOWNSHIP",),
+            "HELIU": ("RIVER", "RIVERNAME"),
+            "DATASOURCE": ("DATA_SOURCE", "SOURCE"),
+        }.items():
+            if cls._text(normalized.get(optional)):
+                continue
+            for alias in aliases:
+                if alias.upper() in lookup:
+                    normalized[optional] = lookup[alias.upper()]
+                    break
+        return normalized
 
     @classmethod
     def _schema_valid(cls, dataset_type: str, raw: dict[str, Any]) -> bool:
@@ -197,9 +244,8 @@ class ShanghaiWaterAdapter:
             if field not in raw:
                 return False
             value = raw[field]
-            if field in cls.NUMERIC_FIELDS and cls._number(value) is None:
-                if field not in cls.MEASUREMENT_FIELDS or not cls._missing_measurement(value):
-                    return False
+            if field in cls.NUMERIC_FIELDS and cls._number(value, allow_negative=field in cls.SIGNED_NUMERIC_FIELDS) is None:
+                return False
             if field in cls.TEXT_FIELDS and not cls._text(value):
                 return False
             if field == "DATETIME" and cls._datetime(value) is None:
@@ -213,9 +259,7 @@ class ShanghaiWaterAdapter:
         return max(valid) if valid else None
 
     @classmethod
-    def _rainfall_item(
-        cls, raw: dict[str, Any], received_at: datetime, raw_source: str
-    ) -> ShanghaiWaterRainfallStation | None:
+    def _rainfall_item(cls, raw: dict[str, Any], received_at: datetime, raw_source: str) -> ShanghaiWaterRainfallStation | None:
         value = cls._number(raw.get("RAINVALUE"))
         coordinates = cls._coordinates(raw)
         observed_at = cls._datetime(raw.get("DATETIME"))
@@ -224,25 +268,15 @@ class ShanghaiWaterAdapter:
         if value is None or coordinates is None or observed_at is None or not station_id or not station_name:
             return None
         return ShanghaiWaterRainfallStation(
-            stationId=station_id,
-            sourceId=station_id,
-            stationName=station_name,
-            district=cls._text(raw.get("QUYU")),
-            township=cls._text(raw.get("JZ")),
-            coordinates=coordinates,
-            rainfallValue=value,
-            observedAt=observed_at,
-            receivedAt=received_at,
-            provider=cls.SOURCE,
-            rawSource=raw_source,
-            dataSource=cls._text(raw.get("DATASOURCE")),
-            isRaining=cls._bool(raw.get("ISRAINING")),
+            stationId=station_id, sourceId=station_id, stationName=station_name,
+            district=cls._text(raw.get("QUYU")), township=cls._text(raw.get("JZ")),
+            coordinates=coordinates, rainfallValue=value, observedAt=observed_at,
+            receivedAt=received_at, provider=cls.SOURCE, rawSource=raw_source,
+            dataSource=cls._text(raw.get("DATASOURCE")), isRaining=cls._bool(raw.get("ISRAINING")),
         )
 
     @classmethod
-    def _ponding_item(
-        cls, raw: dict[str, Any], received_at: datetime, raw_source: str
-    ) -> ShanghaiWaterPondingSite | None:
+    def _ponding_item(cls, raw: dict[str, Any], received_at: datetime, raw_source: str) -> ShanghaiWaterPondingSite | None:
         depth = cls._number(raw.get("JISHUISTATUS"))
         coordinates = cls._coordinates(raw)
         observed_at = cls._datetime(raw.get("DATETIME"))
@@ -251,26 +285,16 @@ class ShanghaiWaterAdapter:
         if depth is None or coordinates is None or observed_at is None or not site_id or not site_name:
             return None
         return ShanghaiWaterPondingSite(
-            siteId=site_id,
-            sourceId=site_id,
-            siteName=site_name,
-            district=cls._text(raw.get("QUYU")),
-            coordinates=coordinates,
-            depthCm=depth,
-            observedAt=observed_at,
-            receivedAt=received_at,
-            provider=cls.SOURCE,
-            rawSource=raw_source,
-            stage=cls._text(raw.get("FLLEVEL")),
-            state=cls._text(raw.get("STATE")),
-            dataSource=cls._text(raw.get("DATASOURCE")),
+            siteId=site_id, sourceId=site_id, siteName=site_name,
+            district=cls._text(raw.get("QUYU")), coordinates=coordinates, depthCm=depth,
+            observedAt=observed_at, receivedAt=received_at, provider=cls.SOURCE,
+            rawSource=raw_source, stage=cls._text(raw.get("FLLEVEL")),
+            state=cls._text(raw.get("STATE")), dataSource=cls._text(raw.get("DATASOURCE")),
         )
 
     @classmethod
-    def _level_item(
-        cls, raw: dict[str, Any], received_at: datetime, raw_source: str
-    ) -> ShanghaiWaterLevelStation | None:
-        level = cls._number(raw.get("OUTWATER"))
+    def _level_item(cls, raw: dict[str, Any], received_at: datetime, raw_source: str) -> ShanghaiWaterLevelStation | None:
+        level = cls._number(raw.get("OUTWATER"), allow_negative=True)
         coordinates = cls._coordinates(raw)
         observed_at = cls._datetime(raw.get("DATETIME"))
         station_id = cls._text(raw.get("STATIONID"))
@@ -278,25 +302,16 @@ class ShanghaiWaterAdapter:
         if level is None or coordinates is None or observed_at is None or not station_id or not station_name:
             return None
         return ShanghaiWaterLevelStation(
-            stationId=station_id,
-            sourceId=station_id,
-            stationName=station_name,
-            district=cls._text(raw.get("QUYU")),
-            river=cls._text(raw.get("HELIU")),
-            coordinates=coordinates,
-            outWaterM=level,
-            observedAt=observed_at,
-            receivedAt=received_at,
-            provider=cls.SOURCE,
-            rawSource=raw_source,
+            stationId=station_id, sourceId=station_id, stationName=station_name,
+            district=cls._text(raw.get("QUYU")), river=cls._text(raw.get("HELIU")),
+            coordinates=coordinates, outWaterM=level, observedAt=observed_at,
+            receivedAt=received_at, provider=cls.SOURCE, rawSource=raw_source,
             dataSource=cls._text(raw.get("DATASOURCE")),
         )
 
     @classmethod
-    def _forecast_item(
-        cls, raw: dict[str, Any], received_at: datetime, raw_source: str
-    ) -> ShanghaiWaterLevelForecast | None:
-        level = cls._number(raw.get("YBCW"))
+    def _forecast_item(cls, raw: dict[str, Any], received_at: datetime, raw_source: str) -> ShanghaiWaterLevelForecast | None:
+        level = cls._number(raw.get("YBCW"), allow_negative=True)
         coordinates = cls._coordinates(raw)
         forecast_at = cls._datetime(raw.get("DATETIME"))
         station_id = cls._text(raw.get("STATIONID"))
@@ -304,15 +319,9 @@ class ShanghaiWaterAdapter:
         if level is None or coordinates is None or forecast_at is None or not station_id or not station_name:
             return None
         return ShanghaiWaterLevelForecast(
-            stationId=station_id,
-            sourceId=station_id,
-            stationName=station_name,
-            coordinates=coordinates,
-            forecastWaterLevelM=level,
-            forecastAt=forecast_at,
-            receivedAt=received_at,
-            provider=cls.SOURCE,
-            rawSource=raw_source,
+            stationId=station_id, sourceId=station_id, stationName=station_name,
+            coordinates=coordinates, forecastWaterLevelM=level, forecastAt=forecast_at,
+            receivedAt=received_at, provider=cls.SOURCE, rawSource=raw_source,
         )
 
     @staticmethod
@@ -323,25 +332,25 @@ class ShanghaiWaterAdapter:
         return text or None
 
     @staticmethod
-    def _number(value: Any) -> float | None:
-        if value is None or str(value).strip().lower() in {"", "null", "none"}:
+    def _number(value: Any, *, allow_negative: bool = False) -> float | None:
+        if value is None or str(value).strip().lower() in {"", "null", "none", "--", "-"}:
             return None
         try:
             number = float(value)
         except (TypeError, ValueError):
             return None
-        return number if math.isfinite(number) and number >= 0 else None
-
-    @staticmethod
-    def _missing_measurement(value: Any) -> bool:
-        return value is None or str(value).strip().lower() in {"", "null", "none"}
+        if not math.isfinite(number):
+            return None
+        if not allow_negative and number < 0:
+            return None
+        return number
 
     @staticmethod
     def _bool(value: Any) -> bool | None:
         text = str(value).strip().lower() if value is not None else ""
-        if text in {"1", "true", "yes"}:
+        if text in {"1", "true", "yes", "y"}:
             return True
-        if text in {"0", "false", "no"}:
+        if text in {"0", "false", "no", "n"}:
             return False
         return None
 
@@ -350,16 +359,22 @@ class ShanghaiWaterAdapter:
         text = str(value).strip() if value is not None else ""
         if not text or text.lower() in {"null", "none"}:
             return None
-        try:
-            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
+        candidates = (
+            lambda: datetime.fromisoformat(text.replace("Z", "+00:00")),
+            lambda: datetime.strptime(text, "%Y-%m-%d %H:%M:%S"),
+            lambda: datetime.strptime(text, "%Y-%m-%d %H:%M"),
+            lambda: datetime.strptime(text, "%Y/%m/%d %H:%M:%S"),
+            lambda: datetime.strptime(text, "%Y/%m/%d %H:%M"),
+        )
+        parsed: datetime | None = None
+        for parse in candidates:
             try:
-                parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
+                parsed = parse()
+                break
             except ValueError:
-                try:
-                    parsed = datetime.strptime(text, "%Y-%m-%d %H:%M")
-                except ValueError:
-                    return None
+                continue
+        if parsed is None:
+            return None
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone(timedelta(hours=8)))
         return parsed

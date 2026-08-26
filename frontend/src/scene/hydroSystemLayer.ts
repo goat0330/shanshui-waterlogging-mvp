@@ -4,9 +4,9 @@ export const SHANGHAI_WATER_POLYGONS_GEOJSON_URL = '/demo/water/shanghai-water-p
 export const SHANGHAI_WATERWAYS_GEOJSON_URL = '/demo/water/shanghai-waterways.geojson'
 export const SHANGHAI_WATER_SOURCE_LABEL = '© OpenStreetMap contributors · Shanghai extract · 2026-08-25 · WGS84'
 
-const WATER_FILL = Cesium.Color.fromCssColorString('#123746').withAlpha(0.2)
-const WATER_STROKE = Cesium.Color.fromCssColorString('#3a6874').withAlpha(0.62)
-const STREAM_STROKE = Cesium.Color.fromCssColorString('#5e8991').withAlpha(0.38)
+const WATER_FILL = Cesium.Color.fromCssColorString('#0b73a8').withAlpha(0.50)
+const WATER_STROKE = Cesium.Color.fromCssColorString('#55e8f2').withAlpha(0.98)
+const STREAM_STROKE = Cesium.Color.fromCssColorString('#35bfd2').withAlpha(0.72)
 
 export async function loadShanghaiHydroSystemLayer(viewer: Cesium.Viewer) {
   const [waterDataSource, waterwaysDataSource] = await Promise.all([
@@ -14,12 +14,12 @@ export async function loadShanghaiHydroSystemLayer(viewer: Cesium.Viewer) {
       clampToGround: true,
       fill: WATER_FILL,
       stroke: WATER_STROKE,
-      strokeWidth: 1,
+      strokeWidth: 2,
     }),
     Cesium.GeoJsonDataSource.load(SHANGHAI_WATERWAYS_GEOJSON_URL, {
       clampToGround: true,
       stroke: WATER_STROKE,
-      strokeWidth: 1.5,
+      strokeWidth: 2,
     }),
   ])
 
@@ -28,6 +28,7 @@ export async function loadShanghaiHydroSystemLayer(viewer: Cesium.Viewer) {
 
   waterDataSource.entities.values.forEach((entity) => {
     if (!entity.polygon) return
+    entity.polygon.material = new Cesium.ColorMaterialProperty(WATER_FILL)
     entity.polygon.heightReference = new Cesium.ConstantProperty(Cesium.HeightReference.CLAMP_TO_GROUND)
     entity.polygon.classificationType = new Cesium.ConstantProperty(Cesium.ClassificationType.TERRAIN)
     entity.polygon.outline = new Cesium.ConstantProperty(true)
@@ -40,7 +41,7 @@ export async function loadShanghaiHydroSystemLayer(viewer: Cesium.Viewer) {
     const props = entity.properties?.getValue(Cesium.JulianDate.now()) as { waterway?: string } | undefined
     const isStream = props?.waterway === 'stream'
     entity.polyline.material = new Cesium.ColorMaterialProperty(isStream ? STREAM_STROKE : WATER_STROKE)
-    entity.polyline.width = new Cesium.ConstantProperty(isStream ? 1 : 1.5)
+    entity.polyline.width = new Cesium.ConstantProperty(isStream ? 1.25 : 2)
   })
 
   await viewer.dataSources.add(waterDataSource)

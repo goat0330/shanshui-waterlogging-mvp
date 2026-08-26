@@ -130,6 +130,13 @@ export interface FloodPoint {
   historicalCaseId?: string
 }
 
+export interface HistoricalCaseMedia {
+  sourceType: 'CASE_SOURCE_MEDIA'
+  sourcePage: string
+  urls: string[]
+  mvpUseStatus: 'APPROVED_LOCAL_MVP'
+}
+
 export interface HistoricalFloodCase {
   candidateId: string
   incidentDate: string
@@ -147,6 +154,8 @@ export interface HistoricalFloodCase {
   evidenceLevel: 'OFFICIAL_EXACT' | 'OFFICIAL_AREA_ONLY' | 'MEDIA_CORROBORATED' | 'INSUFFICIENT'
   sourceType: 'PUBLIC_REPORT'
   dataStatus: 'HISTORICAL_PUBLIC_REPORT'
+  mvpReviewStatus: 'VERIFIED_FOR_MVP'
+  media?: HistoricalCaseMedia | null
   floodPointId: string | null
   sensorId: string | null
   coordinates: Coordinates | null

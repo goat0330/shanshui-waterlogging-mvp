@@ -19,9 +19,11 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install backend smoke dependencies
-        run: python -m pip install -r backend/requirements.txt opencv-python pillow requests websocket-client
+        run: python -m pip install -r backend/requirements.txt
       - name: Run backend smoke
         run: python -B backend/smoke.py
+      - name: Run leanguard repair smoke
+        run: python -B backend/smoke_leanguard.py
 
   frontend-checks:
     runs-on: ubuntu-latest

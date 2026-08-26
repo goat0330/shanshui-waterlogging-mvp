@@ -1,52 +1,55 @@
-# RC2 Source / Provenance Policy
+# RC2.3 MVP Evidence Policy — FROZEN
 
-## Runtime policy
+This file is the project truth for MVP evidence gates. Do not reopen a resolved MVP gate merely because production or redistribution remains unverified.
 
-Pending-license research assets may run in the local evidence pipeline:
+## Formal events
+
+- Exactly **9 formal cards**: `1 REALTIME_EVENT + 8 HISTORICAL_PUBLIC_REPORT`.
+- The eight historical cases are **VERIFIED_FOR_MVP** public/official-report cases.
+- Historical cases never inherit current `SensorState`, Forecast, or LIVE CCTV.
+- Missing official depth is valid and remains `null`.
+- Missing case media does not invalidate a historical case.
+
+## Historical media
+
+- Same-event official/public source media approved for this project is `CASE_SOURCE_MEDIA`.
+- `mvpUseStatus=APPROVED_LOCAL_MVP` is a project-use gate, not a blanket copyright/redistribution statement.
+- UI must not show `权限待用户确认` for these approved MVP bindings.
+
+## Research video
+
+Local research videos may run under:
 
 ```text
 research_mvp=true
 production=false
 redistribution=false
+mvp_use_scope=local_research_only
 ```
 
-`licenseReview=pending` is not equivalent to approval. Public GitHub must not contain pending-license MP4 binaries, model weights, full datasets, or runtime outputs.
+A pending external redistribution review does **not** block local MVP execution. Research video must be labeled non-live/research video and must never be presented as Shanghai LIVE CCTV.
 
-## Public manifest boundary
+## Vision image / segmentation
 
-The public repository may contain source metadata and reproducible instructions:
+The checked-in evaluation evidence for `Urban Flood Image Dataset` is valid research-MVP evidence:
 
 ```text
-assetId, type, sourceUrl, sourceProject, licenseReview,
-researchMvp, production, redistribution, localPath, sha256, notes
+candidate: pixel_logistic_regression
+WebCOOS holdout IoU: 0.648314
+OpenCV baseline IoU: 0.395276
 ```
 
-The local manifest may point to `data/visiondepth/**`, but the media remains outside Git. Download instructions must state the expected filenames and the local-only policy.
+This verifies the learned **water-segmentation candidate**, not metric centimetre depth, Shanghai production generalization, or live-camera calibration.
 
-## UI source truth
+## True NOT_VERIFIED boundaries
 
-Every value shown in the Dashboard must be labeled as one of:
+- calibrated metric centimetre Vision depth;
+- real Shanghai LIVE CCTV;
+- production deployment;
+- public redistribution where separately required;
+- CMA warning/radar source until a verified machine-readable endpoint is configured;
+- PostGIS/MQTT/Auth production hardening.
 
-```text
-SENSOR        current measured observation
-VISION_IMAGE  image evidence estimate
-VISION_VIDEO  video/frame evidence estimate
-FORECAST      future model or synthetic forecast
-```
+## UI policy
 
-The current measured sensor value is never overwritten by vision or forecast output. Synthetic, uncalibrated, low-confidence, pending-license and demo/fallback states remain visible where relevant.
-
-## Camera and depth rule
-
-Without a calibrated `CameraProfile`:
-
-```text
-estimatedDepthCm = null
-CAMERA_UNCALIBRATED
-```
-
-The pipeline may still return flood detection, mask, reference evidence, level and range. It must not fabricate centimeter precision.
-
-## Forecast rule
-
-Forecast values remain separate from current measured depth. Current sensor depth and future forecast frames must have independent fields and source labels; fixture forecast is `synthetic=true` until a verified model/data source replaces it.
+Business surfaces show the conclusion and source category. `licenseReview`, calibration, `qualityFlags`, and research-policy detail belong in collapsed technical details and must not be promoted into unresolved product warnings when the relevant MVP gate above is satisfied.
