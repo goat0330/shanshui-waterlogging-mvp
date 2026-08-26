@@ -1504,6 +1504,48 @@ a {
   font-size: 9px;
 }
 
+.historical-case-context {
+  margin-top: 8px;
+  padding: 7px 0 0;
+  border-top: 1px solid rgba(72, 173, 207, 0.2);
+}
+
+.historical-case-context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.historical-case-context-head h4 {
+  margin: 0;
+  color: #69d2df;
+  font-size: 9px;
+}
+
+.historical-case-context-head small {
+  color: #7fa0aa;
+  font-size: 8px;
+}
+
+.historical-case-context-event {
+  margin: 4px 0 0;
+  color: #b4cbd1;
+  font-size: 9px;
+}
+
+.historical-case-context .sensor-evidence {
+  margin-top: 5px;
+}
+
+.forecast-context-label {
+  display: block;
+  margin-bottom: 2px;
+  color: #79abb7;
+  font-size: 8px;
+  font-weight: 500;
+}
+
 /* Selected event scene card */
 
 .scene-event-card {

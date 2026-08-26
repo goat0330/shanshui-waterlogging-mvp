@@ -396,6 +396,9 @@ export interface EventPanelProps {
   analysis: AIAnalysis | null
   sensor?: SensorState | null
   sensorId?: string | null
+  referenceEvent?: FloodEvent | null
+  referenceSensor?: SensorState | null
+  referenceSensorId?: string | null
   historicalCases?: HistoricalFloodCase[]
   selectedHistoricalCase?: HistoricalFloodCase | null
   historicalCaseMedia?: HistoricalCaseMedia | null
@@ -433,12 +436,12 @@ function EventIndexControl({ items, selectedKey = null, onSelect }: { items: Eve
   )
 }
 
-export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, referenceEvent = null, referenceSensor = null, referenceSensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
   const eventMeta = event
     ? `事件 ID：${event.id}`
     : selectedHistoricalCase
-      ? '历史公开案例'
+      ? referenceEvent ? '历史公开案例 · 当前运行参考' : '历史公开案例'
       : '未关联正式事件'
   if (!event) {
     const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
@@ -449,6 +452,9 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, hi
           cases={historicalCases}
           selectedCase={selectedHistoricalCase}
           media={historicalCaseMedia}
+          referenceEvent={referenceEvent}
+          referenceSensor={referenceSensor}
+          referenceSensorId={referenceSensorId}
           onSelect={onSelectHistoricalCase}
           onClear={onClearHistoricalCase}
         />
@@ -489,11 +495,14 @@ export interface HistoricalCasePanelProps {
   cases: HistoricalFloodCase[]
   selectedCase?: HistoricalFloodCase | null
   media?: HistoricalCaseMedia | null
+  referenceEvent?: FloodEvent | null
+  referenceSensor?: SensorState | null
+  referenceSensorId?: string | null
   onSelect?: (candidateId: string) => void
   onClear?: () => void
 }
 
-export function HistoricalCasePanel({ cases, selectedCase = null, media = null, onSelect, onClear }: HistoricalCasePanelProps) {
+export function HistoricalCasePanel({ cases, selectedCase = null, media = null, referenceEvent = null, referenceSensor = null, referenceSensorId = null, onSelect, onClear }: HistoricalCasePanelProps) {
   if (selectedCase) {
     return (
       <div className="historical-case-detail">
@@ -528,6 +537,13 @@ export function HistoricalCasePanel({ cases, selectedCase = null, media = null, 
           <p>{selectedCase.sourceAgency} · {selectedCase.sourceTitle}</p>
         </section>
         <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
+        {(referenceEvent || referenceSensor || referenceSensorId) && (
+          <section className="historical-case-context">
+            <div className="historical-case-context-head"><h4>当前运行参考</h4><small>非历史事件证据</small></div>
+            {referenceEvent && <p className="historical-case-context-event">当前事件：{referenceEvent.name}</p>}
+            <SensorEvidence sensor={referenceSensor} sensorId={referenceSensorId} />
+          </section>
+        )}
       </div>
     )
   }
@@ -662,20 +678,21 @@ export interface ForecastPreviewProps {
   onChange: (key: ForecastKey) => void
   measuredDepthCm?: number | null
   sourceLabel?: string
+  contextLabel?: string
   state?: PanelState
 }
 
-export function ForecastPreview({ forecast, activeKey, onChange, measuredDepthCm = null, sourceLabel = 'SYNTHETIC FIXTURE', state = 'ready' }: ForecastPreviewProps) {
+export function ForecastPreview({ forecast, activeKey, onChange, measuredDepthCm = null, sourceLabel = 'SYNTHETIC FIXTURE', contextLabel, state = 'ready' }: ForecastPreviewProps) {
   if (!forecast) {
     return (
       <Panel className="forecast-panel" state={state === 'ready' ? 'empty' : state}>
-        <PanelHeader title="内涝预测" icon="▮" meta={<span>当前点位未关联预测</span>} />
+        <PanelHeader title="内涝预测" icon="▮" meta={<span>{contextLabel ? `${contextLabel} · 暂无预测` : '当前点位未关联预测'}</span>} />
       </Panel>
     )
   }
   return (
     <Panel className="forecast-panel" state={state}>
-      <PanelHeader title="内涝预测" icon="▮" meta={<span><b className="forecast-source-label">FORECAST · {sourceLabel}</b> <b className="help-dot">?</b></span>} />
+      <PanelHeader title="内涝预测" icon="▮" meta={<span>{contextLabel && <b className="forecast-context-label">{contextLabel}</b>}<b className="forecast-source-label">FORECAST · {sourceLabel}</b> <b className="help-dot">?</b></span>} />
       <div className="forecast-grid">
         {forecast.frames.map((frame) => (
           <button
@@ -709,6 +726,7 @@ export interface CctvCardProps {
   showOverlay?: boolean
   overlayData?: CctvOverlayData
   decision?: DecisionProjection | null
+  contextLabel?: string
   videoEvidenceState?: VideoEvidenceState
   onVideoReady?: (ready: boolean) => void
   onVideoTimeUpdate?: (currentTimeSec: number) => void
@@ -716,7 +734,7 @@ export interface CctvCardProps {
 
 export type CctvOverlayData = VideoOverlayData
 
-export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
+export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, contextLabel, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -754,7 +772,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
 
   return (
     <Panel className="cctv-panel" state={state}>
-      <PanelHeader title="视频监控" icon="▮" meta={<span>{displayName}</span>} />
+        <PanelHeader title="视频监控" icon="▮" meta={<span>{contextLabel ?? displayName}</span>} />
       <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${displayName} 视频证据 seam`}>
         <video
           ref={videoRef}
@@ -784,7 +802,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        <span className="cctv-source-tag">{mediaState === 'ready' ? sourceLabel : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
+        <span className="cctv-source-tag">{mediaState === 'ready' ? `${contextLabel ? `${contextLabel} · ` : ''}${sourceLabel}` : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
         <span className="cctv-overlay-status">{overlayStatusLabel}</span>
         {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && decisionDisplay && <div className="cctv-decision-strip" aria-label="视频决策结论">
           <div><small>检测结论</small><b>{decisionDisplay.conclusion}</b></div>
@@ -826,7 +844,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           }}
           aria-label={playing ? '暂停视频' : '播放视频'}
         >{playing ? 'Ⅱ' : '▶'}</button>
-        <span className="cctv-camera-name">{displayName}</span>
+        <span className="cctv-camera-name">{contextLabel ?? displayName}</span>
         <div className="cctv-legend"><span><i className="legend-color legend-color--water" />积水区域</span><span><i className="legend-color legend-color--vehicle" />车辆</span><span><i className="legend-color legend-color--person" />行人</span></div>
       </div>
     </Panel>

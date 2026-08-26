@@ -175,13 +175,20 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     })),
   ]
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
+  const isHistoricalSelection = Boolean(selectedHistoricalCase)
+  const referenceEvent = eventOverride ?? data.event
+  const referenceSensor = data.sensor ?? (dataBadge.includes('FIXTURE') && referenceEvent ? createDemoSensorEvidence(referenceEvent) : null)
+  const referenceForecast = data.forecast
+  const referenceCamera = data.camera
+  const referenceContextLabel = isHistoricalSelection ? '当前运行参考 · 非历史事件证据' : undefined
   const selectedSensor = selectedEvent.sensorId
     ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
     : null
   const sensor = selectedSensor ?? (dataBadge.includes('FIXTURE') && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
   const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
-  const cameraId = selectedEvent.camera?.id ?? null
-  const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
+  const panelCamera = isHistoricalSelection ? referenceCamera : selectedEvent.camera
+  const cameraId = panelCamera?.id ?? null
+  const overlayUrl = panelCamera?.overlayUrl ?? null
 
   useEffect(() => {
     if (!visionFile) {
@@ -325,6 +332,9 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
           analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
           sensor={selectedHistoricalCase ? null : sensor}
           sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
+          referenceEvent={referenceEvent}
+          referenceSensor={referenceSensor}
+          referenceSensorId={referenceSensor?.sensorId ?? null}
           historicalCases={formalHistoricalCases}
           selectedHistoricalCase={selectedHistoricalCase}
           historicalCaseMedia={selectedHistoricalCase ? getHistoricalCaseMedia(selectedHistoricalCase.candidateId) : null}
@@ -333,17 +343,26 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
           onSelectEvent={selectFormalEvent}
           onSelectHistoricalCase={selectFormalEvent}
           onClearHistoricalCase={() => {
-            setSelectedEventKey(null)
+            setSelectedEventKey('REALTIME_EVENT')
             setSelectedHistoricalCaseId(null)
+            setSelectedPointId(DEFAULT_FLOOD_POINT_ID)
           }}
           onOpenVision={() => setVisionOpen(true)}
         />
-        <ForecastPreview forecast={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={selectedHistoricalCase ? null : sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+        <ForecastPreview
+          forecast={isHistoricalSelection ? referenceForecast : selectedEvent.forecast}
+          activeKey={activeForecast}
+          measuredDepthCm={isHistoricalSelection ? referenceSensor?.depthCm ?? null : sensor?.depthCm ?? null}
+          sourceLabel={forecastSourceLabel}
+          contextLabel={referenceContextLabel}
+          onChange={setActiveForecast}
+        />
         <CctvCard
-          camera={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.camera}
+          camera={panelCamera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
           decision={selectedVideoFrame?.decision ?? null}
+          contextLabel={referenceContextLabel}
           videoEvidenceState={videoEvidenceState}
           onVideoReady={setVideoReady}
           onVideoTimeUpdate={setVideoTimeSec}
