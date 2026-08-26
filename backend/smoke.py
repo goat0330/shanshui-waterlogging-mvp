@@ -428,6 +428,14 @@ def main() -> None:
         assert partial_snapshot.sourceStatus == "partial"
         assert partial_snapshot.sourceHealth["YJSW"].status.value == "schema_mismatch"
         assert partial_snapshot.sourceHealth["YJSW"].errorCode == "SHANGHAI_WATER_SCHEMA_MISMATCH"
+    null_measurement_rows = {**source_rows, "SSSW": [{**source_row, "OUTWATER": "2.75"}, {**source_row, "OUTWATER": "null"}]}
+    nullable_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
+    with patch.object(nullable_adapter, "_fetch_list", side_effect=lambda dataset_type: null_measurement_rows[dataset_type]):
+        nullable_snapshot = nullable_adapter.fetch(allow_partial=False)
+        assert nullable_snapshot.sourceStatus == "ok"
+        assert nullable_snapshot.sourceHealth["SSSW"].status.value == "ok"
+        assert nullable_snapshot.sourceHealth["SSSW"].errorCode is None
+        assert nullable_snapshot.sourceHealth["SSSW"].recordCount == 1
     unavailable_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
 
     def fail_one_source(dataset_type: str) -> list[dict[str, object]]:
@@ -612,6 +620,8 @@ def main() -> None:
             assert external_snapshot["source"] == "SHANGHAI_WATER_BUREAU_PUBLIC"
             assert external_snapshot["sourceStatus"] in {"ok", "partial"}
             assert set(external_snapshot["sourceHealth"]) == {"SSYLMore", "JSJCMore", "SSSW", "YJSW"}
+            assert external_snapshot["sourceHealth"]["SSSW"]["status"] == "ok"
+            assert external_snapshot["sourceHealth"]["SSSW"]["recordCount"] > 0
             assert external_snapshot["coordinateReference"] == "SOURCE_REPORTED_XX2000_YY2000"
             assert external_snapshot["rainfall"]
             assert external_snapshot["ponding"]
