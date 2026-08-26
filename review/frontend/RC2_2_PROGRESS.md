@@ -58,7 +58,7 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## RC2.3 frontend state-drift closure (2026-08-26)
 
-- Synced the Dashboard worker branch with `origin/main=0cdc329` before validation.
+- Synced the Dashboard worker branch with `origin/main=4626205` before final validation (initial work was based on `0cdc329`).
 - Approved MVP `CASE_SOURCE_MEDIA` cards no longer show `权限待用户确认`; the existing two direct official bindings remain the only image media rendered. Page-only or exact-scene-unverified cases stay text/source cards.
 - Local `/demo/video/` and `runtimePolicy=research_mvp` video evidence is presented as `非实时视频`; `licenseReview` and runtime policy remain inside `技术详情`, and no camera is presented as LIVE/上海实时 CCTV.
 - Browser smoke at `http://127.0.0.1:5190/`, Chrome, `1920x1080`: formal event options `9` (`1` realtime + `8` historical); Tianbao Road showed `CASE_SOURCE_MEDIA` without a permission warning and without a live sensor/forecast/CCTV chain; Chongming Xueyan Road remained a text/source card without media; `scrollWidth=1920`, `scrollHeight=1080`, console errors `0`, page errors `0`.
