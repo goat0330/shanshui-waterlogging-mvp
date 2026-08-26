@@ -77,7 +77,7 @@ GET /api/v1/context/meteorology (provisional, hidden from formal OpenAPI)
 
 `DATA_MODE=hybrid` 或 `DATA_MODE=real` 时，`GET /api/v1/external/shanghai-water` 通过标准库适配器读取上海市水务局公开页面使用的 JSON 接口：实时雨量（`SSYLMore`）、积水检测（`JSJCMore`）、实时水位（`SSSW`）和水位预报（`YJSW`）。接口返回 `source=SHANGHAI_WATER_BUREAU_PUBLIC`、源站 `observedAt`、请求 `receivedAt`、源站 URL、源站坐标字段标记和分组数据；每个分组还返回 `sourceHealth`。该 provisional 路径不会进入正式运行时 OpenAPI，避免与冻结 `contracts/` 静默漂移。
 
-该路径是 backend provisional API，不修改正式 `contracts/`。源站页面把 `RAINVALUE` 标为“雨量值”，但没有在接口响应中明确统计窗口，因此不映射成正式排行的 `intensityMmH`；前端展示为“源站雨量值”。`XX2000` / `YY2000` 也按源站原值返回，当前标记为 `SOURCE_REPORTED_XX2000_YY2000`，未宣称完成独立 WGS84/GCJ-02 校准。`hybrid` 允许四个分组部分成功，并通过 `sourceHealth.status` 标记 `ok`、`schema_mismatch`、`unavailable` 或 `empty`；没有可用数据时返回明确 503，不注入伪造 fixture。`real` 要求四个分组都成功，任一源失败即返回明确 503，不静默回退 fixture。前端仍可保留既有正式 API/fixture fallback，但必须按返回状态标记来源，不得把 fallback 显示为上海实时值。
+该路径是 backend provisional API，不修改正式 `contracts/`。源站页面把 `RAINVALUE` 标为“雨量值”，但没有在接口响应中明确统计窗口，因此不映射成正式排行的 `intensityMmH`；前端展示为“源站雨量值”。`XX2000` / `YY2000` 也按源站原值返回，当前标记为 `SOURCE_REPORTED_XX2000_YY2000`，未宣称完成独立 WGS84/GCJ-02 校准。测量字段为 `null` 的站点表示当前没有可用读数，会被跳过但不被误报为 schema 漂移；缺少必需字段或类型非法才标记 `schema_mismatch`。`hybrid` 允许四个分组部分成功，并通过 `sourceHealth.status` 区分 `ok`、`schema_mismatch`、`unavailable` 与 `empty`；没有可用数据时返回明确 503，不注入伪造 fixture。`real` 要求四个分组都成功，任一源确实不可用、为空或 schema 不合格即返回明确 503，不静默回退 fixture。`fixture`/本地 research fallback 与真实源不可用是不同状态，生产未验证的 warning/radar/nowcast 仍在 `MeteorologyContext.sourceHealth` 标为 `NOT_VERIFIED`。前端仍可保留既有正式 API/fixture fallback，但必须按返回状态标记来源，不得把 fallback 显示为上海实时值。
 
 ### MeteorologyContext（RC3.2 Checkpoint 1，provisional）
 
@@ -109,7 +109,7 @@ POST /api/v1/vision-depth/analyze/url
 
 两个端点都返回冻结 Contract 的 `VisionDepthObservation`。上传输入只接受 JPEG/PNG/WebP，当前限制为 15 MB；URL 输入只接受 HTTP/HTTPS，关闭环境代理，逐跳重新校验 redirect，并拒绝 private/local/reserved target、HTML、SVG 和不可用媒体。错误分别使用明确的 `400`、上传 `413`、上传 `415` 和 fetch/inference `502`。该结果是独立的 VisionDepth evidence，不写入 `SensorState`、`FloodPoint.currentDepthCm` 或 `FloodEvent`，也不覆盖 telemetry；`source.type` 保留 `local` 或 `url`。
 
-Main `d5e568b` 批准的 `provenance` 为必填严格对象：image upload 使用 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=not_required`，remote URL 保持 `licenseReview=pending`，二者均为 `runtimePolicy=research_mvp`。这些字段不塞入 `model`，也不参与 telemetry 或 flood projection。`VISION_VIDEO` 由前端 synthetic browser evidence seam 消费；本 backend 不伪造视频 API 或真实媒体链路。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
+Main `d5e568b` 批准的 `provenance` 为必填严格对象：image upload 使用 `sourceType=VISION_IMAGE`、`sourceId=imageId`、`observedAt=null`、`licenseReview=not_required`，remote URL 保持 `licenseReview=pending`，二者均为 `runtimePolicy=research_mvp`。`pending` 只表达技术 provenance，不阻塞 research MVP 的本地运行时 fallback；production/redistribution 仍不由 backend 宣称批准。这些字段不塞入 `model`，也不参与 telemetry 或 flood projection。`VISION_VIDEO` 由前端/已有 local-only research seam 消费；本 backend 不新增 8002 服务、平行视频 API 或真实媒体链路。现有算法是本地 OpenCV baseline，不能表述为真实生产视觉模型、实时 AI 或真实积水数据；`synthetic` 字段遵循当前 pipeline 输出，不改变这一证据边界。
 
 ## Simulator
 

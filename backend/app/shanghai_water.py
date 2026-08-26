@@ -39,6 +39,13 @@ class ShanghaiWaterAdapter:
         "YJSW": ("STATIONID", "STATIONNAME", "YBCW", "DATETIME", "XX2000", "YY2000"),
     }
     NUMERIC_FIELDS = {"RAINVALUE", "JISHUISTATUS", "OUTWATER", "YBCW", "XX2000", "YY2000"}
+    MEASUREMENT_FIELDS = {"RAINVALUE", "JISHUISTATUS", "OUTWATER", "YBCW"}
+    MEASUREMENT_FIELD_BY_DATASET = {
+        "SSYLMore": "RAINVALUE",
+        "JSJCMore": "JISHUISTATUS",
+        "SSSW": "OUTWATER",
+        "YJSW": "YBCW",
+    }
     TEXT_FIELDS = {"STATIONID", "STATIONNAME"}
 
     def __init__(self, timeout_seconds: float = 8.0, cache_ttl_seconds: float = 45.0) -> None:
@@ -87,7 +94,8 @@ class ShanghaiWaterAdapter:
                         continue
                     item = parser(raw, received_at, source_url)
                     if item is None:
-                        invalid_count += 1
+                        if not self._missing_measurement(raw.get(self.MEASUREMENT_FIELD_BY_DATASET[dataset_type])):
+                            invalid_count += 1
                     else:
                         parsed_items.append(item)
                 results[dataset_type] = parsed_items
@@ -190,7 +198,8 @@ class ShanghaiWaterAdapter:
                 return False
             value = raw[field]
             if field in cls.NUMERIC_FIELDS and cls._number(value) is None:
-                return False
+                if field not in cls.MEASUREMENT_FIELDS or not cls._missing_measurement(value):
+                    return False
             if field in cls.TEXT_FIELDS and not cls._text(value):
                 return False
             if field == "DATETIME" and cls._datetime(value) is None:
@@ -322,6 +331,10 @@ class ShanghaiWaterAdapter:
         except (TypeError, ValueError):
             return None
         return number if math.isfinite(number) and number >= 0 else None
+
+    @staticmethod
+    def _missing_measurement(value: Any) -> bool:
+        return value is None or str(value).strip().lower() in {"", "null", "none"}
 
     @staticmethod
     def _bool(value: Any) -> bool | None:
