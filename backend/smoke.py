@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -27,7 +28,17 @@ except ImportError:
     websocket = None
 
 
-PORT = int(os.environ.get("SMOKE_PORT", "8765"))
+
+def select_smoke_port() -> int:
+    configured_port = os.environ.get("SMOKE_PORT")
+    if configured_port:
+        return int(configured_port)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
+
+
+PORT = select_smoke_port()
 BASE_URL = f"http://127.0.0.1:{PORT}"
 LOCAL_OPENER = build_opener(ProxyHandler({}))
 
