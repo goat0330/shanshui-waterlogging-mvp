@@ -22,12 +22,8 @@ def _visual_level(segmentation: WaterSegmentation) -> int:
 
 
 def _approximate_depth(level: int) -> float | None:
-    """Return a coarse display value for the visual range, never a metric estimate."""
-
     minimum, maximum = range_for_level(level)
-    if minimum is None:
-        return None
-    if maximum is None:
+    if minimum is None or maximum is None:
         return None
     return round((minimum + maximum) / 2.0, 1)
 
@@ -38,15 +34,11 @@ def _reference_depth(reference: ReferenceEvidence, image_height: int) -> float |
     _, y, _, height = reference.bbox
     bottom = y + height
     waterline_px = reference.waterline_y * max(1, image_height - 1)
-    # The HOG/color box is a perspective cue, not a metric measurement. A full
-    # reference height prior is intentionally used only to produce a coarse bin.
     top_norm = y / max(image_height - 1, 1)
     bottom_norm = bottom / max(image_height - 1, 1)
     if top_norm <= reference.waterline_y <= bottom_norm:
         visible_submersion = (bottom - waterline_px) / max(height, 1)
     else:
-        # If the local mask overlaps a small, distant reference but its global
-        # waterline misses the box, retain only a coarse overlap-based cue.
         visible_submersion = min(0.30, reference.water_overlap_ratio)
     if visible_submersion <= 0.04:
         return None
@@ -61,20 +53,29 @@ def _reference_depth(reference: ReferenceEvidence, image_height: int) -> float |
     return max(1.0, min(150.0, prior_cm * visible_submersion))
 
 
-def estimate_depth(
-    segmentation: WaterSegmentation,
-    references: list[ReferenceEvidence],
-) -> dict[str, Any]:
-    reliable = [reference for reference in references if reference.reliable]
-    reliable.sort(key=lambda reference: (reference.confidence, reference.water_overlap_ratio), reverse=True)
-    reference = reliable[0] if reliable else None
-
-    if (
+def _mask_is_dry(segmentation: WaterSegmentation) -> bool:
+    if segmentation.method == "pixel_logistic_regression":
+        # Learned mask has held-out GT evidence. Do not re-reject it using the
+        # OpenCV baseline's muddy-water color heuristic.
+        return (
+            segmentation.score < 0.22
+            or segmentation.largest_component_fraction < 0.01
+            or segmentation.lower_fraction < 0.015
+        )
+    return (
         segmentation.score < 0.22
         or segmentation.largest_component_fraction == 0
         or segmentation.water_color_fraction < 0.70
         or segmentation.lower_red_blue_contrast < 10.0
-    ):
+    )
+
+
+def estimate_depth(segmentation: WaterSegmentation, references: list[ReferenceEvidence]) -> dict[str, Any]:
+    reliable = [reference for reference in references if reference.reliable]
+    reliable.sort(key=lambda reference: (reference.confidence, reference.water_overlap_ratio), reverse=True)
+    reference = reliable[0] if reliable else None
+
+    if _mask_is_dry(segmentation):
         return {
             "floodDetected": False,
             "level": 0,

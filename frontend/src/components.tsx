@@ -20,7 +20,7 @@ import type {
   VisionDepthObservation,
 } from './types'
 import type { VideoEvidenceState, VideoOverlayData } from './adapters/videoEvidenceAdapter'
-import { CesiumScene } from './CesiumScene'
+import { CesiumScene, type SceneAnchorPosition } from './CesiumScene'
 import type { HistoricalCaseMedia } from './data/historicalCaseMedia'
 import { API_BASE_URL } from './services/apiClient'
 
@@ -111,7 +111,7 @@ export interface BrandLockupProps {
   alt?: string
 }
 
-export function BrandLockup({ src = '/brand/qixiao-platform-lockup.png', alt = '启晓平台｜城市内涝智能防控中心' }: BrandLockupProps) {
+export function BrandLockup({ src = '/brand/qixiao-platform-lockup-tight.png', alt = '启晓平台｜城市内涝智能防控中心' }: BrandLockupProps) {
   return (
     <span className="brand-lockup">
       <img src={src} alt={alt} />
@@ -362,7 +362,7 @@ export interface RankingPanelProps {
 export function RankingPanel({ ranking, realRainfall = null, realSource = null, state = 'ready' }: RankingPanelProps) {
   const hasRealRainfall = Boolean(realRainfall?.length)
   const rankedStations = hasRealRainfall
-    ? realRainfall!.slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.rainfallValue }))
+    ? realRainfall!.slice().sort((left, right) => right.rainfallValue - left.rainfallValue).slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.rainfallValue }))
     : ranking.slice().sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.intensityMmH }))
   const maxValue = Math.max(...rankedStations.map((station) => station.value), 1)
 
@@ -376,7 +376,7 @@ export function RankingPanel({ ranking, realRainfall = null, realSource = null, 
             <span className={`rank-badge rank-badge--${index + 1}`}>{index + 1}</span>
             <span className="ranking-name" title={station.stationName}>{station.stationName.replace(/站$/, '')}</span>
             <span className="ranking-bar"><i style={{ width: `${(station.value / maxValue) * 100}%` }} /></span>
-            <strong className="ranking-value ranking-value--high">{station.value.toFixed(1)}</strong>
+            <strong className={`ranking-value ${station.value > 0 ? 'ranking-value--high' : ''}`}>{station.value.toFixed(1)}</strong>
           </div>
         ))}
       </div>
@@ -394,9 +394,6 @@ export interface EventPanelProps {
   analysis: AIAnalysis | null
   sensor?: SensorState | null
   sensorId?: string | null
-  referenceEvent?: FloodEvent | null
-  referenceSensor?: SensorState | null
-  referenceSensorId?: string | null
   historicalCases?: HistoricalFloodCase[]
   selectedHistoricalCase?: HistoricalFloodCase | null
   historicalCaseMedia?: HistoricalCaseMedia | null
@@ -426,7 +423,7 @@ function EventIndexControl({ items, selectedKey = null, onSelect }: { items: Eve
       <select value={value} aria-label={`正式事件选择，共 ${items.length} 个`} onChange={(input) => onSelect?.(input.target.value)}>
         {items.map((item) => (
           <option value={item.key} key={item.key}>
-            {item.kind === 'REALTIME_EVENT' ? `实时 · ${item.title}` : `历史 · ${item.meta} · ${item.title}`}
+            {item.kind === 'REALTIME_EVENT' ? `实时 · ${formatSceneEventName(item.title)}` : `历史 · ${item.meta} · ${item.title}`}
           </option>
         ))}
       </select>
@@ -434,25 +431,17 @@ function EventIndexControl({ items, selectedKey = null, onSelect }: { items: Eve
   )
 }
 
-export function EventPanel({ event, analysis, sensor = null, sensorId = null, referenceEvent = null, referenceSensor = null, referenceSensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
-  const eventMeta = event
-    ? `事件 ID：${event.id}`
-    : selectedHistoricalCase
-      ? referenceEvent ? '历史公开案例 · 当前运行参考' : '历史公开案例'
-      : '未关联正式事件'
   if (!event) {
     const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
     return (
       <Panel className="event-panel" state={emptyState}>
-        <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
+        <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
         <HistoricalCasePanel
           cases={historicalCases}
           selectedCase={selectedHistoricalCase}
           media={historicalCaseMedia}
-          referenceEvent={referenceEvent}
-          referenceSensor={referenceSensor}
-          referenceSensorId={referenceSensorId}
           onSelect={onSelectHistoricalCase}
           onClear={onClearHistoricalCase}
         />
@@ -463,12 +452,12 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, re
 
   return (
     <Panel className={`event-panel ${analysisOpen ? 'event-panel--expanded' : ''}`} state={state}>
-      <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
+      <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
       <div className="event-title-row">
-        <h3>{event.name}</h3>
+        <h3 title={event.name}>{formatSceneEventName(event.name)}</h3>
         <div className="event-title-actions">
           <span className="risk-badge">{RISK_LABEL[event.riskLevel]}</span>
-          {onOpenVision && <button type="button" className="vision-entry-button" onClick={onOpenVision}>VISION_IMAGE · 视觉水深证据</button>}
+          {onOpenVision && <button type="button" className="vision-entry-button" onClick={onOpenVision}>视觉识别</button>}
         </div>
       </div>
       <div className="event-metrics">
@@ -493,14 +482,11 @@ export interface HistoricalCasePanelProps {
   cases: HistoricalFloodCase[]
   selectedCase?: HistoricalFloodCase | null
   media?: HistoricalCaseMedia | null
-  referenceEvent?: FloodEvent | null
-  referenceSensor?: SensorState | null
-  referenceSensorId?: string | null
   onSelect?: (candidateId: string) => void
   onClear?: () => void
 }
 
-export function HistoricalCasePanel({ cases, selectedCase = null, media = null, referenceEvent = null, referenceSensor = null, referenceSensorId = null, onSelect, onClear }: HistoricalCasePanelProps) {
+export function HistoricalCasePanel({ cases, selectedCase = null, media = null, onSelect, onClear }: HistoricalCasePanelProps) {
   if (selectedCase) {
     return (
       <div className="historical-case-detail">
@@ -535,13 +521,6 @@ export function HistoricalCasePanel({ cases, selectedCase = null, media = null, 
           <p>{selectedCase.sourceAgency} · {selectedCase.sourceTitle}</p>
         </section>
         <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
-        {(referenceEvent || referenceSensor || referenceSensorId) && (
-          <section className="historical-case-context">
-            <div className="historical-case-context-head"><h4>当前运行参考</h4><small>非历史事件证据</small></div>
-            {referenceEvent && <p className="historical-case-context-event">当前事件：{referenceEvent.name}</p>}
-            <SensorEvidence sensor={referenceSensor} sensorId={referenceSensorId} />
-          </section>
-        )}
       </div>
     )
   }
@@ -670,27 +649,107 @@ export function SceneEventCard({ event, analysis, sensor = null, sensorId = null
   )
 }
 
+export interface HistoricalSceneCaseCardProps {
+  historicalCase: HistoricalFloodCase | null
+}
+
+export function HistoricalSceneCaseCard({ historicalCase }: HistoricalSceneCaseCardProps) {
+  if (!historicalCase) return null
+  const actions = historicalCase.officialActions.slice(0, 3)
+  const sourceDepth = historicalCase.depthCm != null
+    ? `${historicalCase.depthCm.toFixed(1)} cm`
+    : historicalCase.depthEvidenceText ?? '来源未说明'
+
+  return (
+    <article className="scene-event-card scene-event-card--historical" aria-label="选中历史积水事件详情">
+      <header className="scene-event-card-header">
+        <div>
+          <span className="scene-event-card-kicker">历史内涝事件</span>
+          <h3>{historicalCase.locationText}</h3>
+        </div>
+        <span className="scene-event-card-risk scene-event-card-risk--historical">历史</span>
+      </header>
+      <section className="scene-event-card-section scene-event-card-section--facts">
+        <div className="scene-event-card-row"><span>位置</span><strong>{historicalCase.district}</strong></div>
+        <div className="scene-event-card-row"><span>事件日期</span><strong>{historicalCase.incidentDate}</strong></div>
+        <div className="scene-event-card-row"><span>来源水深</span><strong className="scene-event-card-value--history">{sourceDepth}</strong></div>
+      </section>
+      <section className="scene-event-card-section">
+        <h4>交通影响</h4>
+        <p className="scene-event-card-history-copy">{historicalCase.trafficImpact ?? '官方来源未说明交通影响'}</p>
+      </section>
+      <section className="scene-event-card-section scene-event-card-section--actions">
+        <h4>官方处置</h4>
+        <div className="scene-event-card-actions">
+          {actions.length > 0 ? actions.map((action, index) => (
+            <span className={`scene-event-card-action scene-event-card-action--${index + 1}`} key={action}>{action}</span>
+          )) : <span className="scene-event-card-empty">来源未逐项说明</span>}
+        </div>
+      </section>
+    </article>
+  )
+}
+
+export interface HistoricalMediaPanelProps {
+  historicalCase: HistoricalFloodCase
+  media: HistoricalCaseMedia | null
+}
+
+export function HistoricalMediaPanel({ historicalCase, media }: HistoricalMediaPanelProps) {
+  const [activeIndex, setActiveIndex] = useState(0)
+  useEffect(() => setActiveIndex(0), [historicalCase.candidateId])
+  const urls = media?.urls ?? []
+  const currentUrl = urls[activeIndex] ?? null
+
+  return (
+    <Panel className="historical-media-panel">
+      <PanelHeader title="现场影像" icon="▮" meta={<span>历史同事件 · 非实时</span>} />
+      {currentUrl ? (
+        <div className="historical-media-viewport">
+          <img src={currentUrl} alt={`${historicalCase.locationText} 同事件官方来源影像`} loading="eager" />
+          <span className="historical-media-tag">CASE_SOURCE_MEDIA · OFFICIAL</span>
+          {urls.length > 1 && (
+            <div className="historical-media-controls">
+              <button type="button" onClick={() => setActiveIndex((activeIndex - 1 + urls.length) % urls.length)} aria-label="上一张历史影像">‹</button>
+              <span>{activeIndex + 1} / {urls.length}</span>
+              <button type="button" onClick={() => setActiveIndex((activeIndex + 1) % urls.length)} aria-label="下一张历史影像">›</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="historical-media-empty">
+          <strong>暂无同事件官方影像</strong>
+          <span>该历史事件仍保留官方文字证据，不复用实时 CCTV 或研究视频。</span>
+        </div>
+      )}
+      <div className="historical-media-footer">
+        <span>{historicalCase.sourceAgency}</span>
+        <a href={historicalCase.sourceUrl} target="_blank" rel="noreferrer">官方来源 ↗</a>
+      </div>
+    </Panel>
+  )
+}
+
 export interface ForecastPreviewProps {
   forecast: FloodForecast | null
   activeKey: ForecastKey
   onChange: (key: ForecastKey) => void
   measuredDepthCm?: number | null
   sourceLabel?: string
-  contextLabel?: string
   state?: PanelState
 }
 
-export function ForecastPreview({ forecast, activeKey, onChange, measuredDepthCm = null, sourceLabel = 'SYNTHETIC FIXTURE', contextLabel, state = 'ready' }: ForecastPreviewProps) {
+export function ForecastPreview({ forecast, activeKey, onChange, measuredDepthCm = null, sourceLabel = 'SYNTHETIC FIXTURE', state = 'ready' }: ForecastPreviewProps) {
   if (!forecast) {
     return (
       <Panel className="forecast-panel" state={state === 'ready' ? 'empty' : state}>
-        <PanelHeader title="内涝预测" icon="▮" meta={<span>{contextLabel ? `${contextLabel} · 暂无预测` : '当前点位未关联预测'}</span>} />
+        <PanelHeader title="内涝预测" icon="▮" meta={<span>当前点位未关联预测</span>} />
       </Panel>
     )
   }
   return (
     <Panel className="forecast-panel" state={state}>
-      <PanelHeader title="内涝预测" icon="▮" meta={<span>{contextLabel && <b className="forecast-context-label">{contextLabel}</b>}<b className="forecast-source-label">FORECAST · {sourceLabel}</b> <b className="help-dot">?</b></span>} />
+      <PanelHeader title="内涝预测" icon="▮" meta={<span><b className="forecast-source-label">FORECAST · {sourceLabel}</b> <b className="help-dot">?</b></span>} />
       <div className="forecast-grid">
         {forecast.frames.map((frame) => (
           <button
@@ -724,7 +783,6 @@ export interface CctvCardProps {
   showOverlay?: boolean
   overlayData?: CctvOverlayData
   decision?: DecisionProjection | null
-  contextLabel?: string
   videoEvidenceState?: VideoEvidenceState
   onVideoReady?: (ready: boolean) => void
   onVideoTimeUpdate?: (currentTimeSec: number) => void
@@ -732,7 +790,7 @@ export interface CctvCardProps {
 
 export type CctvOverlayData = VideoOverlayData
 
-export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, contextLabel, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
+export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayData, decision = null, videoEvidenceState = 'missing', onVideoReady, onVideoTimeUpdate }: CctvCardProps) {
   const [playing, setPlaying] = useState(false)
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'unavailable'>(camera?.mediaUrl ? 'loading' : 'unavailable')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -770,7 +828,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
 
   return (
     <Panel className="cctv-panel" state={state}>
-        <PanelHeader title="视频监控" icon="▮" meta={<span>{contextLabel ?? displayName}</span>} />
+      <PanelHeader title="视频监控" icon="▮" meta={<span>{displayName}</span>} />
       <div className={`cctv-viewport cctv-viewport--${mediaState}`} aria-label={`${displayName} 视频证据 seam`}>
         <video
           ref={videoRef}
@@ -800,7 +858,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             {object.type}
           </span>
         ))}
-        <span className="cctv-source-tag">{mediaState === 'ready' ? `${contextLabel ? `${contextLabel} · ` : ''}${sourceLabel}` : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
+        <span className="cctv-source-tag">{mediaState === 'ready' ? sourceLabel : 'VISION_VIDEO · DEMO / PLACEHOLDER'}</span>
         <span className="cctv-overlay-status">{overlayStatusLabel}</span>
         {showOverlay && state === 'ready' && mediaState === 'ready' && overlayData && decisionDisplay && <div className="cctv-decision-strip" aria-label="视频决策结论">
           <div><small>检测结论</small><b>{decisionDisplay.conclusion}</b></div>
@@ -814,7 +872,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
             <div><dt>sourceType</dt><dd>{overlayData.sourceType}</dd></div>
             <div><dt>sourceId</dt><dd>{overlayData.sourceId}</dd></div>
             <div><dt>runtimePolicy</dt><dd>{overlayData.runtimePolicy}</dd></div>
-            <div><dt>licenseReview</dt><dd>{overlayData.licenseReview}</dd></div>
+            <div><dt>licenseReview</dt><dd>{overlayData.runtimePolicy === 'research_mvp' && overlayData.licenseReview === 'pending' ? 'local_mvp_allowed · external_redistribution_pending' : overlayData.licenseReview}</dd></div>
             <div><dt>frame</dt><dd>{overlayData.frameId} · t={overlayData.timestampMs}ms</dd></div>
             <div><dt>rangeCm</dt><dd>{formatRangeCm(overlayData.rangeCm)}</dd></div>
             <div><dt>estimatedDepthCm</dt><dd>{overlayData.estimatedDepthCm === null ? 'null' : `${overlayData.estimatedDepthCm.toFixed(1)} cm`}</dd></div>
@@ -842,7 +900,7 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           }}
           aria-label={playing ? '暂停视频' : '播放视频'}
         >{playing ? 'Ⅱ' : '▶'}</button>
-        <span className="cctv-camera-name">{contextLabel ?? displayName}</span>
+        <span className="cctv-camera-name">{displayName}</span>
         <div className="cctv-legend"><span><i className="legend-color legend-color--water" />积水区域</span><span><i className="legend-color legend-color--vehicle" />车辆</span><span><i className="legend-color legend-color--person" />行人</span></div>
       </div>
     </Panel>
@@ -1107,10 +1165,11 @@ export interface DigitalTwinSceneProps {
   layers: LayerVisibility
   onPointSelect: (id: string) => void
   onLayerToggle: (layer: keyof LayerVisibility) => void
+  onSelectedPointScreenPosition?: (position: SceneAnchorPosition | null) => void
   compact?: boolean
 }
 
-export function DigitalTwinScene({ event, points, sensor = null, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, compact = false }: DigitalTwinSceneProps) {
+export function DigitalTwinScene({ event, points, sensor = null, activeForecast, forecastFrame = null, selectedPointId, layers, onPointSelect, onLayerToggle, onSelectedPointScreenPosition, compact = false }: DigitalTwinSceneProps) {
   return (
     <section className={`digital-twin-scene ${compact ? 'digital-twin-scene--compact' : ''}`} aria-label="上海数字孪生场景">
       <CesiumScene
@@ -1122,6 +1181,7 @@ export function DigitalTwinScene({ event, points, sensor = null, activeForecast,
         selectedPointId={selectedPointId}
         layers={layers}
         onPointSelect={onPointSelect}
+        onSelectedPointScreenPosition={onSelectedPointScreenPosition}
       />
       <div className="scene-atmosphere" />
       <div className="scene-label scene-label--top"><span className="scene-status-dot" />SHANGHAI DIGITAL TWIN <small>CESIUM CITY · L1</small></div>

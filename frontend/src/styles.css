@@ -2661,6 +2661,23 @@ a {
   pointer-events: none;
 }
 
+.cesium-scene-attribution {
+  position: absolute;
+  z-index: 4;
+  bottom: 12px;
+  left: 16px;
+  padding: 4px 7px;
+  border-radius: 3px;
+  background: rgba(4, 17, 28, 0.72);
+  color: rgba(185, 216, 221, 0.78);
+  font-size: 9px;
+  text-decoration: none;
+}
+
+.cesium-scene-attribution:hover {
+  color: #d9f5f7;
+}
+
 .scene-placeholder-image {
   position: absolute;
   z-index: 1;
@@ -3483,3 +3500,297 @@ a {
   .dashboard-side--right { width: 390px; }
   .scene-toolbar-wrap { right: 26%; }
 }
+
+
+/* LEANGUARD_UI_V2_HISTORY_BASEMAP */
+.dashboard-side--right {
+  width: 392px;
+}
+
+.dashboard-side--right.dashboard-side--historical {
+  grid-template-rows: 438px 300px;
+  align-content: start;
+}
+
+.dashboard-side--historical .historical-case-media {
+  display: none;
+}
+
+.dashboard-side--historical .historical-case-detail {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(68, 183, 224, 0.42) transparent;
+}
+
+.dashboard-side--historical .historical-case-detail::-webkit-scrollbar { width: 4px; }
+.dashboard-side--historical .historical-case-detail::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgba(68, 183, 224, 0.42);
+}
+
+.event-panel-header-meta > span,
+.event-index-control > span { display: none; }
+
+.event-index-control select {
+  width: 224px;
+  max-width: 224px;
+  height: 25px;
+  padding-right: 22px;
+  font-size: 9px;
+}
+
+.event-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 14px 7px;
+}
+
+.event-title-row h3 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-title-actions {
+  flex: 0 0 auto;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.vision-entry-button {
+  padding: 4px 7px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.event-meta-grid span { min-width: 0; align-items: baseline; }
+.event-meta-grid strong {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historical-case-detail h3 { font-size: 18px; line-height: 1.25; }
+.historical-case-section p {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 9.5px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.historical-case-section:last-of-type p { -webkit-line-clamp: 2; }
+
+.historical-media-panel {
+  min-height: 0;
+  border-color: rgba(85, 185, 225, 0.24);
+  background: linear-gradient(180deg, rgba(8, 30, 48, 0.82), rgba(6, 22, 36, 0.72));
+}
+
+.historical-media-viewport {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  margin: 0 10px;
+  border: 1px solid rgba(69, 174, 210, 0.22);
+  border-radius: 4px;
+  background: #06151f;
+}
+
+.historical-media-viewport img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.historical-media-tag {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 3px 5px;
+  border: 1px solid rgba(72, 202, 217, 0.32);
+  border-radius: 3px;
+  background: rgba(3, 22, 34, 0.76);
+  color: #91e2e9;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+
+.historical-media-controls {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: rgba(3, 20, 31, 0.78);
+  color: #cfe7ec;
+  font-size: 9px;
+}
+
+.historical-media-controls button {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(68, 183, 224, 0.32);
+  border-radius: 3px;
+  background: rgba(8, 50, 70, 0.66);
+  color: #9fe9ef;
+  cursor: pointer;
+}
+
+.historical-media-empty {
+  display: flex;
+  height: 220px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0 10px;
+  border: 1px dashed rgba(82, 176, 209, 0.26);
+  color: #7799a7;
+  text-align: center;
+}
+
+.historical-media-empty strong { color: #c8dce3; font-size: 12px; font-weight: 500; }
+.historical-media-empty span { max-width: 280px; font-size: 9px; line-height: 1.5; }
+
+.historical-media-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 7px 12px 0;
+  color: #7899a6;
+  font-size: 9px;
+}
+.historical-media-footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.historical-media-footer a { flex: 0 0 auto; color: #67d9e3; }
+
+.scene-event-card--historical {
+  min-height: 292px;
+  border-color: rgba(67, 199, 219, 0.62);
+}
+.scene-event-card-risk--historical {
+  border-color: rgba(67, 199, 219, 0.46);
+  background: rgba(16, 78, 96, 0.58);
+  color: #9ce7ee;
+}
+.scene-event-card-value--history { color: #9fe3e9 !important; font-size: 11px !important; }
+.scene-event-card-history-copy { margin: 0; color: #a8c2ca; font-size: 10px; line-height: 1.45; }
+
+/* QIXIAO_LEANGUARD_UI_V3 */
+/* Header: preserve the lockup's native aspect ratio and reserve a separate weather row. */
+.top-nav {
+  height: 106px;
+  padding: 3px 27px 0;
+  background: linear-gradient(180deg, rgba(5, 16, 28, 0.94), rgba(5, 16, 28, 0.54) 76%, transparent);
+}
+
+.brand {
+  width: 430px;
+  min-width: 430px;
+  height: 80px;
+  align-items: flex-start;
+}
+
+.brand-lockup {
+  position: static;
+  display: flex;
+  width: 410px;
+  height: 80px;
+  flex: 0 0 410px;
+  align-items: flex-start;
+  overflow: visible;
+}
+
+.brand-lockup img {
+  position: static;
+  display: block;
+  width: 390px;
+  height: auto;
+  max-width: 390px;
+  max-height: 79px;
+  object-fit: contain;
+  object-position: left top;
+}
+
+.weather-strip {
+  top: 84px;
+  left: 34px;
+  gap: 14px;
+  min-height: 18px;
+  padding: 0 4px;
+  color: #d7e7ee;
+  font-size: 12px;
+  line-height: 18px;
+  background: rgba(4, 18, 29, 0.34);
+  border-radius: 3px;
+}
+
+.weather-strip > span { gap: 4px; }
+.pin-glyph, .weather-glyph, .rain-glyph { font-size: 14px; }
+
+/* The card is now positioned from the selected Cesium point instead of a fixed HUD slot. */
+.scene-event-card {
+  right: auto;
+  bottom: auto;
+  width: 252px;
+  min-height: 0;
+  max-height: 340px;
+  overflow: auto;
+  pointer-events: auto;
+  clip-path: polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.scene-event-card::after { display: none; }
+.scene-event-card-header { padding: 9px 10px 8px; }
+.scene-event-card-header h3 { max-width: 170px; font-size: 17px; line-height: 1.18; }
+.scene-event-card-risk { margin-top: 0; }
+.scene-event-card-head-actions { display: flex; align-items: center; gap: 6px; }
+.scene-event-card-close {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(110, 205, 226, 0.28);
+  border-radius: 3px;
+  background: rgba(5, 29, 44, 0.72);
+  color: #a8cbd5;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.scene-event-card-close:hover,
+.scene-event-card-close:focus-visible { border-color: #45dce8; color: #fff; outline: none; }
+.scene-event-card-section { padding: 7px 10px 8px; }
+.scene-event-card-row, .scene-event-card-sensor-grid > div { min-height: 22px; }
+.scene-event-card-section h4 { margin-bottom: 5px; }
+.scene-event-card-copy { margin: 0; color: #b4cbd1; font-size: 9px; line-height: 1.4; }
+.scene-event-card-history-badge {
+  padding: 3px 7px;
+  border: 1px solid rgba(86, 194, 225, 0.36);
+  border-radius: 4px;
+  background: rgba(16, 73, 92, 0.42);
+  color: #8ddce5;
+  font-size: 9px;
+}
+
+/* Real-source rainfall keeps source semantics: RAINVALUE is not relabelled as mm/h. */
+.rainfall-panel-tools select.station-select { max-width: 126px; text-overflow: ellipsis; }
+.rainfall-live-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 7px;
+  color: #6f9eaa;
+  font-size: 8px;
+  letter-spacing: 0.02em;
+}
+.rainfall-chart { position: relative; }

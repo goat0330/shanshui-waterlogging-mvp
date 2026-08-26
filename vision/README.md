@@ -1,58 +1,28 @@
-# VisionDepth V1
+# VisionDepth — MVP runtime
 
-`VisionDepth V1` turns one local JPEG/PNG/WebP image or one HTTP/HTTPS image URL into an independent flood-depth evidence JSON. It does not parse webpages, write sensor state, replace `FloodPoint.currentDepthCm`, or provide a production inference service.
+The shared image/video path now supports an optional learned water-segmentation checkpoint while preserving the OpenCV fallback.
 
-## Run
+## Default
 
-From the repository root:
+The runtime first checks `VISION_WATER_SEGMENTATION_CHECKPOINT`, then the project-local/sibling `data/visiondepth/research/Urban-Flood-Image-Dataset/candidate-water-segmentation.joblib`. If no valid checkpoint exists, the existing OpenCV baseline runs unchanged.
 
-```text
-python -m vision.cli --input path/to/image.jpg --output vision/artifacts/result.json --save-mask
-python -m vision.cli --input https://example.org/image.jpg --output vision/artifacts/result.json
-python -m vision.smoke
-python -m compileall vision
-```
+## Learned mask path
 
-The mask is saved beside the JSON in V1 even without `--save-mask`; the flag is retained as an explicit command-line affordance. The output always uses the fixed levels:
+The checked-in candidate has held-out WebCOOS mask evidence:
 
 ```text
-0: no obvious flood
-1: 0-10 cm
-2: 10-20 cm
-3: 20-30 cm
-4: 30-50 cm
-5: >50 cm
+pixel_logistic_regression IoU = 0.648314
+OpenCV baseline IoU          = 0.395276
 ```
 
-## Method boundary
+To use the local checkpoint:
 
-The current implementation is an OpenCV baseline:
-
-- water mask: HSV/color exclusion, lower-scene prior, gradient/texture and connected components;
-- reference evidence: OpenCV built-in HOG people detector and a conservative red/orange compact-blob candidate for traffic signs;
-- geometry: `none`; no Depth Anything model and no monocular-to-centimeter claim;
-- no downloaded model weights are required or assumed.
-
-The smoke-calibrated baseline requires a lower-scene brown/blue chroma cue (`R-B` contrast) before declaring obvious water. It is intentionally conservative against dry pavement and can miss neutral-gray or night-time water; this is a known V1 ceiling, not a production accuracy claim.
-
-An object box alone never produces a metric depth estimate. When no reliable reference or camera calibration is available, the pipeline keeps `estimatedDepthCm` as `null` and may provide `approximateDepthCm` as a coarse midpoint only for a closed visual range. The open-ended Level 5 range `[50, null]` keeps `approximateDepthCm=null`. The value is explicitly marked by `ROUGH_VISUAL_ESTIMATE`; it is not sensor-grade measurement. The shared `vision.decision.project_decision()` helper may use the lower bound `50` for a traffic-policy projection, but that decision value is not a calibrated depth estimate.
-
-The V-FloodNet project was used only as an architecture reference (water segmentation -> reference object -> waterline/submersion -> coarse depth). Its source was not copied; the repository planning document records its license metadata as undeclared, so it is not a runtime dependency.
-
-## Optional RC2.3 learned candidate
-
-`vision.train_water_segmenter` is an opt-in research command. It trains a small pixel-level Logistic Regression mask adapter on the locally acquired Urban Flood Image Dataset and evaluates it on a source-level WebCOOS holdout. The candidate is frozen as `VERIFIED_FOR_RESEARCH_MVP` for water segmentation only; the source declares `CC BY 4.0`, while final public/redistribution review remains deferred. The default V1/V2 pipeline remains OpenCV; no checkpoint is downloaded automatically or committed to Git.
-
-```text
-python -m vision.train_water_segmenter --data-root <local Urban-Flood-Image-Dataset> --model-out <local checkpoint.joblib> --metrics-out vision/artifacts/urban-flood-segmentation-metrics.json --examples-dir <local examples>
+```powershell
+$env:VISION_WATER_SEGMENTATION_CHECKPOINT = "D:\path\candidate-water-segmentation.joblib"
 ```
 
-This candidate only predicts a water mask. It does not produce `estimatedDepthCm`, does not use a level-to-centimetres lookup, and does not replace the shared image/video pipeline until a separate provenance, domain and product gate accepts its checkpoint.
+The pipeline loads a valid checkpoint once per process and reuses it across image/video frames; otherwise it falls back to OpenCV. No weights are downloaded and no checkpoint is committed.
 
-## Runtime dependencies
+This changes the water mask/evidence path only. It does **not** make the system a calibrated centimetre-depth model. `estimatedDepthCm` and camera-calibration guards remain governed by the existing evidence rules.
 
-The verified environment already contains Python 3.11, OpenCV 4.13, Pillow 11.3, NumPy 1.26 and requests 2.32. No new package was installed for V1. `torch`, `transformers` and `ultralytics` may exist in the environment but are intentionally not used without verified weights and a separate license decision.
-
-## URL safety
-
-Only HTTP/HTTPS URLs are accepted. Requests use connect/read timeouts, redirects are revalidated, content type and decoded image format must be JPEG/PNG/WebP, and the response is limited to 15 MB and 20 megapixels. A failed download or webpage response exits non-zero; it never emits a fabricated observation.
+The video pipeline reuses the same `vision.pipeline`, so the same optional learned mask path applies to sampled video frames without creating a second video algorithm.

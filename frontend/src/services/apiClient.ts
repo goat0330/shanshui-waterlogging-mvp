@@ -17,13 +17,16 @@ import type {
 export type DataSource = 'fixture' | 'api'
 
 export const DATA_SOURCE: DataSource = import.meta.env.VITE_DATA_SOURCE === 'api' ? 'api' : 'fixture'
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '')
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
+export const API_BASE_URL = configuredApiBase.replace(/\/+$/, '')
+
+function apiUrl(path: string): string {
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path
+}
 
 async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`)
-  if (!response.ok) {
-    throw new Error(`API ${response.status} ${path}`)
-  }
+  const response = await fetch(apiUrl(path))
+  if (!response.ok) throw new Error(`API ${response.status} ${path}`)
   return response.json() as Promise<T>
 }
 
@@ -44,7 +47,8 @@ export const apiClient: DashboardDataClient = {
 }
 
 export function getRealtimeUrl(baseUrl = API_BASE_URL): string {
-  const url = new URL(baseUrl, window.location.origin)
+  const base = baseUrl || window.location.origin
+  const url = new URL(base, window.location.origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   url.pathname = `${url.pathname.replace(/\/$/, '')}/ws/v1/realtime`
   url.search = ''

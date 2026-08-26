@@ -2,27 +2,32 @@ repositories:
   - name: V-FloodNet
     url: https://github.com/xmlyqing00/V-FloodNet
     purpose: video water segmentation / research depth estimation
-    observed_license_note: "Official README says the paper/source material is all rights reserved"
-    license_review: pending
-    integration: local_video_source
+    observed_license_note: "Upstream rights do not establish blanket redistribution permission."
+    license_review: pending_external_redistribution
+    integration: external_command
     allowed_in_mvp: true
-    mvp_scope: local_research_video_evidence_only
-    external_execution_allowed: false
-    production_allowed: false
-    redistribution_allowed: false
+    mvp_use_scope: local_research_only
+    production: false
+    redistribution: false
 
   - name: flood-water-segmentation
     url: https://github.com/hupi11/flood-water-segmentation
-    purpose: water mask benchmark / optional segmentation backend
-    observed_license_note: "Repository license and dataset terms must be reviewed separately"
-    license_review: pending
+    purpose: optional water mask benchmark / segmentation backend
+    observed_license_note: "Repository and dataset terms are reviewed separately."
+    license_review: pending_external_redistribution
     integration: external_repo
-    allowed_in_mvp: false
+    allowed_in_mvp: true
+    mvp_use_scope: local_research_only
+    production: false
+    redistribution: false
 
   - name: hydrocam-water-segmentation
     url: https://github.com/hydrocam/water-segmentation
     purpose: optional edge water segmentation research
-    observed_license_note: "Reference only until license and data terms are reviewed"
-    license_review: pending
+    observed_license_note: "Reference/research use only unless separately cleared."
+    license_review: pending_external_redistribution
     integration: reference_only
     allowed_in_mvp: true
+    mvp_use_scope: local_research_only
+    production: false
+    redistribution: false

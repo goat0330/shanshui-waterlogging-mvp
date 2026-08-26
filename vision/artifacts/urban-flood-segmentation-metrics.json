@@ -2,38 +2,23 @@
   "status": "PASS",
   "candidate": "pixel_logistic_regression",
   "task": "water_segmentation",
+  "mvpReviewStatus": "VERIFIED_FOR_RESEARCH_MVP",
   "source": {
     "dataset": "Urban Flood Image Dataset",
     "resource": "https://www.hydroshare.org/resource/24866122a6ee456c8f7c80aa87a9abcb/",
     "declaredLicense": "CC BY 4.0",
-    "mvpVerification": "VERIFIED_FOR_RESEARCH_MVP",
-    "rightsReview": "DEFERRED_TO_USER",
+    "rightsReview": "CC_BY_4_0_CONFIRMED_FOR_RESEARCH_MVP",
     "runtimePolicy": "research_mvp_local_only"
   },
   "split": {
     "unit": "source_archive",
-    "trainDatasets": [
-      "Deepflood",
-      "Sazara"
-    ],
-    "testDatasets": [
-      "WebCOOS"
-    ],
+    "trainDatasets": ["Deepflood", "Sazara"],
+    "testDatasets": ["WebCOOS"],
     "trainImages": 1293,
     "testImages": 35,
     "sameImageAcrossSplit": false
   },
-  "features": [
-    "r",
-    "g",
-    "b",
-    "h",
-    "s",
-    "v",
-    "x",
-    "y",
-    "gradient"
-  ],
+  "features": ["r", "g", "b", "h", "s", "v", "x", "y", "gradient"],
   "sampledTrainPixels": 496512,
   "candidateMetrics": {
     "count": 35,
@@ -67,7 +52,7 @@
       "recall": 0.564646
     }
   },
-  "interpretation": "Held-out mask metrics only; not a production street-camera accuracy claim.",
+  "interpretation": "Held-out mask metrics only; not a production street-camera or centimetre-depth accuracy claim.",
   "notVerified": [
     "Shanghai domain transfer",
     "video temporal stability",

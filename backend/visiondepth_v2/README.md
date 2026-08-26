@@ -1,46 +1,36 @@
 # VisionDepth V2 LeanGuard adapter
 
-This package is an isolated research/data gate for the existing VisionDepth
-V1 evidence pipeline. It does not replace the fixed
-`VisionDepthObservation` contract, change FastAPI routes, write SensorState,
-or overwrite `FloodPoint.currentDepthCm`.
+This package remains the local research/video adapter for the shared `vision.pipeline`. It does not change the `VisionDepthObservation` ownership boundary, write `SensorState`, or overwrite current flood-point depth.
 
-## Current execution boundary
+## MVP media gate
 
-The first gate is an authorized local MP4. The manifest must record its source,
-license, authorization, camera and scenario. The gate requires a decodable MP4
-with at least 30 frames. If no such source exists, the result is explicitly
-`VIDEO_SOURCE_REQUIRED`; no synthetic or CCTV/LIVE result is manufactured.
+The local research-video gate requires a decodable MP4 with at least 30 frames. The six recorded V-FloodNet sample files keep their existing frame-gate evidence: four pass and two 11-frame files are rejected without duplication/interpolation.
 
-The frame engine calls the existing `vision.pipeline.run_pipeline`. V2 adds
-only a camera-calibration guard: when the camera is uncalibrated,
-`estimatedDepthCm` is forced to `null` and confidence is capped low. Water
-segmentation and reference detection are not duplicated here.
+For this project:
 
-V-FloodNet is represented in the registry as a local research-video source for
-this MVP only. Its source, weights and large datasets are not copied or
-committed, and no external V-FloodNet command/model is executed. The six small
-test videos are kept outside Git for the local-only smoke and are recorded as
-`MVP_REVIEW`; this is not final public-use approval. The registry keeps the
-pending license state. `tools.check_third_party --config configs/local.yaml`
-passes only for the explicitly non-redistributable `research_mvp` profile and
-still blocks production, redistribution and external model execution.
+```text
+mvp_use_scope=local_research_only
+allowed_in_mvp=true
+production=false
+redistribution=false
+```
 
-## Run from this directory
+External redistribution/production review is a separate gate and must not be treated as a blocker for the local MVP. These videos are never Shanghai LIVE CCTV and must be labeled non-live/research.
+
+## Shared frame engine
+
+Every sampled frame calls `vision.pipeline.run_pipeline`. The pipeline may use the locally configured verified learned water-segmentation checkpoint via `VISION_WATER_SEGMENTATION_CHECKPOINT`; if absent/unloadable it falls back to OpenCV. No second video segmentation algorithm is created here.
+
+Camera calibration remains independent: uncalibrated video keeps metric `estimatedDepthCm` unavailable according to the existing guard. Learned water-mask validation is not centimetre-depth validation.
+
+## Run
 
 ```text
 python -m pytest -q
 python -m tools.data_gate --config configs/local.yaml
 python -m tools.video_smoke --config configs/local.yaml
 python -m tools.check_third_party --config configs/local.yaml
-python -m tools.eval_masks --pred outputs/masks --gt ../../../../data/visiondepth/gt_masks
 python -m compileall -q src tools tests
 ```
 
-The data and third-party roots are intentionally outside Git. Do not add MP4,
-model weights, raw datasets, `.env.local`, or external repositories to this
-package. `runtime_profile: research_mvp` permits the local OpenCV path and the
-explicitly scoped local research-video evidence input; it does not approve
-pending third-party licenses, external model execution, or redistribution.
-Production/redistribution profiles remain blocked until review is explicitly
-approved.
+Do not commit raw MP4s, model checkpoints, full datasets, `.env.local`, or runtime output bundles.
