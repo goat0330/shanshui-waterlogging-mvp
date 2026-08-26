@@ -4,8 +4,12 @@ repositories:
     purpose: video water segmentation / research depth estimation
     observed_license_note: "Official README says the paper/source material is all rights reserved"
     license_review: pending
-    integration: external_command
-    allowed_in_mvp: false
+    integration: local_video_source
+    allowed_in_mvp: true
+    mvp_scope: local_research_video_evidence_only
+    external_execution_allowed: false
+    production_allowed: false
+    redistribution_allowed: false
 
   - name: flood-water-segmentation
     url: https://github.com/hupi11/flood-water-segmentation
@@ -22,4 +26,3 @@ repositories:
     license_review: pending
     integration: reference_only
     allowed_in_mvp: true
-

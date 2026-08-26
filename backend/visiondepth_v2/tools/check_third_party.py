@@ -1,4 +1,4 @@
-"""Block external model use until license review is explicitly approved."""
+"""Keep pending third-party use local-only until review is explicitly approved."""
 
 from __future__ import annotations
 
@@ -25,6 +25,15 @@ def _allows_local_research(config: dict[str, Any]) -> bool:
     )
 
 
+def _local_mvp_assets(entries: list[dict[str, Any]]) -> list[str]:
+    return [
+        str(item.get("name"))
+        for item in entries
+        if item.get("allowed_in_mvp") is True
+        and item.get("mvp_scope") == "local_research_video_evidence_only"
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(PACKAGE_ROOT / "configs" / "local.yaml"))
@@ -42,6 +51,9 @@ def main() -> int:
     if blocked:
         if _allows_local_research(config):
             print("THIRD_PARTY_CHECK_PASS: RESEARCH_MVP_LOCAL_ONLY")
+            allowed_assets = _local_mvp_assets(entries)
+            if allowed_assets:
+                print(f"- local research assets allowed: {', '.join(allowed_assets)}")
             print("- pending entries remain blocked for production/redistribution/external model use")
             return 0
         print("THIRD_PARTY_REVIEW_REQUIRED")

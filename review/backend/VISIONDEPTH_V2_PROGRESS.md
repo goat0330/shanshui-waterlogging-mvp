@@ -183,3 +183,31 @@ The small JSON evidence is tracked at `vision/artifacts/urban-flood-segmentation
 - No learned candidate is wired as the default production image/video model. Real V-FloodNet video smoke remains OpenCV baseline with `estimatedDepthCm=null` under the uncalibrated guard.
 - Metric depth MAE/RMSE, within-5/10 cm, ordinal metrics, temporal jump rate and any product decision improvement are `NOT VERIFIED`.
 - Final public-use/redistribution decisions remain user-owned; local research data and checkpoint are not in Git. HydroShare acquisition succeeded; the source's declared license and rights handoff still require final project review.
+
+## RC2.3 MVP Evidence Policy reconciliation
+
+本节按冻结的 RC2.3 MVP Evidence Policy 对研究运行时状态做收敛，不改变
+VisionDepth contract、默认推理链或 Delivery Manifest。
+
+- Urban Flood Image Dataset 的声明许可证为 `CC BY 4.0`；基于 Deepflood +
+  Sazara 训练、WebCOOS 留出集验证的 pixel Logistic Regression 候选固定为
+  `VERIFIED_FOR_RESEARCH_MVP`。留出集 IoU 为 `0.648314`，同一留出集的
+  OpenCV baseline IoU 为 `0.395276`。该状态只适用于 water segmentation
+  research MVP，不等于上海生产准确率、metric centimetre depth 或生产模型。
+- `vision/artifacts/urban-flood-segmentation-metrics.json` 保留
+  `rightsReview=DEFERRED_TO_USER`，并单独记录 `mvpVerification`；这表示
+  研究 MVP 可复现实验状态已冻结，但最终公开/再分发决定仍未完成。
+- V-FloodNet 在 registry 中标为 `allowed_in_mvp=true`，范围严格为
+  `local_research_video_evidence_only`。`license_review` 仍为 `pending`，
+  `external_execution_allowed=false`、`production_allowed=false`、
+  `redistribution_allowed=false`。因此本地视频 evidence gate 可通过，
+  但不构成第三方模型、公开发布或再分发许可。
+- 现有 6 个本地 MP4 中只有 4 个通过 `>=30` 帧 gate，实际视频 smoke 为
+  4 个视频、25 个 sampled frames；2 个 11 帧文件仍被拒绝，未插帧、未复制
+  帧。所有逐帧视频结果仍为 `estimatedDepthCm=null` 并含
+  `CAMERA_UNCALIBRATED`。
+
+本节之后的边界仍保持：默认 image/video 链路使用 OpenCV baseline；候选模型
+只输出水域 mask，不输出厘米，不写 SensorState/Forecast；无上海标签、相机
+标定、视频时序 GT、STURM 车辆 ordinal 或 V-FloodNet 公制深度对齐数据时，
+厘米精度、时序稳定性、跨城市泛化和生产部署继续 `NOT VERIFIED`。
