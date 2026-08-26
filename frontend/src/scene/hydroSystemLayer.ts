@@ -1,29 +1,49 @@
 import * as Cesium from 'cesium'
 
-export const HUANGPU_RIVER_GEOJSON_URL = '/demo/hydro/huangpu-river.geojson'
-export const HUANGPU_RIVER_SOURCE_LABEL = 'SYNTHETIC DEMO · WGS84 lon/lat'
+export const SHANGHAI_WATER_POLYGONS_GEOJSON_URL = '/demo/water/shanghai-water-polygons.geojson'
+export const SHANGHAI_WATERWAYS_GEOJSON_URL = '/demo/water/shanghai-waterways.geojson'
+export const SHANGHAI_WATER_SOURCE_LABEL = '© OpenStreetMap contributors · Shanghai extract · 2026-08-25 · WGS84'
 
-const RIVER_FILL = Cesium.Color.fromCssColorString('#123746').withAlpha(0.5)
-const RIVER_STROKE = Cesium.Color.fromCssColorString('#3a6874').withAlpha(0.74)
+const WATER_FILL = Cesium.Color.fromCssColorString('#123746').withAlpha(0.2)
+const WATER_STROKE = Cesium.Color.fromCssColorString('#3a6874').withAlpha(0.62)
+const STREAM_STROKE = Cesium.Color.fromCssColorString('#5e8991').withAlpha(0.38)
 
-export async function loadHuangpuHydroSystemLayer(viewer: Cesium.Viewer) {
-  const dataSource = await Cesium.GeoJsonDataSource.load(HUANGPU_RIVER_GEOJSON_URL, {
-    clampToGround: true,
-    fill: RIVER_FILL,
-    stroke: RIVER_STROKE,
-    strokeWidth: 2,
-  })
+export async function loadShanghaiHydroSystemLayer(viewer: Cesium.Viewer) {
+  const [waterDataSource, waterwaysDataSource] = await Promise.all([
+    Cesium.GeoJsonDataSource.load(SHANGHAI_WATER_POLYGONS_GEOJSON_URL, {
+      clampToGround: true,
+      fill: WATER_FILL,
+      stroke: WATER_STROKE,
+      strokeWidth: 1,
+    }),
+    Cesium.GeoJsonDataSource.load(SHANGHAI_WATERWAYS_GEOJSON_URL, {
+      clampToGround: true,
+      stroke: WATER_STROKE,
+      strokeWidth: 1.5,
+    }),
+  ])
 
-  dataSource.name = 'Huangpu River · synthetic demo'
-  dataSource.entities.values.forEach((entity) => {
+  waterDataSource.name = 'Shanghai water polygons · OpenStreetMap'
+  waterwaysDataSource.name = 'Shanghai waterways · OpenStreetMap'
+
+  waterDataSource.entities.values.forEach((entity) => {
     if (!entity.polygon) return
     entity.polygon.heightReference = new Cesium.ConstantProperty(Cesium.HeightReference.CLAMP_TO_GROUND)
     entity.polygon.classificationType = new Cesium.ConstantProperty(Cesium.ClassificationType.TERRAIN)
     entity.polygon.outline = new Cesium.ConstantProperty(true)
-    entity.polygon.outlineColor = new Cesium.ConstantProperty(RIVER_STROKE)
+    entity.polygon.outlineColor = new Cesium.ConstantProperty(WATER_STROKE)
     entity.polygon.zIndex = new Cesium.ConstantProperty(1)
   })
 
-  await viewer.dataSources.add(dataSource)
-  return dataSource
+  waterwaysDataSource.entities.values.forEach((entity) => {
+    if (!entity.polyline) return
+    const props = entity.properties?.getValue(Cesium.JulianDate.now()) as { waterway?: string } | undefined
+    const isStream = props?.waterway === 'stream'
+    entity.polyline.material = new Cesium.ColorMaterialProperty(isStream ? STREAM_STROKE : WATER_STROKE)
+    entity.polyline.width = new Cesium.ConstantProperty(isStream ? 1 : 1.5)
+  })
+
+  await viewer.dataSources.add(waterDataSource)
+  await viewer.dataSources.add(waterwaysDataSource)
+  return [waterDataSource, waterwaysDataSource]
 }

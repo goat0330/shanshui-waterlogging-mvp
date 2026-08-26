@@ -4,7 +4,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 import type { FloodEvent, FloodPoint, ForecastFrame, ForecastKey, SensorState } from './types'
 import { CITY_LABEL_SOURCE_LABEL, loadCityLabelLayer } from './scene/cityLabelLayer'
 import { addDemoCityBlocks } from './scene/demoCityLayer'
-import { HUANGPU_RIVER_GEOJSON_URL, HUANGPU_RIVER_SOURCE_LABEL, loadHuangpuHydroSystemLayer } from './scene/hydroSystemLayer'
+import { SHANGHAI_WATER_POLYGONS_GEOJSON_URL, SHANGHAI_WATER_SOURCE_LABEL, SHANGHAI_WATERWAYS_GEOJSON_URL, loadShanghaiHydroSystemLayer } from './scene/hydroSystemLayer'
 import { loadMajorRoadLayer, MAJOR_ROADS_GEOJSON_URL, MAJOR_ROADS_SOURCE_LABEL } from './scene/majorRoadLayer'
 import { addGeographicSensorEntity } from './scene/sensorEntity'
 
@@ -104,7 +104,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const cityLayerRef = useRef<Cesium.PrimitiveCollection | null>(null)
-  const hydroDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
+  const hydroDataSourceRef = useRef<Cesium.GeoJsonDataSource[]>([])
   const roadDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const labelDataSourceRef = useRef<Cesium.CustomDataSource | null>(null)
   const forecastDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
@@ -243,12 +243,12 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
 
     let cancelled = false
     setHydroStatus('loading')
-    void loadHuangpuHydroSystemLayer(viewer).then((dataSource) => {
+    void loadShanghaiHydroSystemLayer(viewer).then((dataSource) => {
       if (cancelled || viewerRef.current !== viewer || viewer.isDestroyed()) {
-        if (!viewer.isDestroyed()) viewer.dataSources.remove(dataSource, true)
+        if (!viewer.isDestroyed()) dataSource.forEach((source) => viewer.dataSources.remove(source, true))
         return
       }
-      dataSource.show = layers.water
+      dataSource.forEach((source) => { source.show = layers.water })
       hydroDataSourceRef.current = dataSource
       setHydroStatus('ready')
     }).catch(() => {
@@ -257,9 +257,9 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
 
     return () => {
       cancelled = true
-      if (hydroDataSourceRef.current && viewerRef.current === viewer && !viewer.isDestroyed()) {
-        viewer.dataSources.remove(hydroDataSourceRef.current, true)
-        hydroDataSourceRef.current = null
+      if (hydroDataSourceRef.current.length && viewerRef.current === viewer && !viewer.isDestroyed()) {
+        hydroDataSourceRef.current.forEach((source) => viewer.dataSources.remove(source, true))
+        hydroDataSourceRef.current = []
       }
     }
   }, [viewerReady])
@@ -321,7 +321,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   }, [layers.depth])
 
   useEffect(() => {
-    if (hydroDataSourceRef.current) hydroDataSourceRef.current.show = layers.water
+    hydroDataSourceRef.current.forEach((source) => { source.show = layers.water })
   }, [layers.water])
 
   useEffect(() => {
@@ -495,8 +495,9 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       data-local-tileset={CORE_TILES_URL}
       data-coordinate-system="WGS84 lon/lat"
       data-ground-source="dark-globe-no-label"
-      data-hydro-source={HUANGPU_RIVER_GEOJSON_URL}
-      data-hydro-attribution={HUANGPU_RIVER_SOURCE_LABEL}
+      data-hydro-source={SHANGHAI_WATER_POLYGONS_GEOJSON_URL}
+      data-hydro-waterways-source={SHANGHAI_WATERWAYS_GEOJSON_URL}
+      data-hydro-attribution={SHANGHAI_WATER_SOURCE_LABEL}
       data-hydro-status={hydroStatus}
       data-road-source={roadSourceUrl}
       data-road-attribution={roadAttribution}
