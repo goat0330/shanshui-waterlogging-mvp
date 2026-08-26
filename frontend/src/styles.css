@@ -107,43 +107,31 @@ a {
 
 .brand {
   display: flex;
-  align-items: center;
-  min-width: 410px;
+  align-items: flex-start;
+  width: 430px;
+  min-width: 430px;
+  height: 60px;
   color: var(--cyan);
 }
 
-.logo-mark {
-  width: 46px;
-  height: 46px;
-  margin-right: 8px;
-  flex: 0 0 auto;
+.brand-lockup {
+  position: relative;
+  display: block;
+  width: 430px;
+  height: 60px;
+  flex: 0 0 430px;
+  overflow: hidden;
 }
 
-.brand-copy {
-  display: inline-flex;
-  align-items: baseline;
-  white-space: nowrap;
-}
-
-.brand-title {
-  color: #f5fbff;
-  font-size: 25px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-shadow: 0 0 16px rgba(92, 214, 244, 0.17);
-}
-
-.brand-divider {
-  margin: 0 10px;
-  color: rgba(76, 190, 231, 0.55);
-  font-weight: 300;
-}
-
-.brand-subtitle {
-  color: #f0f5f7;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+.brand-lockup img {
+  position: absolute;
+  top: -19px;
+  left: 0;
+  display: block;
+  width: 430px;
+  height: 103px;
+  max-width: none;
+  object-fit: fill;
 }
 
 .weather-strip {

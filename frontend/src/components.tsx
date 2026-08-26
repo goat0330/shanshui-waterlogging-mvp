@@ -66,12 +66,7 @@ export function TopNav({ activeItem = '实时监测', overview, updatedAt }: Top
   return (
     <header className="top-nav">
       <a className="brand" href="/" aria-label="返回实时监测首页">
-        <LogoMark />
-        <span className="brand-copy">
-          <span className="brand-title">启晓平台</span>
-          <span className="brand-divider">|</span>
-          <span className="brand-subtitle">城市内涝智能防控中心</span>
-        </span>
+        <BrandLockup />
       </a>
 
       {overview && (
@@ -111,13 +106,16 @@ export function TopNav({ activeItem = '实时监测', overview, updatedAt }: Top
   )
 }
 
-function LogoMark() {
+export interface BrandLockupProps {
+  src?: string
+  alt?: string
+}
+
+export function BrandLockup({ src = '/brand/qixiao-platform-lockup.png', alt = '启晓平台｜城市内涝智能防控中心' }: BrandLockupProps) {
   return (
-    <svg className="logo-mark" viewBox="0 0 56 56" aria-hidden="true">
-      <path d="M28 5 18 20l-7 9 17-7 17 7-7-9L28 5Z" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M5 36c8-5 15-5 23 0 8-5 15-5 23 0M8 45c7-4 13-4 20 0 7-4 13-4 20 0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="28" cy="28" r="3" fill="currentColor" />
-    </svg>
+    <span className="brand-lockup">
+      <img src={src} alt={alt} />
+    </span>
   )
 }
 
