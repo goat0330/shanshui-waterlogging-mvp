@@ -21,6 +21,7 @@ import type {
 } from './types'
 import type { VideoEvidenceState, VideoOverlayData } from './adapters/videoEvidenceAdapter'
 import { CesiumScene } from './CesiumScene'
+import type { HistoricalCaseMedia } from './data/historicalCaseMedia'
 import { API_BASE_URL } from './services/apiClient'
 
 const NAV_ITEMS = ['实时监测', '风险预警', '内涝分析', '预测预报', '资源调度', '系统管理']
@@ -397,22 +398,57 @@ export interface EventPanelProps {
   sensorId?: string | null
   historicalCases?: HistoricalFloodCase[]
   selectedHistoricalCase?: HistoricalFloodCase | null
+  historicalCaseMedia?: HistoricalCaseMedia | null
+  eventOptions?: EventIndexItem[]
+  selectedEventKey?: string | null
+  onSelectEvent?: (eventKey: string) => void
   onSelectHistoricalCase?: (candidateId: string) => void
   onClearHistoricalCase?: () => void
   onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
+export interface EventIndexItem {
+  key: string
+  kind: 'REALTIME_EVENT' | 'HISTORICAL_PUBLIC_REPORT'
+  title: string
+  meta: string
+}
+
+function EventIndexControl({ items, selectedKey = null, onSelect }: { items: EventIndexItem[]; selectedKey?: string | null; onSelect?: (eventKey: string) => void }) {
+  if (items.length === 0) return null
+  const fallbackKey = items[0].key
+  const value = selectedKey && items.some((item) => item.key === selectedKey) ? selectedKey : fallbackKey
+  return (
+    <label className="event-index-control">
+      <span>正式事件 {items.length}</span>
+      <select value={value} aria-label={`正式事件选择，共 ${items.length} 个`} onChange={(input) => onSelect?.(input.target.value)}>
+        {items.map((item) => (
+          <option value={item.key} key={item.key}>
+            {item.kind === 'REALTIME_EVENT' ? `实时 · ${item.title}` : `历史 · ${item.meta} · ${item.title}`}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
+  const eventMeta = event
+    ? `事件 ID：${event.id}`
+    : selectedHistoricalCase
+      ? '历史公开案例'
+      : '未关联正式事件'
   if (!event) {
     const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
     return (
       <Panel className="event-panel" state={emptyState}>
-        <PanelHeader title="内涝事件" icon="▮" meta={<span>未关联正式事件</span>} />
+        <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
         <HistoricalCasePanel
           cases={historicalCases}
           selectedCase={selectedHistoricalCase}
+          media={historicalCaseMedia}
           onSelect={onSelectHistoricalCase}
           onClear={onClearHistoricalCase}
         />
@@ -423,7 +459,7 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, hi
 
   return (
     <Panel className={`event-panel ${analysisOpen ? 'event-panel--expanded' : ''}`} state={state}>
-      <PanelHeader title="内涝事件" icon="▮" meta={<span>事件 ID：{event.id}</span>} />
+      <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
       <div className="event-title-row">
         <h3>{event.name}</h3>
         <div className="event-title-actions">
@@ -452,11 +488,12 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, hi
 export interface HistoricalCasePanelProps {
   cases: HistoricalFloodCase[]
   selectedCase?: HistoricalFloodCase | null
+  media?: HistoricalCaseMedia | null
   onSelect?: (candidateId: string) => void
   onClear?: () => void
 }
 
-export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onClear }: HistoricalCasePanelProps) {
+export function HistoricalCasePanel({ cases, selectedCase = null, media = null, onSelect, onClear }: HistoricalCasePanelProps) {
   if (selectedCase) {
     return (
       <div className="historical-case-detail">
@@ -465,10 +502,15 @@ export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onCl
         <h3>{selectedCase.locationText}</h3>
         <div className="historical-case-facts">
           <div><span>区域</span><strong>{selectedCase.district}</strong></div>
-          <div><span>报道水深</span><strong>{selectedCase.depthCm == null ? selectedCase.depthEvidenceText ?? '来源未提供' : `${selectedCase.depthCm.toFixed(1)} cm`}</strong></div>
-          <div><span>传感器</span><strong>公开资料未提供</strong></div>
+          {selectedCase.depthCm != null ? <div><span>来源水深</span><strong>{selectedCase.depthCm.toFixed(1)} cm</strong></div> : selectedCase.depthEvidenceText ? <div><span>来源水深</span><strong>{selectedCase.depthEvidenceText}</strong></div> : null}
           <div><span>报道日期</span><strong>{selectedCase.reportDate}</strong></div>
         </div>
+        {media && media.urls[0] && (
+          <figure className="historical-case-media">
+            <img src={media.urls[0]} alt={`${selectedCase.locationText} 官方报道图片`} loading="lazy" />
+            <figcaption>CASE_SOURCE_MEDIA · 同事件官方来源图 · 权限待用户确认</figcaption>
+          </figure>
+        )}
         <section className="historical-case-section">
           <h4>事件记录</h4>
           <p>{selectedCase.confirmedFacts}</p>
@@ -480,6 +522,10 @@ export function HistoricalCasePanel({ cases, selectedCase = null, onSelect, onCl
         <section className="historical-case-section">
           <h4>官方处置</h4>
           {selectedCase.officialActions.length > 0 ? <div className="historical-case-actions">{selectedCase.officialActions.map((action) => <span key={action}>{action}</span>)}</div> : <p>来源未逐项说明</p>}
+        </section>
+        <section className="historical-case-section">
+          <h4>来源</h4>
+          <p>{selectedCase.sourceAgency} · {selectedCase.sourceTitle}</p>
         </section>
         <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
       </div>
