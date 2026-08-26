@@ -9,15 +9,19 @@ import type {
   FloodPoint,
   ForecastFrame,
   ForecastKey,
+  HistoricalFloodCase,
   PanelState,
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterRainfallStation,
+  ShanghaiWaterSnapshot,
   SensorState,
   VisionDepthObservation,
 } from './types'
 import type { VideoEvidenceState, VideoOverlayData } from './adapters/videoEvidenceAdapter'
 import { CesiumScene } from './CesiumScene'
+import type { HistoricalCaseMedia } from './data/historicalCaseMedia'
 import { API_BASE_URL } from './services/apiClient'
 
 const NAV_ITEMS = ['实时监测', '风险预警', '内涝分析', '预测预报', '资源调度', '系统管理']
@@ -189,14 +193,14 @@ export interface StatusPanelProps {
 }
 
 export function StatusPanel({ overview, state = 'ready', variant = 'default' }: StatusPanelProps) {
-  const summary = overview.summary ?? null
+  const situation = overview.waterloggingSituation ?? null
 
   return (
     <Panel className={`status-panel ${variant === 'high-risk' ? 'status-panel--high-risk' : ''}`} state={state}>
       <PanelHeader title="当前积水态势" icon="◈" meta={<span>更新于 {formatClock(overview.updatedAt)}</span>} />
-      {summary ? <StatusSummary summary={summary} /> : (
+      {situation ? <StatusSummary situation={situation} /> : (
         <div className="status-summary-empty">
-          <span className="status-summary-kicker">SUMMARY BLOCK</span>
+          <span className="status-summary-kicker">城市积水汇总</span>
           <strong>—</strong>
           <span>等待城市积水汇总</span>
           <small>当前模式未提供城市积水汇总</small>
@@ -206,19 +210,19 @@ export function StatusPanel({ overview, state = 'ready', variant = 'default' }: 
   )
 }
 
-function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['summary']> }) {
-  const deltaMagnitude = Math.abs(summary.changeVs1h).toFixed(1)
-  const deltaPrefix = summary.changeVs1h > 0 ? '+' : summary.changeVs1h < 0 ? '−' : ''
-  const deltaArrow = summary.changeVs1h > 0 ? '↑' : summary.changeVs1h < 0 ? '↓' : '→'
-  const deltaTone = summary.changeVs1h > 0 ? 'up' : summary.changeVs1h < 0 ? 'down' : 'flat'
-  const maxAreaEvents = Math.max(...summary.topAreas.map((area) => area.eventCount), 1)
+function StatusSummary({ situation }: { situation: NonNullable<DashboardOverview['waterloggingSituation']> }) {
+  const deltaMagnitude = Math.abs(situation.changeVsHour).toFixed(1)
+  const deltaPrefix = situation.changeVsHour > 0 ? '+' : situation.changeVsHour < 0 ? '−' : ''
+  const deltaArrow = situation.changeVsHour > 0 ? '↑' : situation.changeVsHour < 0 ? '↓' : '→'
+  const deltaTone = situation.changeVsHour > 0 ? 'up' : situation.changeVsHour < 0 ? 'down' : 'flat'
+  const maxAreaEvents = Math.max(...situation.topDistricts.map((area) => area.eventCount), 1)
 
   return (
     <div className="status-summary">
       <div className="status-summary-main">
-        <div className="status-summary-ring" role="img" aria-label={`积水事件 ${summary.totalEvents} 起，较1小时前${deltaPrefix}${deltaMagnitude}`}>
+        <div className="status-summary-ring" role="img" aria-label={`积水事件 ${situation.totalEvents} 起，较1小时前${deltaPrefix}${deltaMagnitude}`}>
           <div className="status-summary-ring-core">
-            <strong>{summary.totalEvents}</strong>
+            <strong>{situation.totalEvents}</strong>
             <span>积水事件</span>
             <span className={`status-summary-delta status-summary-delta--${deltaTone}`}>
               <b>{deltaArrow}</b>{deltaPrefix}{deltaMagnitude}<small>较1h前</small>
@@ -226,29 +230,29 @@ function StatusSummary({ summary }: { summary: NonNullable<DashboardOverview['su
           </div>
         </div>
         <div className="status-workflow" aria-label="事件处置状态">
-          <StatusSummaryItem label="待处置" detail="新发现事件" value={summary.status.pending} tone="pending" />
-          <StatusSummaryItem label="处理中" detail="正在排水 / 管控" value={summary.status.processing} tone="processing" />
-          <StatusSummaryItem label="已缓解" detail="水位持续下降" value={summary.status.mitigated} tone="mitigated" />
+          <StatusSummaryItem label="待处置" detail="新发现事件" value={situation.disposition.pending} tone="pending" />
+          <StatusSummaryItem label="处理中" detail="正在排水 / 管控" value={situation.disposition.handling} tone="processing" />
+          <StatusSummaryItem label="已缓解" detail="水位持续下降" value={situation.disposition.relieved} tone="mitigated" />
         </div>
       </div>
       <div className="status-summary-lower">
         <div className="status-top-areas">
           <div className="status-section-label"><span>高发区域</span><small>TOP 3</small></div>
-          {summary.topAreas.slice(0, 3).map((area, index) => (
-            <div className="status-area-row" key={`${area.name}-${index}`}>
+          {situation.topDistricts.slice(0, 3).map((area, index) => (
+            <div className="status-area-row" key={`${area.district}-${index}`}>
               <span className="status-area-rank">{String(index + 1).padStart(2, '0')}</span>
-              <strong>{area.name}</strong>
+              <strong>{area.district}</strong>
               <span className="status-area-bar"><i style={{ width: `${(area.eventCount / maxAreaEvents) * 100}%` }} /></span>
               <small>{String(area.eventCount).padStart(2, '0')}</small>
             </div>
           ))}
-          {summary.topAreas.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
+          {situation.topDistricts.length === 0 && <div className="status-subtle-empty">暂无高发区域</div>}
         </div>
         <div className="status-summary-metrics">
-          <StatusSummaryMetric icon="depth" label="最大水深" value={`${summary.maxDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric icon="average" label="平均水深" value={`${summary.averageDepthCm.toFixed(1)} cm`} />
-          <StatusSummaryMetric icon="response" label="平均响应时间" value={`${summary.averageResponseMinutes.toFixed(0)} min`} />
-          <StatusSummaryMetric icon="today" label="今日新增" value={`${summary.newToday > 0 ? '+' : ''}${summary.newToday} 起`} />
+          <StatusSummaryMetric icon="depth" label="最大水深" value={`${situation.metrics.maxDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="average" label="平均水深" value={`${situation.metrics.avgDepthCm.toFixed(1)} cm`} />
+          <StatusSummaryMetric icon="response" label="平均响应时间" value={`${situation.metrics.avgResponseMinutes.toFixed(0)} min`} />
+          <StatusSummaryMetric icon="today" label="今日新增" value={`${situation.metrics.newToday > 0 ? '+' : ''}${situation.metrics.newToday} 起`} />
         </div>
       </div>
     </div>
@@ -352,28 +356,37 @@ function MetricValue({ value, unit, label, tone, compact = false }: { value: str
 
 export interface RankingPanelProps {
   ranking: RainfallStationRankingItem[]
+  realRainfall?: ShanghaiWaterRainfallStation[] | null
+  realSource?: ShanghaiWaterSnapshot | null
   state?: PanelState
 }
 
-export function RankingPanel({ ranking, state = 'ready' }: RankingPanelProps) {
-  const rankedStations = [...ranking].sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5)
-  const maxValue = Math.max(...rankedStations.map((station) => station.intensityMmH), 1)
+export function RankingPanel({ ranking, realRainfall = null, realSource = null, state = 'ready' }: RankingPanelProps) {
+  const hasRealRainfall = Boolean(realRainfall?.length)
+  const rankedStations = hasRealRainfall
+    ? realRainfall!.slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.rainfallValue }))
+    : ranking.slice().sort((a, b) => b.intensityMmH - a.intensityMmH).slice(0, 5).map((station) => ({ stationId: station.stationId, stationName: station.stationName, value: station.intensityMmH }))
+  const maxValue = Math.max(...rankedStations.map((station) => station.value), 1)
 
   return (
     <Panel className="ranking-panel" state={state}>
-      <PanelHeader title="重点区域雨强排行" icon="⌘" meta={<span>单位：mm/h</span>} />
-      <div className="ranking-caption"><span>排名 / 站点</span><small>雨强</small></div>
+      <PanelHeader title={hasRealRainfall ? '上海水务实时雨量' : '重点区域雨强排行'} icon="⌘" meta={<span>{hasRealRainfall ? '源站雨量值' : '单位：mm/h'}</span>} />
+      <div className="ranking-caption"><span>排名 / 站点</span><small>{hasRealRainfall ? '雨量值' : '雨强'}</small></div>
       <div className="ranking-list">
         {rankedStations.map((station, index) => (
           <div className="ranking-row" key={station.stationId}>
             <span className={`rank-badge rank-badge--${index + 1}`}>{index + 1}</span>
             <span className="ranking-name" title={station.stationName}>{station.stationName.replace(/站$/, '')}</span>
-            <span className="ranking-bar"><i style={{ width: `${(station.intensityMmH / maxValue) * 100}%` }} /></span>
-            <strong className="ranking-value ranking-value--high">{station.intensityMmH.toFixed(1)}</strong>
+            <span className="ranking-bar"><i style={{ width: `${(station.value / maxValue) * 100}%` }} /></span>
+            <strong className="ranking-value ranking-value--high">{station.value.toFixed(1)}</strong>
           </div>
         ))}
       </div>
-      <p className="panel-footnote">数据来源：Rainfall station ranking · 以雨强排序</p>
+      <p className="panel-footnote">
+        {hasRealRainfall
+          ? `数据来源：上海市水务局公开接口 · RAINVALUE；积水检测 ${realSource?.ponding.length ?? 0} 点，水位 ${realSource?.waterLevels.length ?? 0} 站`
+          : '数据来源：Rainfall station ranking · 以雨强排序'}
+      </p>
     </Panel>
   )
 }
@@ -383,16 +396,62 @@ export interface EventPanelProps {
   analysis: AIAnalysis | null
   sensor?: SensorState | null
   sensorId?: string | null
+  historicalCases?: HistoricalFloodCase[]
+  selectedHistoricalCase?: HistoricalFloodCase | null
+  historicalCaseMedia?: HistoricalCaseMedia | null
+  eventOptions?: EventIndexItem[]
+  selectedEventKey?: string | null
+  onSelectEvent?: (eventKey: string) => void
+  onSelectHistoricalCase?: (candidateId: string) => void
+  onClearHistoricalCase?: () => void
   onOpenVision?: () => void
   state?: PanelState
 }
 
-export function EventPanel({ event, analysis, sensor = null, sensorId = null, onOpenVision, state = 'ready' }: EventPanelProps) {
+export interface EventIndexItem {
+  key: string
+  kind: 'REALTIME_EVENT' | 'HISTORICAL_PUBLIC_REPORT'
+  title: string
+  meta: string
+}
+
+function EventIndexControl({ items, selectedKey = null, onSelect }: { items: EventIndexItem[]; selectedKey?: string | null; onSelect?: (eventKey: string) => void }) {
+  if (items.length === 0) return null
+  const fallbackKey = items[0].key
+  const value = selectedKey && items.some((item) => item.key === selectedKey) ? selectedKey : fallbackKey
+  return (
+    <label className="event-index-control">
+      <span>正式事件 {items.length}</span>
+      <select value={value} aria-label={`正式事件选择，共 ${items.length} 个`} onChange={(input) => onSelect?.(input.target.value)}>
+        {items.map((item) => (
+          <option value={item.key} key={item.key}>
+            {item.kind === 'REALTIME_EVENT' ? `实时 · ${item.title}` : `历史 · ${item.meta} · ${item.title}`}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+export function EventPanel({ event, analysis, sensor = null, sensorId = null, historicalCases = [], selectedHistoricalCase = null, historicalCaseMedia = null, eventOptions = [], selectedEventKey = null, onSelectEvent, onSelectHistoricalCase, onClearHistoricalCase, onOpenVision, state = 'ready' }: EventPanelProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false)
+  const eventMeta = event
+    ? `事件 ID：${event.id}`
+    : selectedHistoricalCase
+      ? '历史公开案例'
+      : '未关联正式事件'
   if (!event) {
+    const emptyState = state === 'ready' && historicalCases.length === 0 && !selectedHistoricalCase ? 'empty' : state
     return (
-      <Panel className="event-panel" state={state === 'ready' ? 'empty' : state}>
-        <PanelHeader title="内涝事件" icon="▮" meta={<span>未关联正式事件</span>} />
+      <Panel className="event-panel" state={emptyState}>
+        <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
+        <HistoricalCasePanel
+          cases={historicalCases}
+          selectedCase={selectedHistoricalCase}
+          media={historicalCaseMedia}
+          onSelect={onSelectHistoricalCase}
+          onClear={onClearHistoricalCase}
+        />
       </Panel>
     )
   }
@@ -400,7 +459,7 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, on
 
   return (
     <Panel className={`event-panel ${analysisOpen ? 'event-panel--expanded' : ''}`} state={state}>
-      <PanelHeader title="内涝事件" icon="▮" meta={<span>事件 ID：{event.id}</span>} />
+      <PanelHeader title="内涝事件" icon="▮" meta={<div className="event-panel-header-meta"><span>{eventMeta}</span><EventIndexControl items={eventOptions} selectedKey={selectedEventKey} onSelect={onSelectEvent} /></div>} />
       <div className="event-title-row">
         <h3>{event.name}</h3>
         <div className="event-title-actions">
@@ -423,6 +482,68 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, on
       <SensorEvidence sensor={sensor} sensorId={sensorId} />
       <AIAnalysisPanel analysis={analysis} expanded={analysisOpen} onToggle={() => setAnalysisOpen((open) => !open)} compact />
     </Panel>
+  )
+}
+
+export interface HistoricalCasePanelProps {
+  cases: HistoricalFloodCase[]
+  selectedCase?: HistoricalFloodCase | null
+  media?: HistoricalCaseMedia | null
+  onSelect?: (candidateId: string) => void
+  onClear?: () => void
+}
+
+export function HistoricalCasePanel({ cases, selectedCase = null, media = null, onSelect, onClear }: HistoricalCasePanelProps) {
+  if (selectedCase) {
+    return (
+      <div className="historical-case-detail">
+        <button type="button" className="historical-case-back" onClick={onClear}>← 历史案例列表</button>
+        <div className="historical-case-kicker">历史公开案例 · {selectedCase.incidentDate}</div>
+        <h3>{selectedCase.locationText}</h3>
+        <div className="historical-case-facts">
+          <div><span>区域</span><strong>{selectedCase.district}</strong></div>
+          {selectedCase.depthCm != null ? <div><span>来源水深</span><strong>{selectedCase.depthCm.toFixed(1)} cm</strong></div> : selectedCase.depthEvidenceText ? <div><span>来源水深</span><strong>{selectedCase.depthEvidenceText}</strong></div> : null}
+          <div><span>报道日期</span><strong>{selectedCase.reportDate}</strong></div>
+        </div>
+        {media && media.urls[0] && (
+          <figure className="historical-case-media">
+            <img src={media.urls[0]} alt={`${selectedCase.locationText} 官方报道图片`} loading="lazy" />
+            <figcaption>CASE_SOURCE_MEDIA · 同事件官方来源图</figcaption>
+          </figure>
+        )}
+        <section className="historical-case-section">
+          <h4>事件记录</h4>
+          <p>{selectedCase.confirmedFacts}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>交通影响</h4>
+          <p>{selectedCase.trafficImpact ?? '来源未说明'}</p>
+        </section>
+        <section className="historical-case-section">
+          <h4>官方处置</h4>
+          {selectedCase.officialActions.length > 0 ? <div className="historical-case-actions">{selectedCase.officialActions.map((action) => <span key={action}>{action}</span>)}</div> : <p>来源未逐项说明</p>}
+        </section>
+        <section className="historical-case-section">
+          <h4>来源</h4>
+          <p>{selectedCase.sourceAgency} · {selectedCase.sourceTitle}</p>
+        </section>
+        <a className="historical-case-source" href={selectedCase.sourceUrl} target="_blank" rel="noreferrer">查看官方来源 ↗</a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="historical-case-browser">
+      <p className="historical-case-intro">当前点位未关联正式实时事件。地图中的历史点位可点选，以下为已核验的公开案例，不代表当前告警。</p>
+      <div className="historical-case-list" aria-label="历史公开案例列表">
+        {cases.map((item) => (
+          <button type="button" className="historical-case-item" key={item.candidateId} onClick={() => onSelect?.(item.candidateId)}>
+            <span className="historical-case-item-main"><strong>{item.district} · {item.locationText}</strong><small>{item.incidentDate}</small></span>
+            <span className="historical-case-item-note">{item.trafficImpact ?? '官方积水记录'} <i>›</i></span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -624,7 +745,8 @@ export function CctvCard({ camera, state = 'ready', showOverlay = true, overlayD
           : mediaState === 'ready' ? 'RESULT READY · NO FRAME' : 'RESULT READY · WAITING FOR MEDIA'
         : 'RESULT NOT ATTACHED'
   const researchVideo = camera.mediaUrl?.startsWith('/runtime/vision-video/') === true ||
-    (overlayData?.runtimePolicy === 'research_mvp' && !overlayData.synthetic)
+    camera.mediaUrl?.startsWith('/demo/video/') === true ||
+    overlayData?.runtimePolicy === 'research_mvp'
   const displayName = researchVideo ? '非实时视频' : camera.name
   const mediaStatusLabel = researchVideo ? '非实时视频' : camera.status
   const sourceLabel = researchVideo ? '视频证据 · 非实时' : `VISION_VIDEO · MEDIA / ${camera.mediaType}`

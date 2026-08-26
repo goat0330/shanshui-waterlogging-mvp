@@ -30,6 +30,7 @@ npm run dev
 |---|---|---|
 | `VITE_DATA_SOURCE` | Set to `api` for backend REST/WebSocket; unset/other uses fixtures | Optional; fixture default |
 | `VITE_API_BASE_URL` | API base URL; code default is local `127.0.0.1:8000` | Conditional API mode |
+| backend `DATA_MODE` | Set to `hybrid` or `real` to enable the provisional Shanghai Water Bureau source adapter | Conditional live-source mode; fixture default |
 | `VITE_CESIUM_ION_TOKEN` | OSM Buildings access | Optional for local Huangpu fallback; value must remain local/ignored |
 | `VITE_DEMO_VIDEO_URL` | Local-only verified MP4 served from ignored `public/runtime/` | Optional; default is tracked synthetic browser evidence |
 | `VITE_DEMO_VIDEO_OVERLAY_URL` | Local-only timestamped VisionDepth overlay JSON | Optional; must match `VITE_DEMO_VIDEO_URL` |
@@ -41,6 +42,8 @@ $env:VITE_DATA_SOURCE = "api"
 $env:VITE_API_BASE_URL = "http://127.0.0.1:8000"
 npm run dev
 ```
+
+To let the API-mode dashboard consume the public Shanghai water source seam, start the backend with `DATA_MODE=hybrid`. The existing formal Contract endpoints remain fixture-backed; the frontend calls the provisional `/api/v1/external/shanghai-water` response and labels the panel as source-reported rainfall. The source field is `RAINVALUE` (“雨量值”), not silently converted to `intensityMmH`; source-reported coordinates are not independently WGS84/GCJ-02 calibrated. If the public endpoint is unavailable, the UI keeps its existing fixture/API fallback.
 
 `VITE_CESIUM_ION_TOKEN` is not required for the local Huangpu fallback. Do not paste its value into this README, manifests, screenshots, build logs or commit messages.
 

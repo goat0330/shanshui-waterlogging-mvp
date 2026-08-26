@@ -146,6 +146,13 @@
         "geometrySupport": "none"
       },
       "synthetic": false
+    },
+    "decision": {
+      "floodDetected": true,
+      "decisionDepthCm": 25.4,
+      "trafficStatus": "NOT_RECOMMENDED",
+      "recommendation": "DO_NOT_PASS",
+      "decisionDepthSource": "ESTIMATED_REFERENCE"
     }
   },
   {
@@ -161,7 +168,7 @@
       "depth": {
         "level": 5,
         "estimatedDepthCm": null,
-        "approximateDepthCm": 50.0,
+        "approximateDepthCm": null,
         "rangeCm": [
           50,
           null
@@ -204,8 +211,7 @@
       "qualityFlags": [
         "BASELINE_ONLY",
         "MODEL_WEIGHT_MISSING",
-        "NO_REFERENCE",
-        "ROUGH_VISUAL_ESTIMATE"
+        "NO_REFERENCE"
       ],
       "model": {
         "waterSegmentation": "opencv_baseline",
@@ -213,6 +219,13 @@
         "geometrySupport": "none"
       },
       "synthetic": false
+    },
+    "decision": {
+      "floodDetected": true,
+      "decisionDepthCm": 50.0,
+      "trafficStatus": "PROHIBITED",
+      "recommendation": "NO_PASSAGE",
+      "decisionDepthSource": "LEVEL_LOWER_BOUND"
     }
   },
   {
@@ -364,6 +377,13 @@
         "geometrySupport": "none"
       },
       "synthetic": false
+    },
+    "decision": {
+      "floodDetected": false,
+      "decisionDepthCm": 0.0,
+      "trafficStatus": "NORMAL",
+      "recommendation": "NORMAL_PASSAGE",
+      "decisionDepthSource": "NO_FLOOD"
     }
   }
 ]

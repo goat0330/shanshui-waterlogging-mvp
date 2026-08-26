@@ -135,3 +135,51 @@ manifest 使用 `license=MVP_REVIEW`、`authorized=true`。这里的 `authorized
 - 上一实现 checkpoint：`61fae2b`（`feat(visiondepth): add guarded video evidence scaffold`）。
 - 本轮代码 checkpoint：`6e93c45538da6964bffab597fd63a93329d1bf2e`（`feat(visiondepth): enable research MVP video smoke`）。本报告随后单独提交；runtime MP4、manifest 和 outputs 不进入 Git。
 - RC2 report checkpoint：`bee38d5aa5d0492cf919cdbefef893945ff1ebfa`（本报告内容已提交；本行将随最终 docs commit 固化）。
+
+## RC2.3 research training checkpoint — water segmentation candidate
+
+状态：`CONDITIONAL`。本节是算法历史证据，不替代 `docs/06_DELIVERY_MANIFEST.md` 的当前发布状态。
+
+### G0 environment and acquisition
+
+- Baseline environment: Python 3.11.5, OpenCV 4.13.0, Pillow 11.3.0, NumPy 1.26.4, PyTorch 2.6.0+cu118, CUDA available, `transformers`, `torchvision`, `scikit-learn`, `ultralytics` and `segmentation_models_pytorch` importable. No package was installed in this checkpoint.
+- D: drive free space at G0: approximately 164 GB.
+- No reusable Torch/HuggingFace checkpoint, GT mask directory, depth label split or STURM artifact existed before acquisition. TinyCamML (13.3 GB), V-FloodNet WaterDataset/records, Eawag weights and model weights were not downloaded.
+- Acquired locally outside Git: Urban Flood Image Dataset HydroShare bag (`103.5 MB`, SHA256 `59826F76D8541B7A4C52E09060A033481374D7610681FE6594102DE16C83CD38`), declared `CC BY 4.0`, rights review `DEFERRED_TO_USER`; extracted pairs: Deepflood `1040`, Sazara `253`, WebCOOS `35`.
+- Also acquired and MD5-verified HKFlood-SMDepth (`HKFlood-SMDepth.zip`, MD5 `6E5C9DE418BA11808F32926C0FC6ACE5`, 62 labelled images, declared Zenodo `CC BY 4.0`). It was not mixed into this segmentation training run and remains a future metric-depth experiment asset.
+
+Runtime paths are under `data/visiondepth/research/` at the project root and are not Git artifacts. The source archive, extracted images/masks and learned checkpoint are not committed.
+
+### Selected route and split
+
+Only one learned route was run: a small pixel-level Logistic Regression water-mask candidate. It uses RGB/HSV, normalized image coordinates and gradient features; it is not a foundation model and does not infer centimetres.
+
+The split is source-archive-level, not random pixels: Deepflood + Sazara (`1293` images) for training and WebCOOS (`35` images) as a held-out camera/source domain. `496,512` balanced training pixels were sampled deterministically with seed `23`. No same image crosses the split. The OpenCV baseline is evaluated on exactly the same WebCOOS holdout.
+
+### Actual training/evaluation
+
+```text
+python -m vision.train_water_segmenter --data-root D:\研究生作业\上海城市内涝_智慧平台\data\visiondepth\research\Urban-Flood-Image-Dataset\extracted --model-out D:\研究生作业\上海城市内涝_智慧平台\data\visiondepth\research\Urban-Flood-Image-Dataset\candidate-water-segmentation.joblib --metrics-out vision/artifacts/urban-flood-segmentation-metrics.json --examples-dir D:\研究生作业\上海城市内涝_智慧平台\data\visiondepth\research\Urban-Flood-Image-Dataset\candidate-examples
+WATER_SEGMENTATION_CANDIDATE_PASS train=1293 test=35 candidate_iou=0.648314 baseline_iou=0.395276
+```
+
+Held-out mask results, reported for this split only:
+
+| method | IoU | Dice | precision | recall | images |
+|---|---:|---:|---:|---:|---:|
+| learned pixel Logistic Regression | 0.648314 | 0.781130 | 0.778333 | 0.810439 | 35 |
+| OpenCV baseline | 0.395276 | 0.562605 | 0.584075 | 0.564646 | 35 |
+
+The small JSON evidence is tracked at `vision/artifacts/urban-flood-segmentation-metrics.json`. Three candidate/baseline/truth example masks and the joblib checkpoint remain local-only. The numbers are not a Shanghai accuracy claim and have no temporal-video interpretation.
+
+### Runtime boundary
+
+`vision.learned_segmentation.predict_water_mask()` is an explicit local-checkpoint adapter. The default `vision.pipeline` and MP4 → frame → same image pipeline remain OpenCV, so existing image/video smoke stays reproducible without a model file. The candidate outputs only a water mask; it does not set `estimatedDepthCm`, does not use `level -> cm`, does not treat relative depth as metric depth, and does not write SensorState/Forecast. Candidate checkpoint activation in product/video inference remains gated until provenance, domain transfer and end-to-end evidence are reviewed.
+
+### NOT VERIFIED / blockers
+
+- No Shanghai-labelled water masks, video ground truth, STURM ordinal artifact or aligned V-FloodNet metric-depth GT was available locally. STURM vehicle ordinal training and HKFlood + V-FloodNet continuous-depth fusion were not run in this checkpoint.
+- The holdout contains 35 WebCOOS frames from one source archive/camera sequence; cross-city, cross-weather, true event-level and temporal generalization remain `NOT VERIFIED`.
+- No learned candidate is wired as the default production image/video model. Real V-FloodNet video smoke remains OpenCV baseline with `estimatedDepthCm=null` under the uncalibrated guard.
+- Metric depth MAE/RMSE, within-5/10 cm, ordinal metrics, temporal jump rate and any product decision improvement are `NOT VERIFIED`.
+- Final public-use/redistribution decisions remain user-owned; local research data and checkpoint are not in Git. HydroShare acquisition succeeded; the source's declared license and rights handoff still require final project review.

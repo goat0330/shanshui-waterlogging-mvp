@@ -4,10 +4,10 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 
 ## Baseline and ownership
 
-- Main baseline: `b6ea92a` (backend/Cesium/Vision integration already merged)
-- Branch: `worker/rc22-dashboard-repair`
+- Main baseline: `38df8df` (all four RC2.2 worker checkpoints integrated)
+- Branch: `main` after parent cherry-pick
 - Worktree: `D:/研究生作业/上海城市内涝_智慧平台/worktrees/dashboard-rc11`
-- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/data/homeFixtures.ts`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/styles.css`, `frontend/src/types.ts`, and this review record.
+- Scope: `frontend/src/App.tsx`, `frontend/src/components.tsx`, `frontend/src/data/homeFixtures.ts`, `frontend/src/hooks/useDashboardData.ts`, `frontend/src/styles.css`, `frontend/src/types.ts`, `frontend/src/adapters/videoEvidenceAdapter.ts`, and this review record.
 - Cesium, backend, contracts, public media, and new dependencies were not modified.
 
 ## Delivered
@@ -37,9 +37,10 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Stale product-copy scan over `frontend/src`: PASS; no `SENSOR EVIDENCE`, old sensor disclaimer, `summary pending`, or `没有 decision projection` matches.
 - Backend overview smoke: PASS; local `GET /api/v1/dashboard/overview` returned HTTP 200 with `waterloggingSituation` and the expected fixture-derived values.
 - Adapter decision repro: PASS for flat `frame.decision` and `frame.overlay.decision`; existing nearest-frame/null-depth smoke remains PASS.
+- Browser/API visual review: PASS on Main at `http://127.0.0.1:4173/` in API mode; summary, WS badge, Cesium scene label, video decision and image upload result were independently checked. Evidence screenshots: `review/e2e/rc22-main-1920x1080.jpg` and `review/e2e/rc22-vision-api-1920x1080.jpg`.
 - SceneEventCard browser smoke: PASS; `/` point click opens the card and repeating the same point click closes it; `/gallery` exposes the selected/high-risk component state.
+- Browser/API visual review remains a user review gate for the current integrated runtime.
 - StatusPanel browser smoke: PASS; local `/` renders the reference structure in fixture mode with the demo-only summary projection. Screenshot review used the running 1280px browser viewport; exact 1920×1080 and user visual acceptance remain open.
-- Browser/API visual review: not run in this repair; exact 1920×1080 viewport remains a user review gate.
 - User visual review: pending; this checkpoint is not `MATCHED`.
 
 ## NOT VERIFIED
@@ -55,8 +56,19 @@ Status: `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW`
 - Formal `contracts/openapi.yaml` still needs the two optional nullable `eventId` and `sensorId` properties; this frontend/backend repair does not claim that contract update is complete.
 - Browser/API smoke on `http://127.0.0.1:5175/` against backend `8001`: FP-001 click opened the card with `人民路 · 滨江大道`, `28.6 cm`, `SSZJ-NODE-001`, `未上报`, and three actions; console errors: `0`.
 
+## RC2.3 frontend state-drift closure (2026-08-26)
+
+- Synced the Dashboard worker branch with `origin/main=0cdc329` before validation.
+- Approved MVP `CASE_SOURCE_MEDIA` cards no longer show `权限待用户确认`; the existing two direct official bindings remain the only image media rendered. Page-only or exact-scene-unverified cases stay text/source cards.
+- Local `/demo/video/` and `runtimePolicy=research_mvp` video evidence is presented as `非实时视频`; `licenseReview` and runtime policy remain inside `技术详情`, and no camera is presented as LIVE/上海实时 CCTV.
+- Browser smoke at `http://127.0.0.1:5190/`, Chrome, `1920x1080`: formal event options `9` (`1` realtime + `8` historical); Tianbao Road showed `CASE_SOURCE_MEDIA` without a permission warning and without a live sensor/forecast/CCTV chain; Chongming Xueyan Road remained a text/source card without media; `scrollWidth=1920`, `scrollHeight=1080`, console errors `0`, page errors `0`.
+- `npm run typecheck`: PASS. `npm run build`: PASS with the existing large Cesium chunk warning. `node review/frontend/rc2.1-video-overlay-adapter-smoke.mjs`: PASS. `git diff --check`: PASS.
+
+This is an implementation/conditional checkpoint only. User visual acceptance, public redistribution rights beyond the approved MVP gate, real CCTV, calibrated production depth, and final Cesium asset provenance remain `NOT VERIFIED`.
+
 ## Checkpoint
 
+- Local-main checkpoint: `a9d369a` (frontend StatusPanel refinement cherry-picked onto the Cesium-updated local `main`).
 - Point relation integration checkpoint: worker `8028482`; local Main cherry-pick `2fbdfda`.
 - Commit SHA: `d0f210d706604b91d19f0b79135905ee107cc0f0`
 - SceneEventCard is the bounded image-to-code addition for the selected event point; status remains `IMPLEMENTED / CONDITIONAL / VISUAL_REVIEW` pending user visual review.

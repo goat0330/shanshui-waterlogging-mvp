@@ -6,6 +6,7 @@ export interface VideoEvidenceFrame {
   frameId: string
   timestampMs: number
   observation: VisionDepthObservation
+  decision?: DecisionProjection
   overlay?: {
     referenceBoxes?: unknown[]
   }
@@ -32,6 +33,7 @@ export interface VideoOverlayData {
   quality: VisionDepthObservation['quality']
   qualityFlags: string[]
   synthetic: boolean
+  decision?: DecisionProjection
   waterMaskUrl?: string
   objects?: Array<{
     type: 'vehicle' | 'person'
@@ -220,8 +222,9 @@ function normalizeNestedObservation(observation: VisionDepthObservation, frameDe
 function normalizeFrame(value: unknown, index: number, bundle: RecordValue): VideoEvidenceFrame {
   if (!isRecord(value)) throw new Error(`Invalid video evidence frame at index ${index}`)
   const nestedObservation = hasObservation(value.observation) ? value.observation : null
+  const frameDecision = readFrameDecision(value) ?? nestedObservation?.decision ?? null
   const observation = nestedObservation
-    ? normalizeNestedObservation(nestedObservation, readFrameDecision(value))
+    ? normalizeNestedObservation(nestedObservation, frameDecision)
     : normalizeFlatObservation(value, bundle, index)
   const timestampMs = typeof value.timestampMs === 'number' ? value.timestampMs : Number(value.timestampMs)
   if (!Number.isFinite(timestampMs) || timestampMs < 0) {
@@ -232,7 +235,7 @@ function normalizeFrame(value: unknown, index: number, bundle: RecordValue): Vid
     ? value.overlay.referenceBoxes
     : Array.isArray(value.referenceBoxes) ? value.referenceBoxes : undefined
   const overlay = referenceBoxes ? { referenceBoxes } : undefined
-  return { frameId, timestampMs, observation, overlay }
+  return { frameId, timestampMs, observation, ...(frameDecision ? { decision: frameDecision } : {}), overlay }
 }
 
 export function parseVideoEvidenceBundle(value: unknown): VideoEvidenceBundle {
@@ -289,6 +292,7 @@ function browserAssetUrl(value: string): string | undefined {
 
 export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData {
   const observation = frame.observation
+  const decision = frame.decision ?? observation.decision
   return {
     frameId: frame.frameId,
     timestampMs: frame.timestampMs,
@@ -305,6 +309,7 @@ export function toVideoOverlayData(frame: VideoEvidenceFrame): VideoOverlayData 
     quality: observation.quality,
     qualityFlags: observation.qualityFlags,
     synthetic: observation.synthetic,
+    ...(decision ? { decision } : {}),
     waterMaskUrl: browserAssetUrl(observation.waterMaskPath),
     objects: normalizeReferenceBoxes(frame.overlay?.referenceBoxes),
   }

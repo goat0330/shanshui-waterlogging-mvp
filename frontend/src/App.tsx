@@ -23,9 +23,11 @@ import {
   TopNav,
   VisionDepthDrawer,
   type LayerVisibility,
+  type EventIndexItem,
 } from './components'
 import { homeFixtures } from './data/homeFixtures'
-import { getFloodPointEventId } from './data/mappings'
+import { getHistoricalCaseMedia } from './data/historicalCaseMedia'
+import { DEFAULT_FLOOD_POINT_ID, getFloodPointEventId } from './data/mappings'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
@@ -128,6 +130,8 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const [activeForecast, setActiveForecast] = useState<ForecastKey>(initialForecast)
   const [selectedPointId, setSelectedPointId] = useState('FP-001')
   const [eventCardOpen, setEventCardOpen] = useState(false)
+  const [selectedHistoricalCaseId, setSelectedHistoricalCaseId] = useState<string | null>(null)
+  const [selectedEventKey, setSelectedEventKey] = useState<string | null>('REALTIME_EVENT')
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS)
   const [visionOpen, setVisionOpen] = useState(false)
   const [visionMode, setVisionMode] = useState<'local' | 'url'>('local')
@@ -153,6 +157,23 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     analysesByEventId: data.analysesByEventId,
     camerasById: data.camerasById,
   })
+  const selectedHistoricalCase = data.historicalCases.find((item) => item.candidateId === selectedHistoricalCaseId) ?? null
+  const formalHistoricalCases = data.historicalCases.filter((item) => item.dataStatus === 'HISTORICAL_PUBLIC_REPORT')
+  const realtimeEvent = eventOverride ?? data.event
+  const eventOptions: EventIndexItem[] = [
+    {
+      key: 'REALTIME_EVENT',
+      kind: 'REALTIME_EVENT',
+      title: realtimeEvent?.name ?? '当前实时事件',
+      meta: realtimeEvent?.district ?? '实时数据加载中',
+    },
+    ...formalHistoricalCases.map((item) => ({
+      key: item.candidateId,
+      kind: 'HISTORICAL_PUBLIC_REPORT' as const,
+      title: item.locationText,
+      meta: `${item.incidentDate} · ${item.district}`,
+    })),
+  ]
   const forecastSurface = getForecastSurfaceAdapter(selectedEvent.forecast, activeForecast)
   const selectedSensor = selectedEvent.sensorId
     ? data.sensorsById?.[selectedEvent.sensorId] ?? (data.sensor?.sensorId === selectedEvent.sensorId ? data.sensor : null)
@@ -245,9 +266,35 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
   const selectedVideoFrame = videoReady && videoEvidence ? selectNearestVideoFrame(videoEvidence, videoTimeSec) : null
   const videoOverlayData = selectedVideoFrame ? toVideoOverlayData(selectedVideoFrame) : undefined
 
+  const selectFormalEvent = (eventKey: string) => {
+    if (eventKey === 'REALTIME_EVENT') {
+      setSelectedEventKey('REALTIME_EVENT')
+      setSelectedHistoricalCaseId(null)
+      setSelectedPointId(DEFAULT_FLOOD_POINT_ID)
+      setEventCardOpen(false)
+      return
+    }
+    const historicalCase = formalHistoricalCases.find((item) => item.candidateId === eventKey)
+    if (!historicalCase) return
+    setSelectedEventKey(eventKey)
+    setSelectedHistoricalCaseId(eventKey)
+    const historicalPoint = data.points.find((point) => point.historicalCaseId === eventKey)
+    if (historicalPoint) setSelectedPointId(historicalPoint.id)
+    setEventCardOpen(false)
+  }
+
   const handlePointSelect = (pointId: string) => {
     const point = data.points.find((item) => item.id === pointId) ?? null
+    if (point?.historicalCaseId) {
+      setSelectedEventKey(point.historicalCaseId)
+      setSelectedHistoricalCaseId(point.historicalCaseId)
+      setEventCardOpen(false)
+      setSelectedPointId(pointId)
+      return
+    }
     const hasEvent = getFloodPointEventId(point) !== null
+    setSelectedEventKey(hasEvent ? 'REALTIME_EVENT' : null)
+    setSelectedHistoricalCaseId(null)
     setEventCardOpen((open) => hasEvent && (selectedPointId === pointId ? !open : true))
     setSelectedPointId(pointId)
   }
@@ -270,16 +317,33 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
         <RainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} />
-        <RankingPanel ranking={data.rainfallRanking} />
+        <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
       <div className="dashboard-side dashboard-side--right">
-        <EventPanel event={selectedEvent.event} analysis={selectedEvent.analysis} sensor={sensor} sensorId={selectedEvent.sensorId} onOpenVision={() => setVisionOpen(true)} />
-        <ForecastPreview forecast={selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
+        <EventPanel
+          event={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.event}
+          analysis={selectedHistoricalCase ? null : selectedEvent.analysis}
+          sensor={selectedHistoricalCase ? null : sensor}
+          sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
+          historicalCases={formalHistoricalCases}
+          selectedHistoricalCase={selectedHistoricalCase}
+          historicalCaseMedia={selectedHistoricalCase ? getHistoricalCaseMedia(selectedHistoricalCase.candidateId) : null}
+          eventOptions={eventOptions}
+          selectedEventKey={selectedEventKey}
+          onSelectEvent={selectFormalEvent}
+          onSelectHistoricalCase={selectFormalEvent}
+          onClearHistoricalCase={() => {
+            setSelectedEventKey(null)
+            setSelectedHistoricalCaseId(null)
+          }}
+          onOpenVision={() => setVisionOpen(true)}
+        />
+        <ForecastPreview forecast={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.forecast} activeKey={activeForecast} measuredDepthCm={selectedHistoricalCase ? null : sensor?.depthCm ?? null} sourceLabel={forecastSourceLabel} onChange={setActiveForecast} />
         <CctvCard
-          camera={selectedEvent.camera}
+          camera={selectedHistoricalCase || selectedEventKey !== 'REALTIME_EVENT' ? null : selectedEvent.camera}
           showOverlay={layers.video}
           overlayData={videoOverlayData}
-          decision={selectedVideoFrame?.observation.decision ?? null}
+          decision={selectedVideoFrame?.decision ?? null}
           videoEvidenceState={videoEvidenceState}
           onVideoReady={setVideoReady}
           onVideoTimeUpdate={setVideoTimeSec}
@@ -328,7 +392,7 @@ function DashboardPage() {
   })
   const data = dashboard.data ?? homeFixtures
   const dataBadge = dashboard.source === 'api'
-    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : `API DATA · WS ${realtime.status.toUpperCase()}`
+    ? dashboard.error ? 'API UNAVAILABLE · FIXTURE FALLBACK' : data.shanghaiWater ? `API DATA · SHANGHAI WATER LIVE · WS ${realtime.status.toUpperCase()}` : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 
   return (
@@ -405,6 +469,9 @@ function GalleryPage() {
             </GalleryCard>
             <GalleryCard title="EventPanel" stateName="empty">
               <EventPanel event={homeFixtures.event} analysis={homeFixtures.analysis} state="empty" />
+            </GalleryCard>
+            <GalleryCard title="EventPanel" stateName="historical public cases">
+              <HistoricalCaseGalleryPreview />
             </GalleryCard>
             <GalleryCard title="ForecastPreview" stateName="NOW active">
               <ForecastPreview forecast={homeFixtures.forecast} activeKey="NOW" measuredDepthCm={createDemoSensorEvidence(homeFixtures.event).depthCm} onChange={() => undefined} />
@@ -529,6 +596,21 @@ function VisionDepthGalleryPreview() {
       />
     </div>
   )
+}
+
+function HistoricalCaseGalleryPreview() {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedCase = homeFixtures.historicalCases.find((item) => item.candidateId === selectedId) ?? null
+
+  return <EventPanel
+    event={null}
+    analysis={null}
+    historicalCases={homeFixtures.historicalCases}
+    selectedHistoricalCase={selectedCase}
+    historicalCaseMedia={selectedCase ? getHistoricalCaseMedia(selectedCase.candidateId) : null}
+    onSelectHistoricalCase={setSelectedId}
+    onClearHistoricalCase={() => setSelectedId(null)}
+  />
 }
 
 function SceneOnlyPreview() {

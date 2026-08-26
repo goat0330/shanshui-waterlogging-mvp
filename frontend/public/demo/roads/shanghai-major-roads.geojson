@@ -1,0 +1,47 @@
+{
+  "type": "FeatureCollection",
+  "name": "shanghai-major-roads-demo",
+  "metadata": {
+    "source": "SYNTHETIC DEMO",
+    "attribution": "Approximate centerlines authored for the Cesium visual-layer smoke; not an official road dataset.",
+    "coordinateSystem": "WGS84 lon/lat",
+    "scope": "Central Shanghai view only"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "road-yanan-elevated", "name": "延安高架路", "roadClass": "elevated", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.438,31.225],[121.455,31.225],[121.472,31.226],[121.489,31.229],[121.507,31.231]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-north-south-elevated", "name": "南北高架路", "roadClass": "elevated", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.468,31.270],[121.469,31.253],[121.470,31.237],[121.471,31.220],[121.472,31.202]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-inner-ring", "name": "内环高架", "roadClass": "elevated", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.440,31.205],[121.452,31.198],[121.468,31.194],[121.486,31.195],[121.505,31.202],[121.520,31.214]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-nanjing-west", "name": "南京西路", "roadClass": "major", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.445,31.239],[121.461,31.239],[121.477,31.238],[121.493,31.236],[121.508,31.234]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-beijing-west", "name": "北京西路", "roadClass": "major", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.448,31.247],[121.465,31.247],[121.481,31.245],[121.496,31.243],[121.508,31.241]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-luban", "name": "鲁班路", "roadClass": "major", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.465,31.193],[121.466,31.206],[121.467,31.219],[121.468,31.232]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "road-zhongshan-east", "name": "中山东一路", "roadClass": "major", "source": "synthetic-demo" },
+      "geometry": { "type": "LineString", "coordinates": [[121.492,31.245],[121.493,31.237],[121.493,31.229],[121.494,31.220],[121.494,31.211]] }
+    }
+  ]
+}

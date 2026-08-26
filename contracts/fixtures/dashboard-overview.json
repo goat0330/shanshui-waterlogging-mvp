@@ -10,5 +10,27 @@
     "warning": 12,
     "normal": 137
   },
-  "activeFloodPoints": 26
+  "activeFloodPoints": 26,
+  "waterloggingSituation": {
+    "totalEvents": 1,
+    "changeVsHour": 108.0,
+    "disposition": {
+      "pending": 0,
+      "handling": 1,
+      "relieved": 0
+    },
+    "topDistricts": [
+      {
+        "district": "黄浦区",
+        "eventCount": 1
+      }
+    ],
+    "metrics": {
+      "maxDepthCm": 28.6,
+      "avgDepthCm": 28.6,
+      "avgResponseMinutes": 32.4,
+      "newToday": 1
+    },
+    "source": "FIXTURE_DERIVED"
+  }
 }

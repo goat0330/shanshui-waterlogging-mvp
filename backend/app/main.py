@@ -14,15 +14,21 @@ from .models import (
     FloodEvent,
     FloodForecast,
     FloodPoint,
+    HistoricalFloodCase,
+    MeteorologyContext,
     RainfallSnapshot,
     RainfallStationRankingItem,
     ScenarioTimeline,
+    ShanghaiWaterSnapshot,
     SensorState,
     TelemetryObservation,
     VisionDepthObservation,
     VisionDepthUrlRequest,
 )
+from .config import load_settings
 from .repository import UnknownSensorError, build_repository
+from .meteorology import MeteorologyContextService, MeteorologyError
+from .shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from .vision_depth import VisionDepthAdapter, VisionDepthError
 
 
@@ -39,12 +45,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-repository = build_repository()
+settings = load_settings()
+repository = build_repository(settings)
 # Kept as a compatibility name for the existing smoke and local integrations.
 sensor_repository = repository
 realtime_clients: set[WebSocket] = set()
 SENSOR_SOURCE = "DEMO_DEVICE"
 vision_depth_adapter = VisionDepthAdapter()
+shanghai_water_adapter = ShanghaiWaterAdapter(
+    timeout_seconds=settings.shanghai_water_timeout_seconds,
+    cache_ttl_seconds=settings.shanghai_water_cache_ttl_seconds,
+)
+meteorology_context_service = MeteorologyContextService(shanghai_water_adapter)
 
 
 def not_found(resource: str, identifier: str) -> HTTPException:
@@ -82,9 +94,56 @@ def list_rainfall_station_ranking() -> list[RainfallStationRankingItem]:
     return repository.list_rainfall_station_ranking()
 
 
+@app.get(
+    "/api/v1/external/shanghai-water",
+    response_model=ShanghaiWaterSnapshot,
+    operation_id="getShanghaiWaterSnapshot",
+    tags=["provisional-external-source"],
+    include_in_schema=False,
+)
+def get_shanghai_water_snapshot() -> ShanghaiWaterSnapshot:
+    if settings.data_mode == "fixture":
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "REAL_SOURCE_DISABLED",
+                "message": "Set DATA_MODE=hybrid or DATA_MODE=real to enable the Shanghai Water Bureau adapter",
+            },
+        )
+    try:
+        return shanghai_water_adapter.fetch(allow_partial=settings.data_mode == "hybrid")
+    except ShanghaiWaterError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
+
+
+@app.get(
+    "/api/v1/context/meteorology",
+    response_model=MeteorologyContext,
+    operation_id="getMeteorologyContext",
+    tags=["provisional-context"],
+    include_in_schema=False,
+)
+def get_meteorology_context() -> MeteorologyContext:
+    try:
+        return meteorology_context_service.get(settings.data_mode)
+    except MeteorologyError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
+
+
 @app.get("/api/v1/flood-points", response_model=list[FloodPoint], operation_id="listFloodPoints")
 def list_flood_points() -> list[FloodPoint]:
     return repository.list_flood_points()
+
+
+@app.get(
+    "/api/v1/historical-cases",
+    response_model=list[HistoricalFloodCase],
+    operation_id="listHistoricalCases",
+    include_in_schema=False,
+    tags=["provisional-history"],
+)
+def list_historical_cases() -> list[HistoricalFloodCase]:
+    return repository.list_historical_cases()
 
 
 @app.get("/api/v1/flood-events/{event_id}", response_model=FloodEvent, operation_id="getFloodEvent")
