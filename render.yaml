@@ -22,6 +22,6 @@ services:
       - key: MEDIA_BUNDLE_URL
         value: https://github.com/goat0330/shanshui-waterlogging-mvp/releases/download/cloud-demo-assets-v1/qixiao-demo-media-v1.zip
       - key: MEDIA_BUNDLE_SHA256
-        value: ""
+        value: 790a82e0b9c94ad61cd358e0841c5108af017baaffc27a3a93c373cb110dff13
       - key: MEDIA_BUNDLE_REQUIRED
-        value: "false"
+        value: "true"
