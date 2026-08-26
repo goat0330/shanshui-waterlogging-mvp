@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "releaseTag": "cloud-demo-assets-v1",
+  "bundle": {
+    "enabled": false,
+    "url": "https://github.com/goat0330/shanshui-waterlogging-mvp/releases/download/cloud-demo-assets-v1/qixiao-demo-media-v1.zip",
+    "sha256": "",
+    "required": false
+  },
+  "layout": {
+    "currentVideo": "video/current/flood_cam_017.mp4",
+    "currentOverlay": "video/current/flood_cam_017.overlay.json",
+    "historicalRoot": "historical",
+    "researchVideoRoot": "video/research",
+    "modelsRoot": "models",
+    "learnedWaterCheckpoint": "models/candidate-water-segmentation.joblib"
+  },
+  "note": "Keep enabled=false until cloud-demo-assets-v1 exists. Render env MEDIA_BUNDLE_URL can override the URL."
+}

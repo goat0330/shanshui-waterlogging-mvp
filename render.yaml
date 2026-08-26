@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: qixiao-waterlogging
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: REPOSITORY_BACKEND
+        value: memory
+      - key: DATA_MODE
+        value: hybrid
+      - key: VITE_DATA_SOURCE
+        value: api
+      - key: VITE_API_BASE_URL
+        value: ""
+      - key: VITE_CESIUM_ION_TOKEN
+        sync: false
+      - key: MEDIA_BUNDLE_URL
+        value: https://github.com/goat0330/shanshui-waterlogging-mvp/releases/download/cloud-demo-assets-v1/qixiao-demo-media-v1.zip
+      - key: MEDIA_BUNDLE_SHA256
+        value: ""
+      - key: MEDIA_BUNDLE_REQUIRED
+        value: "false"

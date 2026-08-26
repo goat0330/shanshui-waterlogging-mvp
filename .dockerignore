@@ -1,0 +1,44 @@
+.git
+.git/**
+.github
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/.env
+frontend/.env.*
+backend/.venv
+.venv
+node_modules
+dist
+*.log
+.env
+.env.*
+!.env.example
+
+# Runtime/generated evidence is not part of the public deployment image.
+backend/.runtime
+vision/artifacts
+review
+worktrees
+runs
+
+# Large/local research data and model files stay out unless delivered via Release bundle.
+data/visiondepth/research
+**/*.pt
+**/*.pth
+**/*.ckpt
+**/*.onnx
+**/*.joblib
+**/*.pkl
+**/*.npz
+**/*.mp4
+**/*.webm
+
+# Keep the tiny tracked browser demo media from frontend/public.
+!frontend/public/demo/video/flood_cam_017.mp4
