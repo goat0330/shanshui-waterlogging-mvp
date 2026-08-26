@@ -65,4 +65,5 @@ export const fixtureClient: DashboardDataClient = {
     return homeFixtures.timeline
   },
   getShanghaiWater: async () => null,
+  getShanghaiWaterRuntime: async () => null,
 }

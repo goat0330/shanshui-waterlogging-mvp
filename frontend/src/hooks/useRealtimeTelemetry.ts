@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { DATA_SOURCE, getRealtimeUrl } from '../services/apiClient'
-import type { SensorState } from '../types'
+import type { SensorState, ShanghaiWaterRealtimeState } from '../types'
 
 export type RealtimeStatus = 'disabled' | 'connecting' | 'connected' | 'fallback'
 
-const REST_REFRESH_INTERVAL_MS = 5000
-const WS_RECONNECT_DELAY_MS = 5000
+const REST_REFRESH_INTERVAL_MS = 15_000
+const WS_RECONNECT_DELAY_MS = 5_000
 
 interface RealtimeEnvelope {
   type?: string
@@ -26,9 +26,18 @@ function isSensorState(value: unknown): value is SensorState {
     && Boolean(candidate.coordinates)
 }
 
+function isShanghaiWaterRealtimeState(value: unknown): value is ShanghaiWaterRealtimeState {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<ShanghaiWaterRealtimeState>
+  return typeof candidate.status === 'string'
+    && typeof candidate.pollIntervalSeconds === 'number'
+    && typeof candidate.rainfallHistory === 'object'
+}
+
 export interface UseRealtimeTelemetryOptions {
   enabled?: boolean
   onSensorUpdated: (sensor: SensorState) => void
+  onShanghaiWaterUpdated?: (state: ShanghaiWaterRealtimeState) => void
   onScenarioStarted?: (payload: unknown) => void
   onRestFallback?: () => void
 }
@@ -38,7 +47,7 @@ export interface UseRealtimeTelemetryResult {
   lastEventAt: string | null
 }
 
-export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensorUpdated, onScenarioStarted, onRestFallback }: UseRealtimeTelemetryOptions): UseRealtimeTelemetryResult {
+export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensorUpdated, onShanghaiWaterUpdated, onScenarioStarted, onRestFallback }: UseRealtimeTelemetryOptions): UseRealtimeTelemetryResult {
   const [status, setStatus] = useState<RealtimeStatus>(enabled ? 'connecting' : 'disabled')
   const [lastEventAt, setLastEventAt] = useState<string | null>(null)
 
@@ -124,6 +133,11 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
         if (envelope.type === 'sensor.updated' && isSensorState(envelope.payload)) {
           setLastEventAt(eventTime)
           onSensorUpdated(envelope.payload)
+          return
+        }
+        if (envelope.type === 'external.shanghai_water.updated' && isShanghaiWaterRealtimeState(envelope.payload)) {
+          setLastEventAt(eventTime)
+          onShanghaiWaterUpdated?.(envelope.payload)
         }
       }
 
@@ -133,7 +147,7 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
         try {
           candidate.close()
         } catch {
-          // The close event will schedule the reconnect when available.
+          // close event will schedule reconnect when available
         }
       }
       candidate.onclose = () => handleSocketClosed(candidate)
@@ -144,10 +158,7 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
     return () => {
       disposed = true
       clearRestRefresh()
-      if (reconnectTimer !== null) {
-        window.clearTimeout(reconnectTimer)
-        reconnectTimer = null
-      }
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer)
       if (socket !== null) {
         const activeSocket = socket
         socket = null
@@ -158,11 +169,11 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
         try {
           activeSocket.close()
         } catch {
-          // The socket is already closing or closed.
+          // socket already closed
         }
       }
     }
-  }, [enabled, onRestFallback, onScenarioStarted, onSensorUpdated])
+  }, [enabled, onRestFallback, onScenarioStarted, onSensorUpdated, onShanghaiWaterUpdated])
 
   return { status, lastEventAt }
 }

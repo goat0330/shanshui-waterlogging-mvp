@@ -34,7 +34,6 @@ import { homeFixtures } from './data/homeFixtures'
 import { getHistoricalCaseMedia } from './data/historicalCaseMedia'
 import { DEFAULT_FLOOD_POINT_ID, getFloodPointEventId } from './data/mappings'
 import { useDashboardData } from './hooks/useDashboardData'
-import { useExternalDataRefresh } from './hooks/useExternalDataRefresh'
 import { useRealtimeTelemetry } from './hooks/useRealtimeTelemetry'
 import { useSelectedEventCoordinator } from './hooks/useSelectedEventCoordinator'
 import { DATA_SOURCE } from './services/apiClient'
@@ -359,7 +358,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
       <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
-        <LiveRainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} realSource={data.shanghaiWater} />
+        <LiveRainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} realSource={data.shanghaiWater} runtime={data.shanghaiWaterRuntime} />
         <RankingPanel ranking={data.rainfallRanking} realRainfall={data.shanghaiWater?.rainfall} realSource={data.shanghaiWater} />
       </div>
       <div className={`dashboard-side dashboard-side--right ${selectedHistoricalCase ? 'dashboard-side--historical' : ''}`}>
@@ -439,23 +438,18 @@ function DashboardPage() {
   const realtime = useRealtimeTelemetry({
     enabled: dashboard.source === 'api',
     onSensorUpdated: dashboard.applySensorState,
-    onRestFallback: dashboard.reload,
+    onShanghaiWaterUpdated: dashboard.applyShanghaiWaterRuntime,
+    onRestFallback: dashboard.refreshRealtimeData,
   })
-  const external = useExternalDataRefresh({
-    enabled: dashboard.source === 'api',
-    initialShanghaiWater: dashboard.data?.shanghaiWater ?? null,
-  })
-  const baseData = dashboard.data ?? homeFixtures
-  const data = external.shanghaiWater && dashboard.source === 'api'
-    ? { ...baseData, shanghaiWater: external.shanghaiWater }
-    : baseData
+  const data = dashboard.data ?? homeFixtures
+  const waterStatus = data.shanghaiWaterRuntime?.status ?? (data.shanghaiWater ? 'ready' : 'disabled')
   const dataBadge = dashboard.source === 'api'
     ? dashboard.error
       ? 'API UNAVAILABLE · FIXTURE FALLBACK'
       : dashboard.degraded
         ? `API DEGRADED · PARTIAL FIXTURE FALLBACK · WS ${realtime.status.toUpperCase()}`
         : data.shanghaiWater
-          ? `HYBRID MVP · SHANGHAI WATER ${external.waterStatus.toUpperCase()} · WS ${realtime.status.toUpperCase()}`
+          ? `HYBRID MVP · SHANGHAI WATER ${waterStatus.toUpperCase()} · WS ${realtime.status.toUpperCase()}`
           : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 

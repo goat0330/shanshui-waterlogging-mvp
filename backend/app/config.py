@@ -11,6 +11,8 @@ class Settings:
     data_mode: str
     shanghai_water_timeout_seconds: float
     shanghai_water_cache_ttl_seconds: float
+    shanghai_water_poll_interval_seconds: float = 60.0
+    shanghai_water_history_points: int = 144
 
 
 def load_settings() -> Settings:
@@ -28,12 +30,16 @@ def load_settings() -> Settings:
 
     timeout_seconds = _positive_float("SHANGHAI_WATER_TIMEOUT_SECONDS", 8.0)
     cache_ttl_seconds = _positive_float("SHANGHAI_WATER_CACHE_TTL_SECONDS", 45.0)
+    poll_interval_seconds = _positive_float("SHANGHAI_WATER_POLL_INTERVAL_SECONDS", 60.0)
+    history_points = _positive_int("SHANGHAI_WATER_HISTORY_POINTS", 144)
     return Settings(
         repository_backend=backend,
         database_url=database_url,
         data_mode=data_mode,
         shanghai_water_timeout_seconds=timeout_seconds,
         shanghai_water_cache_ttl_seconds=cache_ttl_seconds,
+        shanghai_water_poll_interval_seconds=poll_interval_seconds,
+        shanghai_water_history_points=history_points,
     )
 
 
@@ -45,4 +51,15 @@ def _positive_float(name: str, default: float) -> float:
         raise ValueError(f"{name} must be a positive number") from exc
     if value <= 0:
         raise ValueError(f"{name} must be a positive number")
+    return value
+
+
+def _positive_int(name: str, default: int) -> int:
+    raw = os.getenv(name, str(default)).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
     return value

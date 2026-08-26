@@ -266,6 +266,39 @@ class ShanghaiWaterSnapshot(BaseModel):
     cacheHit: bool = False
 
 
+class ShanghaiWaterRainfallHistoryPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str
+    stationName: str
+    observedAt: datetime
+    rainfallValue: float = Field(ge=0)
+
+
+class ShanghaiWaterRealtimeStatus(str, Enum):
+    DISABLED = "disabled"
+    LOADING = "loading"
+    READY = "ready"
+    DEGRADED = "degraded"
+
+
+class ShanghaiWaterRealtimeState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: ShanghaiWaterRealtimeStatus
+    pollIntervalSeconds: float = Field(gt=0)
+    polledAt: datetime | None = None
+    lastSuccessfulPollAt: datetime | None = None
+    sourceChangedAt: datetime | None = None
+    sourceChangedThisPoll: bool = False
+    rainfallChangedThisPoll: bool = False
+    latestSourceObservedAt: datetime | None = None
+    consecutiveFailures: int = Field(default=0, ge=0)
+    lastError: str | None = None
+    snapshot: ShanghaiWaterSnapshot | None = None
+    rainfallHistory: dict[str, list[ShanghaiWaterRainfallHistoryPoint]] = Field(default_factory=dict)
+
+
 class MeteorologyMode(str, Enum):
     FIXTURE = "fixture"
     HYBRID = "hybrid"

@@ -10,6 +10,7 @@ import type {
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
+  ShanghaiWaterRealtimeState,
   ShanghaiWaterSnapshot,
   SensorState,
 } from '../types'
@@ -25,7 +26,7 @@ function apiUrl(path: string): string {
 }
 
 async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(apiUrl(path))
+  const response = await fetch(apiUrl(path), { cache: 'no-store' })
   if (!response.ok) throw new Error(`API ${response.status} ${path}`)
   return response.json() as Promise<T>
 }
@@ -44,6 +45,7 @@ export const apiClient: DashboardDataClient = {
   getSensorState: (sensorId: string) => requestJson<SensorState>(`/api/v1/sensors/${encodeURIComponent(sensorId)}`),
   getTimeline: (scenarioId: string) => requestJson<ScenarioTimeline>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/timeline`),
   getShanghaiWater: () => requestJson<ShanghaiWaterSnapshot>('/api/v1/external/shanghai-water').catch(() => null),
+  getShanghaiWaterRuntime: () => requestJson<ShanghaiWaterRealtimeState>('/api/v1/external/shanghai-water/runtime').catch(() => null),
 }
 
 export function getRealtimeUrl(baseUrl = API_BASE_URL): string {

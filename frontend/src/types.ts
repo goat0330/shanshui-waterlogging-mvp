@@ -117,6 +117,29 @@ export interface ShanghaiWaterSnapshot {
   waterLevelForecast: ShanghaiWaterLevelForecast[]
 }
 
+export interface ShanghaiWaterRainfallHistoryPoint {
+  stationId: string
+  stationName: string
+  observedAt: string
+  rainfallValue: number
+}
+
+export interface ShanghaiWaterRealtimeState {
+  status: 'disabled' | 'loading' | 'ready' | 'degraded'
+  pollIntervalSeconds: number
+  polledAt: string | null
+  lastSuccessfulPollAt: string | null
+  sourceChangedAt: string | null
+  sourceChangedThisPoll: boolean
+  rainfallChangedThisPoll: boolean
+  latestSourceObservedAt: string | null
+  consecutiveFailures: number
+  lastError: string | null
+  snapshot: ShanghaiWaterSnapshot | null
+  rainfallHistory: Record<string, ShanghaiWaterRainfallHistoryPoint[]>
+}
+
+
 export interface FloodPoint {
   id: string
   name: string
@@ -290,6 +313,7 @@ export interface DashboardData {
   timeline: ScenarioTimeline
   sensor?: SensorState | null
   shanghaiWater?: ShanghaiWaterSnapshot | null
+  shanghaiWaterRuntime?: ShanghaiWaterRealtimeState | null
   eventsById?: Record<string, FloodEvent>
   forecastsByEventId?: Record<string, FloodForecast>
   analysesByEventId?: Record<string, AIAnalysis>
@@ -311,6 +335,7 @@ export interface DashboardDataClient {
   getSensorState(sensorId: string): Promise<SensorState>
   getTimeline(scenarioId: string): Promise<ScenarioTimeline>
   getShanghaiWater(): Promise<ShanghaiWaterSnapshot | null>
+  getShanghaiWaterRuntime(): Promise<ShanghaiWaterRealtimeState | null>
 }
 
 export interface HomeFixtures {
@@ -325,4 +350,5 @@ export interface HomeFixtures {
   analysis: AIAnalysis
   timeline: ScenarioTimeline
   shanghaiWater?: ShanghaiWaterSnapshot | null
+  shanghaiWaterRuntime?: ShanghaiWaterRealtimeState | null
 }

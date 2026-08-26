@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { RainfallSnapshot, ShanghaiWaterSnapshot } from './types'
+import type { RainfallSnapshot, ShanghaiWaterRealtimeState, ShanghaiWaterSnapshot } from './types'
 
 interface LiveRainfallPanelProps {
   rainfall: RainfallSnapshot
   stationName?: string
   realSource?: ShanghaiWaterSnapshot | null
-}
-
-interface TrendPoint {
-  stationId: string
-  observedAt: string
-  value: number
+  runtime?: ShanghaiWaterRealtimeState | null
 }
 
 function formatClock(value: string) {
@@ -37,10 +32,18 @@ function Metric({ value, unit, label, tone, compact = false }: { value: string; 
   )
 }
 
-export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', realSource = null }: LiveRainfallPanelProps) {
+function freshnessLabel(runtime: ShanghaiWaterRealtimeState | null | undefined, observedAt: string | null) {
+  if (!runtime) return '前端已连接实时源'
+  if (runtime.status === 'degraded') return runtime.lastError ? '采集降级 · 保留最近有效数据' : '采集降级'
+  if (!runtime.polledAt) return '后端采集器启动中'
+  if (runtime.rainfallChangedThisPoll) return '已刷新 · 雨量源有新观测'
+  if (!observedAt) return '已刷新 · 暂无源站观测'
+  return '已刷新 · 源站暂无新观测'
+}
+
+export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', realSource = null, runtime = null }: LiveRainfallPanelProps) {
   const realStations = realSource?.rainfall ?? []
   const [selectedStationId, setSelectedStationId] = useState<string>('')
-  const [trend, setTrend] = useState<TrendPoint[]>([])
 
   useEffect(() => {
     if (realStations.length === 0) return
@@ -52,23 +55,17 @@ export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', real
 
   const selectedStation = realStations.find((item) => item.stationId === selectedStationId) ?? null
   const realMode = Boolean(selectedStation)
-
-  useEffect(() => {
-    if (!selectedStation) return
-    setTrend((current) => {
-      const nextPoint = { stationId: selectedStation.stationId, observedAt: selectedStation.observedAt, value: selectedStation.rainfallValue }
-      if (current.at(-1)?.stationId !== selectedStation.stationId) return [nextPoint]
-      const duplicate = current.at(-1)?.observedAt === selectedStation.observedAt && current.at(-1)?.value === selectedStation.rainfallValue
-      if (duplicate) return current
-      return [...current, nextPoint].slice(-120)
-    })
-  }, [selectedStation?.stationId, selectedStation?.observedAt, selectedStation?.rainfallValue])
+  const backendHistory = selectedStation ? runtime?.rainfallHistory[selectedStation.stationId] ?? [] : []
+  const trend = realMode
+    ? (backendHistory.length > 0
+        ? backendHistory.map((item) => item.rainfallValue)
+        : [selectedStation!.rainfallValue])
+    : rainfall.trend.map((item) => item.valueMmH)
 
   const chart = useMemo(() => {
     const width = 360
     const height = 112
-    const values = realMode ? trend.map((item) => item.value) : rainfall.trend.map((item) => item.valueMmH)
-    const safeValues = values.length > 0 ? values : [0]
+    const safeValues = trend.length > 0 ? trend : [0]
     const max = Math.max(...safeValues, realMode ? 1 : 100)
     const points = safeValues.map((value, index) => ({
       x: (index / Math.max(safeValues.length - 1, 1)) * width,
@@ -80,12 +77,16 @@ export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', real
       line: points.map((point) => `${point.x},${point.y}`).join(' '),
       area: `0,${height} ${points.map((point) => `${point.x},${point.y}`).join(' ')} ${width},${height}`,
     }
-  }, [rainfall.trend, realMode, trend])
+  }, [realMode, trend])
 
-  const updatedAt = realMode ? realSource?.fetchedAt ?? selectedStation!.observedAt : rainfall.updatedAt
+  const updatedAt = realMode
+    ? runtime?.polledAt ?? realSource?.fetchedAt ?? selectedStation!.observedAt
+    : rainfall.updatedAt
   const chartLabel = realMode ? '源值趋势' : '雨强趋势'
   const chartUnit = realMode ? 'RAINVALUE' : 'mm/h'
   const currentChartValue = realMode ? selectedStation!.rainfallValue : rainfall.intensityMmH
+  const sourceObservedAt = selectedStation?.observedAt ?? runtime?.latestSourceObservedAt ?? null
+  const runtimeHint = realMode ? freshnessLabel(runtime, sourceObservedAt) : null
 
   return (
     <section className="panel rainfall-panel" data-state="ready">
@@ -116,7 +117,7 @@ export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', real
         )}
       </div>
       <div className="chart-heading"><span>{chartLabel}</span><small>({chartUnit})</small></div>
-      <div className="rainfall-chart" aria-label={realMode ? '启动后的上海水务源值趋势' : '最近 120 分钟雨强趋势图'}>
+      <div className="rainfall-chart" aria-label={realMode ? '后端保存的上海水务源值趋势' : '最近 120 分钟雨强趋势图'}>
         <svg viewBox="0 0 360 144" preserveAspectRatio="none" role="img">
           <defs>
             <linearGradient id="rainAreaLive" x1="0" x2="0" y1="0" y2="1">
@@ -130,11 +131,15 @@ export function LiveRainfallPanel({ rainfall, stationName = '徐家汇站', real
           {chart.points.map((point, index) => (
             <circle key={`${point.x}-${index}`} cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 4.6 : 2.4} className={index === chart.points.length - 1 ? 'rain-point rain-point--current' : 'rain-point'} />
           ))}
-          <text x="4" y="140" className="chart-axis-label">{realMode ? '启动' : '−120min'}</text>
+          <text x="4" y="140" className="chart-axis-label">{realMode ? '后端实时历史' : '−120min'}</text>
           <text x="314" y="140" className="chart-axis-label">NOW</text>
           <text x="334" y={(chart.points.at(-1)?.y ?? 32) - 8} className="chart-current-label">{currentChartValue.toFixed(1)}</text>
         </svg>
-        {realMode && trend.length < 3 && <span className="rainfall-live-hint">实时趋势积累中 · 每 60 秒刷新</span>}
+        {realMode && (
+          <span className="rainfall-live-hint" title={runtime?.lastError ?? undefined}>
+            {runtimeHint} · {backendHistory.length} 条源观测 · 后端 {Math.round(runtime?.pollIntervalSeconds ?? 60)}s 自动采集
+          </span>
+        )}
       </div>
     </section>
   )

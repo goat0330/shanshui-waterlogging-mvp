@@ -20,6 +20,7 @@ from .models import (
     RainfallStationRankingItem,
     ScenarioTimeline,
     ShanghaiWaterSnapshot,
+    ShanghaiWaterRealtimeState,
     SensorState,
     TelemetryObservation,
     VisionDepthObservation,
@@ -27,6 +28,7 @@ from .models import (
 )
 from .config import load_settings
 from .repository import UnknownSensorError, build_repository
+from .realtime_external import ShanghaiWaterRealtimeCollector
 from .meteorology import MeteorologyContextService, MeteorologyError
 from .shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from .vision_depth import VisionDepthAdapter, VisionDepthError
@@ -57,6 +59,22 @@ shanghai_water_adapter = ShanghaiWaterAdapter(
     cache_ttl_seconds=settings.shanghai_water_cache_ttl_seconds,
 )
 meteorology_context_service = MeteorologyContextService(shanghai_water_adapter)
+shanghai_water_realtime = ShanghaiWaterRealtimeCollector(
+    shanghai_water_adapter,
+    data_mode=settings.data_mode,
+    poll_interval_seconds=settings.shanghai_water_poll_interval_seconds,
+    history_points_per_station=settings.shanghai_water_history_points,
+)
+
+
+@app.on_event("startup")
+async def startup_realtime_collectors() -> None:
+    await shanghai_water_realtime.start(broadcast_realtime)
+
+
+@app.on_event("shutdown")
+async def shutdown_realtime_collectors() -> None:
+    await shanghai_water_realtime.stop()
 
 
 def not_found(resource: str, identifier: str) -> HTTPException:
@@ -101,7 +119,7 @@ def list_rainfall_station_ranking() -> list[RainfallStationRankingItem]:
     tags=["provisional-external-source"],
     include_in_schema=False,
 )
-def get_shanghai_water_snapshot() -> ShanghaiWaterSnapshot:
+async def get_shanghai_water_snapshot() -> ShanghaiWaterSnapshot:
     if settings.data_mode == "fixture":
         raise HTTPException(
             status_code=503,
@@ -110,10 +128,29 @@ def get_shanghai_water_snapshot() -> ShanghaiWaterSnapshot:
                 "message": "Set DATA_MODE=hybrid or DATA_MODE=real to enable the Shanghai Water Bureau adapter",
             },
         )
-    try:
-        return shanghai_water_adapter.fetch(allow_partial=settings.data_mode == "hybrid")
-    except ShanghaiWaterError as exc:
-        raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
+    state = shanghai_water_realtime.state()
+    if state.snapshot is None:
+        state = await shanghai_water_realtime.refresh_now()
+    if state.snapshot is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "SHANGHAI_WATER_UNAVAILABLE",
+                "message": state.lastError or "Shanghai Water realtime collector has no usable snapshot",
+            },
+        )
+    return state.snapshot
+
+
+@app.get(
+    "/api/v1/external/shanghai-water/runtime",
+    response_model=ShanghaiWaterRealtimeState,
+    operation_id="getShanghaiWaterRealtimeState",
+    tags=["provisional-external-source"],
+    include_in_schema=False,
+)
+def get_shanghai_water_runtime() -> ShanghaiWaterRealtimeState:
+    return shanghai_water_realtime.state()
 
 
 @app.get(
@@ -207,11 +244,11 @@ def get_scenario_timeline(scenario_id: str) -> ScenarioTimeline:
     return timeline
 
 
-async def broadcast_sensor_updated(state: SensorState) -> None:
+async def broadcast_realtime(event_type: str, payload: dict) -> None:
     envelope = {
-        "type": "sensor.updated",
+        "type": event_type,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "payload": state.model_dump(mode="json", exclude_none=True),
+        "payload": payload,
     }
     disconnected: list[WebSocket] = []
     for client in tuple(realtime_clients):
@@ -221,6 +258,13 @@ async def broadcast_sensor_updated(state: SensorState) -> None:
             disconnected.append(client)
     for client in disconnected:
         realtime_clients.discard(client)
+
+
+async def broadcast_sensor_updated(state: SensorState) -> None:
+    await broadcast_realtime(
+        "sensor.updated",
+        state.model_dump(mode="json", exclude_none=True),
+    )
 
 
 @app.post(
