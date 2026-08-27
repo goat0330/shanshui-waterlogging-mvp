@@ -11,6 +11,7 @@ from .models import (
     MeteorologyNowcastFrame,
     MeteorologyRainfallNow,
     MeteorologyRainfallStation,
+    MeteorologyRadar,
     MeteorologySourceHealth,
     MeteorologySourceHealthStatus,
     ShanghaiWaterSnapshot,
@@ -42,13 +43,9 @@ class MeteorologyContextService:
         try:
             snapshot = self.shanghai_water_adapter.fetch(allow_partial=True)
         except ShanghaiWaterError as exc:
-            if data_mode == MeteorologyMode.REAL.value:
-                raise MeteorologyError("METEOROLOGY_UNAVAILABLE", exc.message) from exc
             return self._degraded_context(data_mode, received_at, exc.code, cma)
 
         if not snapshot.rainfall:
-            if data_mode == MeteorologyMode.REAL.value:
-                raise MeteorologyError("METEOROLOGY_RAINFALL_UNAVAILABLE", "Shanghai Water Bureau returned no rainfall stations")
             return self._degraded_context(data_mode, received_at, "SHANGHAI_WATER_RAINFALL_EMPTY", cma)
 
         rainfall = [self._rainfall_station(item, snapshot.coordinateReference) for item in snapshot.rainfall]
@@ -66,12 +63,14 @@ class MeteorologyContextService:
         return MeteorologyContext(
             observedAt=max(observed_candidates),
             receivedAt=received_at,
-            source="SHANGHAI_WATER+CMA_CONTEXT" if cma_ok else ShanghaiWaterAdapter.SOURCE,
+            source="SHANGHAI_WATER+NMC+CHINA_WEATHER" if cma_ok else "SHANGHAI_WATER+METEOROLOGY_PARTIAL",
             coordinateReference=snapshot.coordinateReference,
             mode=MeteorologyMode(data_mode),
             dataStatus=status,
+            current=cma.current,
             warnings=cma.warnings,
             rainfallNow=MeteorologyRainfallNow(stations=rainfall),
+            radar=MeteorologyRadar(frames=cma.radar_frames),
             nowcast=MeteorologyNowcast(frames=cma.frames),
             sourceHealth=source_health,
         )
@@ -84,8 +83,10 @@ class MeteorologyContextService:
             source="FIXTURE_SYNTHETIC",
             mode=MeteorologyMode.FIXTURE,
             dataStatus=MeteorologyDataStatus.SYNTHETIC,
+            current=None,
             warnings=[],
             rainfallNow=MeteorologyRainfallNow(stations=[]),
+            radar=MeteorologyRadar(),
             nowcast=MeteorologyNowcast(frames=self._synthetic_frames(received_at)),
             sourceHealth=[
                 MeteorologySourceHealth(
@@ -105,8 +106,10 @@ class MeteorologyContextService:
             source="METEOROLOGY_DEGRADED",
             mode=MeteorologyMode(data_mode),
             dataStatus=MeteorologyDataStatus.DEGRADED,
+            current=cma.current,
             warnings=cma.warnings,
             rainfallNow=MeteorologyRainfallNow(stations=[]),
+            radar=MeteorologyRadar(frames=cma.radar_frames),
             nowcast=MeteorologyNowcast(frames=cma.frames),
             sourceHealth=[
                 MeteorologySourceHealth(

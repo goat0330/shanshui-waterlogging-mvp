@@ -10,6 +10,7 @@ import type {
   ForecastFrame,
   ForecastKey,
   HistoricalFloodCase,
+  MeteorologyContext,
   PanelState,
   RainfallSnapshot,
   RainfallStationRankingItem,
@@ -58,10 +59,14 @@ export interface TopNavProps {
   activeItem?: string
   overview?: DashboardOverview
   updatedAt?: string
+  meteorology?: MeteorologyContext | null
 }
 
-export function TopNav({ activeItem = '实时监测', overview, updatedAt }: TopNavProps) {
+export function TopNav({ activeItem = '实时监测', overview, updatedAt, meteorology }: TopNavProps) {
   const time = updatedAt ?? overview?.updatedAt
+  const liveWeather = meteorology?.current && !meteorology.current.synthetic ? meteorology.current : null
+  const temperatureC = liveWeather?.temperatureC ?? overview?.weather.temperatureC
+  const condition = liveWeather?.condition ?? overview?.weather.condition
 
   return (
     <header className="top-nav">
@@ -72,8 +77,10 @@ export function TopNav({ activeItem = '实时监测', overview, updatedAt }: Top
       {overview && (
         <div className="weather-strip" aria-label="城市天气">
           <span className="weather-location"><span className="pin-glyph">⌖</span>{overview.city}</span>
-          <span className="weather-temp"><span className="weather-glyph">☼</span>{overview.weather.temperatureC}°C</span>
-          <span className="weather-condition"><span className="rain-glyph">⌁</span>{overview.weather.condition}</span>
+          {temperatureC !== undefined && temperatureC !== null && (
+            <span className="weather-temp" title={liveWeather ? '国家气象中心实况' : '场景天气'}><span className="weather-glyph">☼</span>{temperatureC}°C</span>
+          )}
+          {condition && <span className="weather-condition"><span className="rain-glyph">⌁</span>{condition}</span>}
         </div>
       )}
 

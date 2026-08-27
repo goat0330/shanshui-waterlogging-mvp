@@ -53,7 +53,7 @@ def main() -> None:
             "sent": "2026-08-26T01:30:00Z", "areaDesc": "上海市",
         }]
     }
-    warnings = CmaSourceAdapter.parse_warnings(warning_payload)
+    warnings = CmaSourceAdapter.parse_generic_warnings(warning_payload)
     assert len(warnings) == 1 and warnings[0].sourceId == "WARN-1"
 
     nowcast_payload = {
@@ -65,7 +65,7 @@ def main() -> None:
             "bbox": [120.8, 30.6, 122.2, 31.9],
         }]
     }
-    frames = CmaSourceAdapter.parse_nowcast(nowcast_payload)
+    frames = CmaSourceAdapter.parse_generic_nowcast(nowcast_payload)
     assert len(frames) == 1 and frames[0].renderableInCesium is True
     print("PASS CMA warning + georeferenced nowcast metadata parser")
 

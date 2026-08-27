@@ -356,6 +356,42 @@ class MeteorologyRainfallNow(BaseModel):
     stations: list[MeteorologyRainfallStation]
 
 
+class MeteorologyCurrentConditions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stationId: str
+    stationName: str
+    observedAt: datetime
+    temperatureC: float | None = None
+    condition: str | None = None
+    humidityPercent: float | None = Field(default=None, ge=0, le=100)
+    rainfallMm: float | None = Field(default=None, ge=0)
+    windDirection: str | None = None
+    windPower: str | None = None
+    sourceId: str
+    synthetic: bool = False
+
+
+class MeteorologyRadarFrame(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    observedAt: datetime
+    previewUrl: str
+    mediaType: str | None = None
+    crs: str | None = None
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    georeferenced: bool = False
+    renderableInCesium: bool = False
+    sourceId: str
+    synthetic: bool = False
+
+
+class MeteorologyRadar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    frames: list[MeteorologyRadarFrame] = Field(default_factory=list)
+
+
 class MeteorologyNowcastFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -368,6 +404,9 @@ class MeteorologyNowcastFrame(BaseModel):
     bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
     georeferenced: bool = False
     renderableInCesium: bool = False
+    summary: str | None = None
+    precipitationValue: float | None = Field(default=None, ge=0)
+    precipitationUnit: str | None = None
     sourceId: str
     synthetic: bool = False
 
@@ -398,10 +437,34 @@ class MeteorologyContext(BaseModel):
     coordinateReference: str | None = None
     mode: MeteorologyMode
     dataStatus: MeteorologyDataStatus
+    current: MeteorologyCurrentConditions | None = None
     warnings: list[MeteorologyWarning]
     rainfallNow: MeteorologyRainfallNow
+    radar: MeteorologyRadar = Field(default_factory=MeteorologyRadar)
     nowcast: MeteorologyNowcast
     sourceHealth: list[MeteorologySourceHealth]
+
+
+class MeteorologyRealtimeStatus(str, Enum):
+    DISABLED = "disabled"
+    LOADING = "loading"
+    READY = "ready"
+    DEGRADED = "degraded"
+
+
+class MeteorologyRealtimeState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: MeteorologyRealtimeStatus
+    pollIntervalSeconds: float = Field(gt=0)
+    polledAt: datetime | None = None
+    lastSuccessfulPollAt: datetime | None = None
+    sourceChangedAt: datetime | None = None
+    sourceChangedThisPoll: bool = False
+    latestSourceObservedAt: datetime | None = None
+    consecutiveFailures: int = Field(default=0, ge=0)
+    lastError: str | None = None
+    context: MeteorologyContext | None = None
 
 
 class FloodPoint(BaseModel):

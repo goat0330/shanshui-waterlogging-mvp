@@ -18,7 +18,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 from app.config import load_settings
 from app.main import app, repository, sensor_repository
-from app.meteorology import MeteorologyContextService, MeteorologyError
+from app.meteorology import MeteorologyContextService
 from app.shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from app.vision_depth import VisionDepthAdapter, VisionDepthError, project_vision_decision
 
@@ -413,9 +413,10 @@ def main() -> None:
     assert hybrid_context.rainfallNow.stations[0].windowMinutes is None
     assert not hasattr(hybrid_context.rainfallNow.stations[0], "intensityMmH")
     if not os.environ.get("CMA_NOWCAST_URL"):
-        assert hybrid_context.nowcast.frames == []
-    if not os.environ.get("CMA_WARNING_URL") and not os.environ.get("CMA_NOWCAST_URL"):
-        assert any(item.status.value == "NOT_VERIFIED" for item in hybrid_context.sourceHealth)
+        assert all(frame.renderableInCesium is False for frame in hybrid_context.nowcast.frames)
+        assert any(item.provider == "CHINA_WEATHER_MINUTE_NOWCAST" for item in hybrid_context.sourceHealth)
+    if not os.environ.get("CMA_WARNING_URL"):
+        assert any(item.provider == "NMC_WEATHER_WARNING" for item in hybrid_context.sourceHealth)
 
     failed_context_adapter = ShanghaiWaterAdapter(cache_ttl_seconds=60)
     failed_context_service = MeteorologyContextService(failed_context_adapter)
@@ -426,12 +427,12 @@ def main() -> None:
     ):
         hybrid_degraded = failed_context_service.get("hybrid")
         assert hybrid_degraded.dataStatus.value == "DEGRADED"
-        try:
-            failed_context_service.get("real")
-        except MeteorologyError as exc:
-            assert exc.code == "METEOROLOGY_UNAVAILABLE"
-        else:
-            raise AssertionError("real meteorology fallback was not blocked")
+        real_degraded = failed_context_service.get("real")
+        assert real_degraded.dataStatus.value == "DEGRADED"
+        assert any(
+            item.provider == ShanghaiWaterAdapter.SOURCE and item.status.value == "UNAVAILABLE"
+            for item in real_degraded.sourceHealth
+        )
     print("PASS MeteorologyContext fixture/hybrid/real fallback and raster gate")
 
     malformed_rows = {**source_rows, "YJSW": [{**source_row, "DATETIME": "2026-08-25 12:00:00"}]}
@@ -583,8 +584,10 @@ def main() -> None:
                     "coordinateReference",
                     "mode",
                     "dataStatus",
+                    "current",
                     "warnings",
                     "rainfallNow",
+                    "radar",
                     "nowcast",
                     "sourceHealth",
                 }

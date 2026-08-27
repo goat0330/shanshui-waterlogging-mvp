@@ -355,7 +355,7 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
         sensorId={selectedHistoricalCase ? null : selectedEvent.sensorId}
         onClose={() => setEventCardOpen(false)}
       />
-      <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} />
+      <TopNav overview={data.overview} updatedAt={data.timeline.currentTime} meteorology={data.meteorology} />
       <div className="dashboard-side dashboard-side--left">
         <StatusPanel overview={data.overview} variant={statusVariant} />
         <LiveRainfallPanel rainfall={data.rainfall} stationName={data.rainfallRanking[0]?.stationName} realSource={data.shanghaiWater} runtime={data.shanghaiWaterRuntime} />
@@ -439,17 +439,19 @@ function DashboardPage() {
     enabled: dashboard.source === 'api',
     onSensorUpdated: dashboard.applySensorState,
     onShanghaiWaterUpdated: dashboard.applyShanghaiWaterRuntime,
+    onMeteorologyUpdated: dashboard.applyMeteorologyRuntime,
     onRestFallback: dashboard.refreshRealtimeData,
   })
   const data = dashboard.data ?? homeFixtures
   const waterStatus = data.shanghaiWaterRuntime?.status ?? (data.shanghaiWater ? 'ready' : 'disabled')
+  const meteorologyStatus = data.meteorologyRuntime?.status ?? (data.meteorology?.current ? 'ready' : 'disabled')
   const dataBadge = dashboard.source === 'api'
     ? dashboard.error
       ? 'API UNAVAILABLE · FIXTURE FALLBACK'
       : dashboard.degraded
         ? `API DEGRADED · PARTIAL FIXTURE FALLBACK · WS ${realtime.status.toUpperCase()}`
         : data.shanghaiWater
-          ? `HYBRID MVP · SHANGHAI WATER ${waterStatus.toUpperCase()} · WS ${realtime.status.toUpperCase()}`
+          ? `HYBRID MVP · SHANGHAI WATER ${waterStatus.toUpperCase()} · METEO ${meteorologyStatus.toUpperCase()} · WS ${realtime.status.toUpperCase()}`
           : `API DATA · BASE FIXTURE · WS ${realtime.status.toUpperCase()}`
     : 'DEMO SCENARIO DATA · FIXTURE'
 

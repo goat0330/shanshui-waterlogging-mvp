@@ -140,6 +140,97 @@ export interface ShanghaiWaterRealtimeState {
 }
 
 
+export interface MeteorologyCurrentConditions {
+  stationId: string
+  stationName: string
+  observedAt: string
+  temperatureC?: number | null
+  condition?: string | null
+  humidityPercent?: number | null
+  rainfallMm?: number | null
+  windDirection?: string | null
+  windPower?: string | null
+  sourceId: string
+  synthetic: boolean
+}
+
+export interface MeteorologyWarning {
+  type: string
+  level: string
+  issuedAt: string
+  expiresAt?: string | null
+  sourceId: string
+  area?: string | null
+  synthetic: boolean
+}
+
+export interface MeteorologyRadarFrame {
+  observedAt: string
+  previewUrl: string
+  mediaType?: string | null
+  crs?: string | null
+  bbox?: number[] | null
+  georeferenced: boolean
+  renderableInCesium: boolean
+  sourceId: string
+  synthetic: boolean
+}
+
+export interface MeteorologyNowcastFrame {
+  offsetMinutes: 0 | 30 | 60 | 120
+  validAt: string
+  rasterUrl?: string | null
+  previewUrl?: string | null
+  mediaType?: string | null
+  crs?: string | null
+  bbox?: number[] | null
+  georeferenced: boolean
+  renderableInCesium: boolean
+  summary?: string | null
+  precipitationValue?: number | null
+  precipitationUnit?: string | null
+  sourceId: string
+  synthetic: boolean
+}
+
+export interface MeteorologySourceHealth {
+  provider: string
+  sourceId: string
+  status: 'OK' | 'SYNTHETIC' | 'UNAVAILABLE' | 'NOT_VERIFIED' | 'AUTH_REQUIRED' | 'SCHEMA_MISMATCH' | 'TIMEOUT'
+  observedAt?: string | null
+  receivedAt: string
+  message?: string | null
+}
+
+export interface MeteorologyContext {
+  observedAt?: string | null
+  receivedAt: string
+  source: string
+  coordinateReference?: string | null
+  mode: 'fixture' | 'hybrid' | 'real'
+  dataStatus: 'REAL' | 'MIXED' | 'SYNTHETIC' | 'DEGRADED'
+  current?: MeteorologyCurrentConditions | null
+  warnings: MeteorologyWarning[]
+  rainfallNow: { stations: Array<Record<string, unknown>> }
+  radar: { frames: MeteorologyRadarFrame[] }
+  nowcast: { frames: MeteorologyNowcastFrame[] }
+  sourceHealth: MeteorologySourceHealth[]
+}
+
+export interface MeteorologyRealtimeState {
+  status: 'disabled' | 'loading' | 'ready' | 'degraded'
+  pollIntervalSeconds: number
+  polledAt?: string | null
+  lastSuccessfulPollAt?: string | null
+  sourceChangedAt?: string | null
+  sourceChangedThisPoll: boolean
+  latestSourceObservedAt?: string | null
+  consecutiveFailures: number
+  lastError?: string | null
+  context?: MeteorologyContext | null
+}
+
+
 export interface FloodPoint {
   id: string
   name: string
@@ -314,6 +405,8 @@ export interface DashboardData {
   sensor?: SensorState | null
   shanghaiWater?: ShanghaiWaterSnapshot | null
   shanghaiWaterRuntime?: ShanghaiWaterRealtimeState | null
+  meteorology?: MeteorologyContext | null
+  meteorologyRuntime?: MeteorologyRealtimeState | null
   eventsById?: Record<string, FloodEvent>
   forecastsByEventId?: Record<string, FloodForecast>
   analysesByEventId?: Record<string, AIAnalysis>
@@ -336,6 +429,8 @@ export interface DashboardDataClient {
   getTimeline(scenarioId: string): Promise<ScenarioTimeline>
   getShanghaiWater(): Promise<ShanghaiWaterSnapshot | null>
   getShanghaiWaterRuntime(): Promise<ShanghaiWaterRealtimeState | null>
+  getMeteorology(): Promise<MeteorologyContext | null>
+  getMeteorologyRuntime(): Promise<MeteorologyRealtimeState | null>
 }
 
 export interface HomeFixtures {
@@ -351,4 +446,6 @@ export interface HomeFixtures {
   timeline: ScenarioTimeline
   shanghaiWater?: ShanghaiWaterSnapshot | null
   shanghaiWaterRuntime?: ShanghaiWaterRealtimeState | null
+  meteorology?: MeteorologyContext | null
+  meteorologyRuntime?: MeteorologyRealtimeState | null
 }

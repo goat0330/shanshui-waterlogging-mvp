@@ -9,7 +9,7 @@ import {
 } from '../data/mappings'
 import { apiClient, DATA_SOURCE, type DataSource } from '../services/apiClient'
 import { fixtureClient } from '../services/fixtureClient'
-import type { DashboardData, HistoricalFloodCase, SensorState, FloodPoint, ShanghaiWaterRealtimeState } from '../types'
+import type { DashboardData, HistoricalFloodCase, SensorState, FloodPoint, MeteorologyRealtimeState, ShanghaiWaterRealtimeState } from '../types'
 
 const defaultEventId = FORMAL_EVENT_BY_FLOOD_POINT[DEFAULT_FLOOD_POINT_ID]
 const defaultSensorId = SENSOR_FLOOD_POINT_MAPPINGS[0]?.sensorId ?? 'SSZJ-NODE-001'
@@ -86,6 +86,8 @@ async function loadDashboardData(): Promise<DashboardLoadResult> {
   const backendAvailable = DATA_SOURCE !== 'api' || coreResults.some((item) => item.apiSucceeded)
   const shanghaiWaterRuntime = DATA_SOURCE === 'api' ? await apiClient.getShanghaiWaterRuntime() : null
   const shanghaiWater = shanghaiWaterRuntime?.snapshot ?? (DATA_SOURCE === 'api' ? await apiClient.getShanghaiWater() : null)
+  const meteorologyRuntime = DATA_SOURCE === 'api' ? await apiClient.getMeteorologyRuntime() : null
+  const meteorology = meteorologyRuntime?.context ?? (DATA_SOURCE === 'api' ? await apiClient.getMeteorology() : null)
 
   const overview = overviewResult.value
   const rainfall = rainfallResult.value
@@ -162,6 +164,8 @@ async function loadDashboardData(): Promise<DashboardLoadResult> {
       timeline,
       shanghaiWater,
       shanghaiWaterRuntime,
+      meteorology,
+      meteorologyRuntime,
       sensor: sensorsById[defaultSensorId] ?? null,
       eventsById,
       forecastsByEventId,
@@ -181,6 +185,7 @@ export interface UseDashboardDataResult {
   reload: () => void
   applySensorState: (sensor: SensorState) => void
   applyShanghaiWaterRuntime: (runtime: ShanghaiWaterRealtimeState) => void
+  applyMeteorologyRuntime: (runtime: MeteorologyRealtimeState) => void
   refreshRealtimeData: () => void
 }
 
@@ -242,16 +247,26 @@ export function useDashboardData(): UseDashboardDataResult {
     } : current)
   }, [])
 
+  const applyMeteorologyRuntime = useCallback((runtime: MeteorologyRealtimeState) => {
+    setData((current) => current ? {
+      ...current,
+      meteorologyRuntime: runtime,
+      meteorology: runtime.context ?? current.meteorology ?? null,
+    } : current)
+  }, [])
+
   const refreshRealtimeData = useCallback(() => {
     if (DATA_SOURCE !== 'api') return
     void Promise.allSettled([
       apiClient.getShanghaiWaterRuntime(),
       apiClient.getSensorState(defaultSensorId),
-    ]).then(([waterResult, sensorResult]) => {
+      apiClient.getMeteorologyRuntime(),
+    ]).then(([waterResult, sensorResult, meteorologyResult]) => {
       if (waterResult.status === 'fulfilled' && waterResult.value) applyShanghaiWaterRuntime(waterResult.value)
       if (sensorResult.status === 'fulfilled') applySensorState(sensorResult.value)
+      if (meteorologyResult.status === 'fulfilled' && meteorologyResult.value) applyMeteorologyRuntime(meteorologyResult.value)
     })
-  }, [applySensorState, applyShanghaiWaterRuntime])
+  }, [applyMeteorologyRuntime, applySensorState, applyShanghaiWaterRuntime])
 
   useEffect(() => {
     let cancelled = false
@@ -276,7 +291,7 @@ export function useDashboardData(): UseDashboardDataResult {
     return () => { cancelled = true }
   }, [reloadToken])
 
-  return { data, source: DATA_SOURCE, isLoading, error, degraded, reload, applySensorState, applyShanghaiWaterRuntime, refreshRealtimeData }
+  return { data, source: DATA_SOURCE, isLoading, error, degraded, reload, applySensorState, applyShanghaiWaterRuntime, applyMeteorologyRuntime, refreshRealtimeData }
 }
 
 export { DEFAULT_FLOOD_POINT_ID }

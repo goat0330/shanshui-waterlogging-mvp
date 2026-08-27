@@ -13,6 +13,7 @@ class Settings:
     shanghai_water_cache_ttl_seconds: float
     shanghai_water_poll_interval_seconds: float = 60.0
     shanghai_water_history_points: int = 144
+    meteorology_poll_interval_seconds: float = 360.0
 
 
 def load_settings() -> Settings:
@@ -32,6 +33,7 @@ def load_settings() -> Settings:
     cache_ttl_seconds = _positive_float("SHANGHAI_WATER_CACHE_TTL_SECONDS", 45.0)
     poll_interval_seconds = _positive_float("SHANGHAI_WATER_POLL_INTERVAL_SECONDS", 60.0)
     history_points = _positive_int("SHANGHAI_WATER_HISTORY_POINTS", 144)
+    meteorology_poll_interval_seconds = _positive_float("METEOROLOGY_POLL_INTERVAL_SECONDS", 360.0)
     return Settings(
         repository_backend=backend,
         database_url=database_url,
@@ -40,6 +42,7 @@ def load_settings() -> Settings:
         shanghai_water_cache_ttl_seconds=cache_ttl_seconds,
         shanghai_water_poll_interval_seconds=poll_interval_seconds,
         shanghai_water_history_points=history_points,
+        meteorology_poll_interval_seconds=meteorology_poll_interval_seconds,
     )
 
 

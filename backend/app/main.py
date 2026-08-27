@@ -16,6 +16,7 @@ from .models import (
     FloodPoint,
     HistoricalFloodCase,
     MeteorologyContext,
+    MeteorologyRealtimeState,
     RainfallSnapshot,
     RainfallStationRankingItem,
     ScenarioTimeline,
@@ -29,6 +30,7 @@ from .models import (
 from .config import load_settings
 from .repository import UnknownSensorError, build_repository
 from .realtime_external import ShanghaiWaterRealtimeCollector
+from .realtime_meteorology import MeteorologyRealtimeCollector
 from .meteorology import MeteorologyContextService, MeteorologyError
 from .shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from .vision_depth import VisionDepthAdapter, VisionDepthError
@@ -59,6 +61,11 @@ shanghai_water_adapter = ShanghaiWaterAdapter(
     cache_ttl_seconds=settings.shanghai_water_cache_ttl_seconds,
 )
 meteorology_context_service = MeteorologyContextService(shanghai_water_adapter)
+meteorology_realtime = MeteorologyRealtimeCollector(
+    meteorology_context_service,
+    data_mode=settings.data_mode,
+    poll_interval_seconds=settings.meteorology_poll_interval_seconds,
+)
 shanghai_water_realtime = ShanghaiWaterRealtimeCollector(
     shanghai_water_adapter,
     data_mode=settings.data_mode,
@@ -70,10 +77,12 @@ shanghai_water_realtime = ShanghaiWaterRealtimeCollector(
 @app.on_event("startup")
 async def startup_realtime_collectors() -> None:
     await shanghai_water_realtime.start(broadcast_realtime)
+    await meteorology_realtime.start(broadcast_realtime)
 
 
 @app.on_event("shutdown")
 async def shutdown_realtime_collectors() -> None:
+    await meteorology_realtime.stop()
     await shanghai_water_realtime.stop()
 
 
@@ -160,11 +169,32 @@ def get_shanghai_water_runtime() -> ShanghaiWaterRealtimeState:
     tags=["provisional-context"],
     include_in_schema=False,
 )
-def get_meteorology_context() -> MeteorologyContext:
-    try:
+async def get_meteorology_context() -> MeteorologyContext:
+    if settings.data_mode == "fixture":
         return meteorology_context_service.get(settings.data_mode)
-    except MeteorologyError as exc:
-        raise HTTPException(status_code=503, detail={"code": exc.code, "message": exc.message}) from exc
+    state = meteorology_realtime.state()
+    if state.context is None:
+        state = await meteorology_realtime.refresh_now()
+    if state.context is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "METEOROLOGY_UNAVAILABLE",
+                "message": state.lastError or "Meteorology realtime collector has no usable context",
+            },
+        )
+    return state.context
+
+
+@app.get(
+    "/api/v1/context/meteorology/runtime",
+    response_model=MeteorologyRealtimeState,
+    operation_id="getMeteorologyRealtimeState",
+    tags=["provisional-context"],
+    include_in_schema=False,
+)
+def get_meteorology_runtime() -> MeteorologyRealtimeState:
+    return meteorology_realtime.state()
 
 
 @app.get("/api/v1/flood-points", response_model=list[FloodPoint], operation_id="listFloodPoints")

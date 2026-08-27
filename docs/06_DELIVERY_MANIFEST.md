@@ -28,12 +28,15 @@ Status: **IMPLEMENTED / CONDITIONAL / MVP-READY AFTER LOCAL RUNTIME SMOKE**.
 - Strict real mode requires the three current-observation feeds; optional water-level forecast does not collapse an otherwise usable snapshot.
 - Coordinate provenance remains `SOURCE_REPORTED_XX2000_YY2000`; no WGS84 claim is added.
 
-## CMA context
+## Meteorology / CMA-NMC context
 
-- Warning/radar/nowcast models and a configurable provider seam exist.
-- No anonymous stable CMA endpoint is hard-coded or falsely marked verified.
-- Configure `CMA_WARNING_URL` and/or `CMA_NOWCAST_URL` only after verifying machine-readable endpoints.
-- Radar/nowcast metadata stays in `MeteorologyContext`, not `FloodForecast`.
+- Built-in MVP providers are implemented for NMC current weather, NMC Shanghai warning list, NMC radar preview, and China Weather 0–2 h minute precipitation nowcast.
+- Backend owns meteorology polling (`METEOROLOGY_POLL_INTERVAL_SECONDS`, default 360 s), last-good runtime state and `meteorology.updated` WebSocket projection.
+- Runtime `sourceHealth` is the authority: a provider becomes `OK` only after a successful machine-readable fetch/parse; network/schema failures remain `UNAVAILABLE`/`SCHEMA_MISMATCH` instead of being hidden by fixture data.
+- NMC radar is treated as a real preview only. It remains `georeferenced=false` / `renderableInCesium=false` unless a configured metadata source supplies a trustworthy `rasterUrl + CRS + bbox`.
+- The built-in 0–2 h product is point precipitation nowcast, not a flood-depth forecast and not a georeferenced radar raster.
+- `CMA_WARNING_URL` and `CMA_NOWCAST_URL` remain optional override seams; blank values use the built-in public providers.
+- Meteorology remains in `MeteorologyContext`; it never overwrites `FloodForecast`.
 
 ## Vision
 
@@ -54,6 +57,7 @@ Local research MVP use is approved by project policy. Production/public redistri
 - physical MQTT/device gateway;
 - production auth/CORS policy;
 - real Shanghai LIVE CCTV;
+- georeferenced radar raster/tile overlay when no trustworthy CRS+bbox metadata source is configured;
 - calibrated metric Vision depth;
 - production/public redistribution clearance where separately required;
 - final human visual acceptance.

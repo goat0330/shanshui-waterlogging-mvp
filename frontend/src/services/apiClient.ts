@@ -7,6 +7,8 @@ import type {
   FloodForecast,
   FloodPoint,
   HistoricalFloodCase,
+  MeteorologyContext,
+  MeteorologyRealtimeState,
   RainfallSnapshot,
   RainfallStationRankingItem,
   ScenarioTimeline,
@@ -46,6 +48,8 @@ export const apiClient: DashboardDataClient = {
   getTimeline: (scenarioId: string) => requestJson<ScenarioTimeline>(`/api/v1/scenarios/${encodeURIComponent(scenarioId)}/timeline`),
   getShanghaiWater: () => requestJson<ShanghaiWaterSnapshot>('/api/v1/external/shanghai-water').catch(() => null),
   getShanghaiWaterRuntime: () => requestJson<ShanghaiWaterRealtimeState>('/api/v1/external/shanghai-water/runtime').catch(() => null),
+  getMeteorology: () => requestJson<MeteorologyContext>('/api/v1/context/meteorology').catch(() => null),
+  getMeteorologyRuntime: () => requestJson<MeteorologyRealtimeState>('/api/v1/context/meteorology/runtime').catch(() => null),
 }
 
 export function getRealtimeUrl(baseUrl = API_BASE_URL): string {

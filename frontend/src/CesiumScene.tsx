@@ -11,6 +11,7 @@ import { addGeographicSensorEntity } from './scene/sensorEntity'
 const CORE_TILES_URL = '/data/runtime/shanghai-core/tileset.json'
 const OSM_BASEMAP_URL = 'https://tile.openstreetmap.org/'
 const CESIUM_ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN?.trim()
+const WORLD_TERRAIN_ENABLED = Boolean(CESIUM_ION_TOKEN)
 const SENSOR_STATE_SOURCE = 'sensor-state-input'
 const FLOOD_POINT_FALLBACK_SOURCE = 'floodpoint-fallback'
 const EVENT_FALLBACK_SOURCE = 'event-fallback'
@@ -140,6 +141,13 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
   useEffect(() => {
     if (!containerRef.current) return
 
+    // OSM Buildings and the ground must share Cesium World Terrain's vertical datum.
+    // Do not compensate building height with a hard-coded Z translation.
+    if (CESIUM_ION_TOKEN) Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN
+    const worldTerrain = WORLD_TERRAIN_ENABLED
+      ? Cesium.Terrain.fromWorldTerrain()
+      : undefined
+
     const viewer = new Cesium.Viewer(containerRef.current, {
       animation: false,
       baseLayer: false,
@@ -151,7 +159,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       sceneModePicker: false,
       selectionIndicator: false,
       timeline: false,
-      terrain: undefined,
+      terrain: worldTerrain,
     })
     const cityLayer = new Cesium.PrimitiveCollection()
     viewer.scene.primitives.add(cityLayer)
@@ -171,6 +179,7 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
     basemapLayerRef.current = basemapLayer
     viewer.scene.globe.enableLighting = false
     viewer.scene.globe.showGroundAtmosphere = false
+    viewer.scene.globe.depthTestAgainstTerrain = WORLD_TERRAIN_ENABLED
     viewer.scene.fog.enabled = true
     viewer.scene.fog.density = 0.00008
     viewer.scene.fog.screenSpaceErrorFactor = 2
@@ -221,7 +230,6 @@ export function CesiumScene({ event, points, sensor = null, activeForecast, fore
       }
 
       try {
-        Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN
         const tileset = await Cesium.createOsmBuildingsAsync({
           style: OSM_BUILDING_STYLE,
           showOutline: false,

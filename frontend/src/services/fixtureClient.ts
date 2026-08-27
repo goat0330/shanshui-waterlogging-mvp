@@ -66,4 +66,6 @@ export const fixtureClient: DashboardDataClient = {
   },
   getShanghaiWater: async () => null,
   getShanghaiWaterRuntime: async () => null,
+  getMeteorology: async () => null,
+  getMeteorologyRuntime: async () => null,
 }
