@@ -170,6 +170,7 @@ def main() -> None:
         "/api/v1/rainfall/stations/ranking",
         "/api/v1/flood-points",
         "/api/v1/flood-events/{event_id}",
+        "/api/v1/flood-events/{event_id}/risk",
         "/api/v1/flood-events/{event_id}/forecast",
         "/api/v1/flood-events/{event_id}/analysis",
         "/api/v1/cameras",
@@ -551,6 +552,7 @@ def main() -> None:
             "/api/v1/rainfall/stations/ranking",
             "/api/v1/flood-points",
             "/api/v1/flood-events/FP202506010024",
+            "/api/v1/flood-events/FP202506010024/risk",
             "/api/v1/flood-events/FP202506010024/forecast",
             "/api/v1/flood-events/FP202506010024/analysis",
             "/api/v1/cameras",
@@ -703,7 +705,17 @@ def main() -> None:
         json.dumps(forecast, ensure_ascii=False)
         status, analysis = request("/api/v1/flood-events/FP202506010024/analysis")
         assert status == 200
-        assert set(analysis) == {"eventId", "riskSummary", "causes", "forecastSummary", "actions"}
+        assert set(analysis) == {
+            "eventId",
+            "riskSummary",
+            "causes",
+            "forecastSummary",
+            "actions",
+            "method",
+            "confidence",
+            "generatedAt",
+        }
+        assert analysis["method"] == "SYNTHETIC_FIXTURE"
         assert "source" not in analysis
         json.dumps(analysis, ensure_ascii=False)
         print("PASS forecast frame constraints and synthetic analysis response shape")
@@ -760,6 +772,13 @@ def main() -> None:
             assert "receivedAt" in updated["payload"]
             json.dumps(updated, ensure_ascii=False)
             print("PASS WS sensor.updated")
+            intelligence_updated = json.loads(websocket_client.recv())
+            assert intelligence_updated["type"] == "event.intelligence.updated"
+            assert intelligence_updated["payload"]["event"]["currentDepthCm"] == 28.6
+            assert intelligence_updated["payload"]["risk"]["method"] == "RULE_WEIGHTED_V1"
+            assert intelligence_updated["payload"]["forecast"]["method"] == "EMPIRICAL_BASELINE"
+            assert intelligence_updated["payload"]["analysis"]["method"] == "RULE_WEIGHTED_V1"
+            print("PASS WS event.intelligence.updated")
         status, sensor = request("/api/v1/sensors/SSZJ-NODE-001")
         assert status == 200, (status, sensor)
         assert sensor["sensorId"] == "SSZJ-NODE-001"
@@ -811,8 +830,16 @@ def main() -> None:
         assert status == 200
         assert event["currentDepthCm"] == 28.6
         assert event["riskLevel"] == "HIGH"
-        assert event["riseRateCmMin"] == 1.8
+        assert event["riseRateCmMin"] == 0.0
+        assert event["riseRateSource"] == "INSUFFICIENT_HISTORY"
         assert event["pipeLoadPercent"] == 91
+        status, risk = request("/api/v1/flood-events/FP202506010024/risk")
+        assert status == 200
+        assert risk["eventId"] == "FP202506010024"
+        assert 0 <= risk["riskIndex"] <= 100
+        assert risk["method"] == "RULE_WEIGHTED_V1"
+        assert risk["evidence"]["sensor"] == "LIVE"
+        assert "NO_LIVE_SENSOR" not in risk["hardRulesTriggered"]
         print("PASS projection at 28.6cm with risk fields preserved")
 
         vision_bytes = vision_input.read_bytes()
@@ -1006,16 +1033,29 @@ def main() -> None:
         assert status == 200
         assert event["currentDepthCm"] == 35.0
         assert event["riskLevel"] == "HIGH"
-        assert event["riseRateCmMin"] == 1.8
+        assert event["riseRateSource"] != "SCENARIO_BASELINE"
         assert event["pipeLoadPercent"] == 91
+        status, final_risk = request("/api/v1/flood-events/FP202506010024/risk")
+        assert status == 200
+        assert final_risk["riskIndex"] == event["riskIndex"]
+        status, final_forecast = request("/api/v1/flood-events/FP202506010024/forecast")
+        assert status == 200
+        assert final_forecast["method"] == "EMPIRICAL_BASELINE"
         print("PASS simulator final 35.0cm projection with risk fields preserved")
 
         if websocket_client is not None:
-            final_updates = [json.loads(websocket_client.recv()) for _ in range(8)]
-            assert final_updates[-1]["type"] == "sensor.updated"
-            assert final_updates[-1]["payload"]["depthCm"] == 35.0
-            assert final_updates[-1]["payload"]["receivedAt"]
-            print("PASS WS final sensor.updated depthCm=35.0")
+            sequence_fixture = json.loads((backend_dir.parent / "contracts" / "fixtures" / "telemetry-sequence.json").read_text(encoding="utf-8"))
+            expected_messages = len(sequence_fixture["sequence"]) * 2
+            final_updates = [json.loads(websocket_client.recv()) for _ in range(expected_messages)]
+            sensor_updates = [item for item in final_updates if item["type"] == "sensor.updated"]
+            intelligence_updates = [item for item in final_updates if item["type"] == "event.intelligence.updated"]
+            assert len(sensor_updates) == len(sequence_fixture["sequence"])
+            assert len(intelligence_updates) == len(sequence_fixture["sequence"])
+            assert sensor_updates[-1]["payload"]["depthCm"] == 35.0
+            assert sensor_updates[-1]["payload"]["receivedAt"]
+            assert intelligence_updates[-1]["payload"]["event"]["currentDepthCm"] == 35.0
+            assert intelligence_updates[-1]["payload"]["forecast"]["method"] == "EMPIRICAL_BASELINE"
+            print("PASS WS final sensor + event.intelligence.updated depthCm=35.0")
 
         unknown_request = dict(observation_request)
         unknown_request["sensorId"] = "UNKNOWN"
@@ -1043,6 +1083,7 @@ def main() -> None:
         for path in [
             "/api/v1/sensors/UNKNOWN",
             "/api/v1/flood-events/UNKNOWN",
+            "/api/v1/flood-events/UNKNOWN/risk",
             "/api/v1/flood-events/UNKNOWN/forecast",
             "/api/v1/flood-events/UNKNOWN/analysis",
             "/api/v1/scenarios/UNKNOWN/timeline",

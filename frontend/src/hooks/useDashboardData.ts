@@ -9,7 +9,7 @@ import {
 } from '../data/mappings'
 import { apiClient, DATA_SOURCE, type DataSource } from '../services/apiClient'
 import { fixtureClient } from '../services/fixtureClient'
-import type { DashboardData, HistoricalFloodCase, SensorState, FloodPoint, MeteorologyRealtimeState, ShanghaiWaterRealtimeState } from '../types'
+import type { DashboardData, EventIntelligenceUpdate, HistoricalFloodCase, SensorState, FloodPoint, MeteorologyRealtimeState, ShanghaiWaterRealtimeState } from '../types'
 
 const defaultEventId = FORMAL_EVENT_BY_FLOOD_POINT[DEFAULT_FLOOD_POINT_ID]
 const defaultSensorId = SENSOR_FLOOD_POINT_MAPPINGS[0]?.sensorId ?? 'SSZJ-NODE-001'
@@ -186,6 +186,7 @@ export interface UseDashboardDataResult {
   applySensorState: (sensor: SensorState) => void
   applyShanghaiWaterRuntime: (runtime: ShanghaiWaterRealtimeState) => void
   applyMeteorologyRuntime: (runtime: MeteorologyRealtimeState) => void
+  applyEventIntelligence: (update: EventIntelligenceUpdate) => void
   refreshRealtimeData: () => void
 }
 
@@ -255,18 +256,65 @@ export function useDashboardData(): UseDashboardDataResult {
     } : current)
   }, [])
 
+  const applyEventIntelligence = useCallback((update: EventIntelligenceUpdate) => {
+    setData((current) => {
+      if (!current) return current
+      const eventId = update.event.id
+      const nextEventsById = { ...(current.eventsById ?? {}), [eventId]: update.event }
+      const nextForecastsByEventId = { ...(current.forecastsByEventId ?? {}), [eventId]: update.forecast }
+      const nextAnalysesByEventId = { ...(current.analysesByEventId ?? {}), [eventId]: update.analysis }
+      const nextPoints = current.points.map((point) => {
+        if (getFloodPointEventId(point) !== eventId) return point
+        const trend: FloodPoint['trend'] = update.event.riseRateCmMin > 0.1 ? 'UP' : update.event.riseRateCmMin < -0.1 ? 'DOWN' : 'STABLE'
+        return { ...point, depthCm: update.event.currentDepthCm, riskLevel: update.event.riskLevel, trend }
+      })
+      const realtimeDepths = nextPoints.filter((point) => !point.historicalCaseId).map((point) => point.depthCm)
+      const situation = current.overview.waterloggingSituation
+      const nextOverview = situation ? {
+        ...current.overview,
+        updatedAt: new Date().toISOString(),
+        waterloggingSituation: {
+          ...situation,
+          changeVsHour: Number((update.event.riseRateCmMin * 60).toFixed(1)),
+          metrics: {
+            ...situation.metrics,
+            maxDepthCm: Math.max(...realtimeDepths, 0),
+            avgDepthCm: realtimeDepths.length > 0 ? Number((realtimeDepths.reduce((sum, value) => sum + value, 0) / realtimeDepths.length).toFixed(1)) : 0,
+          },
+        },
+      } : current.overview
+      return {
+        ...current,
+        overview: nextOverview,
+        points: nextPoints,
+        event: current.event?.id === eventId ? update.event : current.event,
+        forecast: current.event?.id === eventId ? update.forecast : current.forecast,
+        analysis: current.event?.id === eventId ? update.analysis : current.analysis,
+        eventsById: nextEventsById,
+        forecastsByEventId: nextForecastsByEventId,
+        analysesByEventId: nextAnalysesByEventId,
+      }
+    })
+  }, [])
+
   const refreshRealtimeData = useCallback(() => {
     if (DATA_SOURCE !== 'api') return
     void Promise.allSettled([
       apiClient.getShanghaiWaterRuntime(),
       apiClient.getSensorState(defaultSensorId),
       apiClient.getMeteorologyRuntime(),
-    ]).then(([waterResult, sensorResult, meteorologyResult]) => {
+      apiClient.getFloodEvent(defaultEventId),
+      apiClient.getFloodForecast(defaultEventId),
+      apiClient.getFloodAnalysis(defaultEventId),
+    ]).then(([waterResult, sensorResult, meteorologyResult, eventResult, forecastResult, analysisResult]) => {
       if (waterResult.status === 'fulfilled' && waterResult.value) applyShanghaiWaterRuntime(waterResult.value)
       if (sensorResult.status === 'fulfilled') applySensorState(sensorResult.value)
       if (meteorologyResult.status === 'fulfilled' && meteorologyResult.value) applyMeteorologyRuntime(meteorologyResult.value)
+      if (eventResult.status === 'fulfilled' && forecastResult.status === 'fulfilled' && analysisResult.status === 'fulfilled') {
+        applyEventIntelligence({ event: eventResult.value, forecast: forecastResult.value, analysis: analysisResult.value })
+      }
     })
-  }, [applyMeteorologyRuntime, applySensorState, applyShanghaiWaterRuntime])
+  }, [applyEventIntelligence, applyMeteorologyRuntime, applySensorState, applyShanghaiWaterRuntime])
 
   useEffect(() => {
     let cancelled = false
@@ -291,7 +339,7 @@ export function useDashboardData(): UseDashboardDataResult {
     return () => { cancelled = true }
   }, [reloadToken])
 
-  return { data, source: DATA_SOURCE, isLoading, error, degraded, reload, applySensorState, applyShanghaiWaterRuntime, applyMeteorologyRuntime, refreshRealtimeData }
+  return { data, source: DATA_SOURCE, isLoading, error, degraded, reload, applySensorState, applyShanghaiWaterRuntime, applyMeteorologyRuntime, applyEventIntelligence, refreshRealtimeData }
 }
 
 export { DEFAULT_FLOOD_POINT_ID }

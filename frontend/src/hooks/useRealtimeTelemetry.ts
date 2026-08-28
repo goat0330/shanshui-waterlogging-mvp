@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DATA_SOURCE, getRealtimeUrl } from '../services/apiClient'
-import type { MeteorologyRealtimeState, SensorState, ShanghaiWaterRealtimeState } from '../types'
+import type { EventIntelligenceUpdate, MeteorologyRealtimeState, SensorState, ShanghaiWaterRealtimeState } from '../types'
 
 export type RealtimeStatus = 'disabled' | 'connecting' | 'connected' | 'fallback'
 
@@ -42,11 +42,21 @@ function isMeteorologyRealtimeState(value: unknown): value is MeteorologyRealtim
     && typeof candidate.sourceChangedThisPoll === 'boolean'
 }
 
+function isEventIntelligenceUpdate(value: unknown): value is EventIntelligenceUpdate {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<EventIntelligenceUpdate>
+  return Boolean(candidate.event)
+    && Boolean(candidate.forecast)
+    && Boolean(candidate.analysis)
+    && typeof candidate.event?.id === 'string'
+}
+
 export interface UseRealtimeTelemetryOptions {
   enabled?: boolean
   onSensorUpdated: (sensor: SensorState) => void
   onShanghaiWaterUpdated?: (state: ShanghaiWaterRealtimeState) => void
   onMeteorologyUpdated?: (state: MeteorologyRealtimeState) => void
+  onEventIntelligenceUpdated?: (update: EventIntelligenceUpdate) => void
   onScenarioStarted?: (payload: unknown) => void
   onRestFallback?: () => void
 }
@@ -56,7 +66,7 @@ export interface UseRealtimeTelemetryResult {
   lastEventAt: string | null
 }
 
-export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensorUpdated, onShanghaiWaterUpdated, onMeteorologyUpdated, onScenarioStarted, onRestFallback }: UseRealtimeTelemetryOptions): UseRealtimeTelemetryResult {
+export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensorUpdated, onShanghaiWaterUpdated, onMeteorologyUpdated, onEventIntelligenceUpdated, onScenarioStarted, onRestFallback }: UseRealtimeTelemetryOptions): UseRealtimeTelemetryResult {
   const [status, setStatus] = useState<RealtimeStatus>(enabled ? 'connecting' : 'disabled')
   const [lastEventAt, setLastEventAt] = useState<string | null>(null)
 
@@ -152,6 +162,11 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
         if (envelope.type === 'meteorology.updated' && isMeteorologyRealtimeState(envelope.payload)) {
           setLastEventAt(eventTime)
           onMeteorologyUpdated?.(envelope.payload)
+          return
+        }
+        if (envelope.type === 'event.intelligence.updated' && isEventIntelligenceUpdate(envelope.payload)) {
+          setLastEventAt(eventTime)
+          onEventIntelligenceUpdated?.(envelope.payload)
         }
       }
 
@@ -187,7 +202,7 @@ export function useRealtimeTelemetry({ enabled = DATA_SOURCE === 'api', onSensor
         }
       }
     }
-  }, [enabled, onMeteorologyUpdated, onRestFallback, onScenarioStarted, onSensorUpdated, onShanghaiWaterUpdated])
+  }, [enabled, onEventIntelligenceUpdated, onMeteorologyUpdated, onRestFallback, onScenarioStarted, onSensorUpdated, onShanghaiWaterUpdated])
 
   return { status, lastEventAt }
 }

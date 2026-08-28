@@ -471,7 +471,7 @@ export function EventPanel({ event, analysis, sensor = null, sensorId = null, hi
         <EventMetric label={sensor ? '实测水深' : '事件水深'} value={(sensor?.depthCm ?? event.currentDepthCm).toFixed(1)} unit="cm" />
         <EventMetric label="上涨速度" value={event.riseRateCmMin.toFixed(1)} unit="cm/min" />
         <EventMetric label="管网负荷" value={String(event.pipeLoadPercent)} unit="%" />
-        <EventMetric label="风险等级" value={RISK_LABEL[event.riskLevel]} unit="" />
+        <EventMetric label="风险等级" value={`${RISK_LABEL[event.riskLevel]}${event.riskIndex != null ? ` ${event.riskIndex.toFixed(0)}` : ''}`} unit="" />
       </div>
       <div className="event-meta-grid">
         <span>所属区域 <strong>{event.district}</strong></span>
@@ -778,7 +778,7 @@ export function ForecastPreview({ forecast, activeKey, onChange, measuredDepthCm
           </button>
         ))}
       </div>
-      <div className="forecast-summary"><span>水深(cm) · {activeKey === 'NOW' ? 'SENSOR 实测' : 'FORECAST 预测'}</span><strong>{(activeKey === 'NOW' ? measuredDepthCm : forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm)?.toFixed(1) ?? '—'} <small>{activeKey === 'NOW' ? 'measured baseline' : '当前预测帧最大水深'}</small></strong></div>
+      <div className="forecast-summary"><span>水深(cm) · {activeKey === 'NOW' ? 'SENSOR 实测' : 'FORECAST 预测'}</span><strong>{(activeKey === 'NOW' ? measuredDepthCm : forecast.frames.find((frame) => frame.timeKey === activeKey)?.maxDepthCm)?.toFixed(1) ?? '—'} <small>{activeKey === 'NOW' ? 'measured baseline' : (() => { const frame = forecast.frames.find((item) => item.timeKey === activeKey); return frame?.lowerDepthCm != null && frame?.upperDepthCm != null ? `预测范围 ${frame.lowerDepthCm.toFixed(1)}–${frame.upperDepthCm.toFixed(1)} cm` : '当前预测帧最大水深' })()}</small></strong></div>
       <DepthLegend compact />
     </Panel>
   )
@@ -1253,7 +1253,7 @@ export function AIAnalysisPanel({ analysis, expanded = false, compact = false, o
     return (
       <section className={`analysis-panel ${compact ? 'analysis-panel--compact' : ''}`}>
         <button type="button" className="analysis-toggle" disabled>
-          <span><i className="analysis-spark" />AI 研判</span><strong>未关联</strong>
+          <span><i className="analysis-spark" />风险研判</span><strong>未关联</strong>
         </button>
         <p className="analysis-summary">当前点位暂无正式事件研判。</p>
       </section>
@@ -1263,9 +1263,10 @@ export function AIAnalysisPanel({ analysis, expanded = false, compact = false, o
   return (
     <section className={`analysis-panel ${compact ? 'analysis-panel--compact' : ''} ${isOpen ? 'is-open' : ''}`}>
       <button type="button" className="analysis-toggle" onClick={toggle} aria-expanded={isOpen}>
-        <span><i className="analysis-spark" />AI 研判</span><strong>{isOpen ? '收起' : '展开'} <span>{isOpen ? '⌃' : '⌄'}</span></strong>
+        <span><i className="analysis-spark" />风险研判</span><strong>{isOpen ? '收起' : '展开'} <span>{isOpen ? '⌃' : '⌄'}</span></strong>
       </button>
       <p className="analysis-summary">{analysis.riskSummary}</p>
+      {(analysis.method || analysis.confidence != null) && <div className="analysis-method"><span>{analysis.method ?? 'STRUCTURED_ANALYSIS'}</span>{analysis.confidence != null && <small>证据完整度 {Math.round(analysis.confidence * 100)}%</small>}</div>}
       {isOpen && (
         <div className="analysis-details">
           <div className="analysis-causes"><h4>主要原因</h4>{analysis.causes.map((cause) => <span key={cause.label}><i style={{ width: `${cause.weight * 100}%` }} />{cause.label}<b>{Math.round(cause.weight * 100)}%</b></span>)}</div>

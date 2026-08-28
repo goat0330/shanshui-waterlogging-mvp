@@ -201,7 +201,8 @@ function DashboardFrame({ data, initialForecast = 'NOW', statusVariant = 'defaul
     : null
   const allowDemoSensor = dataBadge.startsWith('DEMO') || dataBadge.startsWith('API UNAVAILABLE')
   const sensor = selectedSensor ?? (allowDemoSensor && selectedEvent.event && selectedEvent.sensorId ? createDemoSensorEvidence(selectedEvent.event) : null)
-  const forecastSourceLabel = dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE'
+  const forecastMethodLabel = selectedEvent.forecast?.method?.replaceAll('_', ' ') ?? null
+  const forecastSourceLabel = forecastMethodLabel ?? (dataBadge.includes('API DATA') ? 'ADAPTER · SYNTHETIC' : 'SYNTHETIC FIXTURE')
   const cameraId = selectedEvent.camera?.id ?? null
   const overlayUrl = selectedEvent.camera?.overlayUrl ?? null
 
@@ -440,6 +441,7 @@ function DashboardPage() {
     onSensorUpdated: dashboard.applySensorState,
     onShanghaiWaterUpdated: dashboard.applyShanghaiWaterRuntime,
     onMeteorologyUpdated: dashboard.applyMeteorologyRuntime,
+    onEventIntelligenceUpdated: dashboard.applyEventIntelligence,
     onRestFallback: dashboard.refreshRealtimeData,
   })
   const data = dashboard.data ?? homeFixtures

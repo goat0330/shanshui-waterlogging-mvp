@@ -530,6 +530,36 @@ class FloodEvent(BaseModel):
     startedAt: datetime
     durationSeconds: int | None = None
     cameraId: str | None = None
+    riskIndex: float | None = Field(default=None, ge=0, le=100)
+    riskMethod: str | None = None
+    riskConfidence: float | None = Field(default=None, ge=0, le=1)
+    riseRateSource: str | None = None
+
+
+class RiskContribution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    feature: str
+    label: str
+    rawValue: float
+    unit: str
+    normalized: float = Field(ge=0, le=1)
+    weight: float = Field(ge=0, le=1)
+    contribution: float = Field(ge=0, le=100)
+
+
+class RiskAssessment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    eventId: str
+    generatedAt: datetime
+    riskIndex: float = Field(ge=0, le=100)
+    riskLevel: RiskLevel
+    confidence: float = Field(ge=0, le=1)
+    method: str
+    causes: list[RiskContribution]
+    hardRulesTriggered: list[str]
+    evidence: dict[str, str]
 
 
 class ForecastKey(str, Enum):
@@ -544,12 +574,18 @@ class ForecastFrame(BaseModel):
     maxDepthCm: float
     affectedAreaKm2: float
     geometryUrl: str
+    lowerDepthCm: float | None = Field(default=None, ge=0)
+    upperDepthCm: float | None = Field(default=None, ge=0)
 
 
 class FloodForecast(BaseModel):
     eventId: str
     generatedAt: datetime
     frames: list[ForecastFrame]
+    method: str | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    inputStatus: str | None = None
+    uncertaintyNote: str | None = None
 
 
 class CameraStatus(str, Enum):
@@ -576,6 +612,9 @@ class Camera(BaseModel):
 class AnalysisCause(BaseModel):
     label: str
     weight: float
+    feature: str | None = None
+    rawValue: float | None = None
+    contribution: float | None = None
 
 
 class AnalysisAction(BaseModel):
@@ -590,6 +629,9 @@ class AIAnalysis(BaseModel):
     causes: list[AnalysisCause]
     forecastSummary: str
     actions: list[AnalysisAction]
+    method: str | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    generatedAt: datetime | None = None
 
 
 class ScenarioMode(str, Enum):

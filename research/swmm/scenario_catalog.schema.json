@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Qixiao Forecast Scenario Catalog",
+  "type": "object",
+  "required": [
+    "featureRanges",
+    "scenarios"
+  ],
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "modelClassification": {
+      "type": "string"
+    },
+    "featureRanges": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scenarioId",
+          "features",
+          "frames"
+        ],
+        "properties": {
+          "scenarioId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "frames": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  }
+}

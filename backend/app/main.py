@@ -19,6 +19,7 @@ from .models import (
     MeteorologyRealtimeState,
     RainfallSnapshot,
     RainfallStationRankingItem,
+    RiskAssessment,
     ScenarioTimeline,
     ShanghaiWaterSnapshot,
     ShanghaiWaterRealtimeState,
@@ -34,6 +35,7 @@ from .realtime_meteorology import MeteorologyRealtimeCollector
 from .meteorology import MeteorologyContextService, MeteorologyError
 from .shanghai_water import ShanghaiWaterAdapter, ShanghaiWaterError
 from .vision_depth import VisionDepthAdapter, VisionDepthError
+from .intelligence import EventIntelligenceService
 
 
 app = FastAPI(
@@ -72,6 +74,12 @@ shanghai_water_realtime = ShanghaiWaterRealtimeCollector(
     poll_interval_seconds=settings.shanghai_water_poll_interval_seconds,
     history_points_per_station=settings.shanghai_water_history_points,
 )
+event_intelligence = EventIntelligenceService(
+    repository,
+    shanghai_water_realtime=shanghai_water_realtime,
+    meteorology_realtime=meteorology_realtime,
+)
+# QIXIAO_INTELLIGENCE_V7: realtime depth -> rise-rate -> risk -> forecast/analysis.
 
 
 @app.on_event("startup")
@@ -215,10 +223,22 @@ def list_historical_cases() -> list[HistoricalFloodCase]:
 
 @app.get("/api/v1/flood-events/{event_id}", response_model=FloodEvent, operation_id="getFloodEvent")
 def get_flood_event(event_id: str) -> FloodEvent:
-    event = repository.get_event(event_id)
+    event = event_intelligence.get_event(event_id)
     if event is None:
         raise not_found("flood-event", event_id)
     return event
+
+
+@app.get(
+    "/api/v1/flood-events/{event_id}/risk",
+    response_model=RiskAssessment,
+    operation_id="getFloodRiskAssessment",
+)
+def get_flood_risk(event_id: str) -> RiskAssessment:
+    risk = event_intelligence.get_risk(event_id)
+    if risk is None:
+        raise not_found("flood-event", event_id)
+    return risk
 
 
 @app.get(
@@ -227,9 +247,7 @@ def get_flood_event(event_id: str) -> FloodEvent:
     operation_id="getFloodForecast",
 )
 def get_flood_forecast(event_id: str) -> FloodForecast:
-    if repository.get_event(event_id) is None:
-        raise not_found("flood-event", event_id)
-    forecast = repository.get_forecast(event_id)
+    forecast = event_intelligence.get_forecast(event_id)
     if forecast is None:
         raise not_found("forecast", event_id)
     return forecast
@@ -241,9 +259,7 @@ def get_flood_forecast(event_id: str) -> FloodForecast:
     operation_id="getFloodAnalysis",
 )
 def get_flood_analysis(event_id: str) -> AIAnalysis:
-    if repository.get_event(event_id) is None:
-        raise not_found("flood-event", event_id)
-    analysis = repository.get_analysis(event_id)
+    analysis = event_intelligence.get_analysis(event_id)
     if analysis is None:
         raise not_found("analysis", event_id)
     return analysis
@@ -274,7 +290,7 @@ def get_scenario_timeline(scenario_id: str) -> ScenarioTimeline:
     return timeline
 
 
-async def broadcast_realtime(event_type: str, payload: dict) -> None:
+async def _send_realtime_envelope(event_type: str, payload: dict) -> None:
     envelope = {
         "type": event_type,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -288,6 +304,13 @@ async def broadcast_realtime(event_type: str, payload: dict) -> None:
             disconnected.append(client)
     for client in disconnected:
         realtime_clients.discard(client)
+
+
+async def broadcast_realtime(event_type: str, payload: dict) -> None:
+    await _send_realtime_envelope(event_type, payload)
+    if event_type in {"external.shanghai_water.updated", "meteorology.updated"}:
+        for update in event_intelligence.all_updates():
+            await _send_realtime_envelope("event.intelligence.updated", update)
 
 
 async def broadcast_sensor_updated(state: SensorState) -> None:
@@ -313,7 +336,11 @@ async def post_telemetry_observation(payload: TelemetryObservation) -> SensorSta
         )
     except UnknownSensorError:
         raise not_found("sensor", payload.sensorId)
+    event_intelligence.observe_sensor(state)
     await broadcast_sensor_updated(state)
+    intelligence_update = event_intelligence.get_update_for_sensor(state.sensorId)
+    if intelligence_update is not None:
+        await _send_realtime_envelope("event.intelligence.updated", intelligence_update)
     return state
 
 

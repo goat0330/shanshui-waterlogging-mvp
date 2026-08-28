@@ -288,6 +288,32 @@ export interface FloodEvent {
   startedAt: string
   durationSeconds?: number
   cameraId?: string
+  riskIndex?: number | null
+  riskMethod?: string | null
+  riskConfidence?: number | null
+  riseRateSource?: string | null
+}
+
+export interface RiskContribution {
+  feature: string
+  label: string
+  rawValue: number
+  unit: string
+  normalized: number
+  weight: number
+  contribution: number
+}
+
+export interface RiskAssessment {
+  eventId: string
+  generatedAt: string
+  riskIndex: number
+  riskLevel: RiskLevel
+  confidence: number
+  method: string
+  causes: RiskContribution[]
+  hardRulesTriggered: string[]
+  evidence: Record<string, string>
 }
 
 export interface ForecastFrame {
@@ -296,12 +322,18 @@ export interface ForecastFrame {
   maxDepthCm: number
   affectedAreaKm2: number
   geometryUrl: string
+  lowerDepthCm?: number | null
+  upperDepthCm?: number | null
 }
 
 export interface FloodForecast {
   eventId: string
   generatedAt: string
   frames: ForecastFrame[]
+  method?: string | null
+  confidence?: number | null
+  inputStatus?: string | null
+  uncertaintyNote?: string | null
 }
 
 export interface Camera {
@@ -317,9 +349,19 @@ export interface Camera {
 export interface AIAnalysis {
   eventId: string
   riskSummary: string
-  causes: Array<{ label: string; weight: number }>
+  causes: Array<{ label: string; weight: number; feature?: string | null; rawValue?: number | null; contribution?: number | null }>
   forecastSummary: string
   actions: Array<{ priority: number; title: string; detail: string }>
+  method?: string | null
+  confidence?: number | null
+  generatedAt?: string | null
+}
+
+export interface EventIntelligenceUpdate {
+  event: FloodEvent
+  risk?: RiskAssessment
+  forecast: FloodForecast
+  analysis: AIAnalysis
 }
 
 export interface ScenarioTimeline {

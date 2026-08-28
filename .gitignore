@@ -47,3 +47,7 @@ frontend/public/runtime/
 Thumbs.db
 .idea/
 .vscode/
+
+# Research-only hydrodynamic environments and generated model outputs.
+.venv-swmm/
+research/swmm/runtime/

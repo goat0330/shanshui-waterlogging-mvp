@@ -3794,3 +3794,17 @@ a {
   letter-spacing: 0.02em;
 }
 .rainfall-chart { position: relative; }
+
+/* QIXIAO_INTELLIGENCE_V7 */
+.analysis-method {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  color: rgba(177, 206, 218, 0.72);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.analysis-method span { color: #78d5df; font-weight: 700; }
+.analysis-method small { font-size: 10px; color: rgba(194, 214, 221, 0.68); }

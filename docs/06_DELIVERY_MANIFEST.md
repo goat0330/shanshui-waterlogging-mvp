@@ -80,3 +80,13 @@ Then launch backend on `8000` and frontend on `4173` and verify the 9-event sele
 - Ground basemap: IMPLEMENTED — online OpenStreetMap imagery restored beneath 3D buildings and explicit road/label layers; presentation is dimmed/desaturated for the dark dashboard.
 - Event title typography: IMPLEMENTED — product display normalizes intersection separator `×` to `·` without mutating source data.
 - Historical media semantics: PASS — only `CASE_SOURCE_MEDIA` is shown; the FP-001 research `VISION_VIDEO` is not reused for historical cases.
+
+## Realtime intelligence + open-source hydrodynamic path — QIXIAO_INTELLIGENCE_V7
+
+- Live Sensor depth now feeds a process-local depth history and a robust median pairwise slope estimator; `riseRateCmMin` is no longer forced to the fixture value after sufficient telemetry samples arrive.
+- `RiskAssessmentService` computes an explainable `0–100` risk index (`RULE_WEIGHTED_V1`) plus hard safety floors. The index is **not a probability**. Missing/stale evidence reduces confidence instead of silently producing NORMAL.
+- `/api/v1/flood-events/{event_id}/risk` exposes the structured risk result. Event, risk, forecast and analysis are broadcast together as `event.intelligence.updated` after telemetry and after Shanghai Water / meteorology source refreshes.
+- Forecast provider ladder: `SCENARIO_LIBRARY` (when `data/runtime/forecast-scenarios.json` is present and matches) → `EMPIRICAL_BASELINE` → static `SYNTHETIC_FIXTURE` before live telemetry. Empirical forecasts expose lower/upper uncertainty bounds and method metadata.
+- Existing `pipeLoadPercent` remains `SCENARIO_BASELINE` until a real drainage-network telemetry/model output replaces it.
+- `research/swmm` adds a research-only path around SWMManywhere + swmm_api + PySWMM. Heavy dependencies are not imported by the FastAPI runtime.
+- Any SWMManywhere output is `SYNTHETIC_UDM / NOT_OFFICIAL_NETWORK / RESEARCH_MVP`; it must not be described as the official Shanghai drainage network.

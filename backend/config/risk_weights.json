@@ -1,0 +1,26 @@
+{
+  "weights": {
+    "depthCm": 0.4,
+    "riseRateCmMin": 0.25,
+    "forecastRain30Mm": 0.2,
+    "pipeLoadPercent": 0.15
+  },
+  "scales": {
+    "depthCm": 50.0,
+    "riseRateCmMin": 2.5,
+    "forecastRain30Mm": 30.0,
+    "pipeLoadPercent": 100.0
+  },
+  "thresholds": {
+    "warning": 30,
+    "high": 60,
+    "critical": 80
+  },
+  "hardRules": {
+    "highDepthCm": 30,
+    "criticalDepthCm": 50,
+    "rapidRiseCmMin": 1.0,
+    "rapidRiseMinDepthCm": 20
+  },
+  "note": "Risk index is not a probability. pipeLoadPercent remains a scenario baseline until live network telemetry exists."
+}

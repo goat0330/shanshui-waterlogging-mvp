@@ -1,0 +1,10 @@
+{
+  "risePersistence": 0.45,
+  "rainToDepthCmPerMm": 0.18,
+  "drainageReliefCmPerMinAtZeroLoad": 0.05,
+  "uncertaintyBaseCm": 3.0,
+  "uncertaintyCmPerMinute": 0.18,
+  "lowConfidencePenaltyCm": 8.0,
+  "insufficientHistoryPenaltyCm": 5.0,
+  "note": "Transparent MVP baseline. Parameters must be calibrated against scenario/PySWMM or historical observations before production use."
+}
